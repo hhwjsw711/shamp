@@ -64,7 +64,7 @@ function CreateAccountPage() {
 
   return (
     <main
-      className="min-h-screen flex items-center justify-center p-4"
+      className="min-h-screen flex items-center justify-center p-4 relative"
       style={{
         backgroundImage: "url('/auth-background.png')",
         backgroundSize: 'cover',
@@ -72,6 +72,7 @@ function CreateAccountPage() {
         backgroundRepeat: 'no-repeat',
       }}
     >
+      <div className="absolute inset-0 bg-black/15" />
       <style>{`
         @media (max-width: 768px) {
           main {
@@ -80,7 +81,7 @@ function CreateAccountPage() {
         }
       `}</style>
 
-      <section className="w-full max-w-md p-4 rounded-[22px] flex flex-col items-start gap-8 bg-background/95 backdrop-blur-sm">
+      <section className="w-full max-w-md p-8 rounded-[22px] flex flex-col items-start gap-8 bg-background/98 backdrop-blur-md shadow-2xl border border-border/20 relative z-10">
         {/* Logo and heading section */}
         <section className="flex flex-col gap-1 w-full items-start">
           <img
