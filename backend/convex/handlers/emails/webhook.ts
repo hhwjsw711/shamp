@@ -9,7 +9,7 @@ import { Resend } from "@convex-dev/resend";
 import { internal } from "../../_generated/api";
 
 const resend = new Resend((components as any).resend, {
-  testMode: process.env.NODE_ENV !== "production",
+  testMode: false,
   onEmailEvent: (internal as any).functions.emails.mutations.handleEmailEvent as any,
 });
 
