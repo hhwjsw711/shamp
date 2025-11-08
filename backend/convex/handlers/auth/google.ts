@@ -79,7 +79,7 @@ export const getGoogleAuthUrlHandler = httpAction(async (_ctx, request) => {
 
 /**
  * Google OAuth callback handler
- * GET /api/auth/google/callback
+ * GET /api/auth/callback/google
  */
 export const googleCallbackHandler = httpAction(async (ctx, request) => {
   try {

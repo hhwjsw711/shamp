@@ -125,7 +125,7 @@ http.route({
 });
 
 http.route({
-  path: "/api/auth/google/callback",
+  path: "/api/auth/callback/google",
   method: "OPTIONS",
   handler: corsPreflightHandler,
 });
@@ -208,8 +208,9 @@ http.route({
 });
 
 // Google OAuth callback
+// Note: Google OAuth redirects to /api/auth/callback/google (not /api/auth/google/callback)
 http.route({
-  path: "/api/auth/google/callback",
+  path: "/api/auth/callback/google",
   method: "GET",
   handler: googleCallbackHandler,
 });
