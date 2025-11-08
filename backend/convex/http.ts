@@ -5,6 +5,7 @@
 
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
+import { api } from "./_generated/api";
 
 // Import auth handlers
 import { getGoogleAuthUrlHandler, googleCallbackHandler } from "./handlers/auth/google";
@@ -91,11 +92,15 @@ http.route({
 http.route({
   path: "/:path*",
   method: "OPTIONS",
-  handler: httpAction(async () => {
+  handler: httpAction(async (ctx) => {
+    const frontendUrl = await ctx.runAction(
+      (api as any).functions.auth.getEnv.getEnvVar,
+      { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
+    );
     return new Response(null, {
       status: 204,
       headers: {
-        "Access-Control-Allow-Origin": process.env.CLIENT_ORIGIN || "*",
+        "Access-Control-Allow-Origin": frontendUrl || "http://localhost:3000",
         "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
         "Access-Control-Max-Age": "86400",

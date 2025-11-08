@@ -77,6 +77,12 @@ export const meHandler = httpAction(async (ctx, request) => {
       );
     }
 
+    // Get frontend URL for CORS
+    const frontendUrl = await ctx.runAction(
+      (api as any).functions.auth.getEnv.getEnvVar,
+      { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
+    );
+
     // Return user info (exclude sensitive fields)
     return new Response(
       JSON.stringify({
@@ -95,12 +101,16 @@ export const meHandler = httpAction(async (ctx, request) => {
         status: 200,
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": process.env.CLIENT_ORIGIN || "*",
+          "Access-Control-Allow-Origin": frontendUrl || "http://localhost:3000",
         },
       }
     );
   } catch (error) {
     console.error("Get current user error:", error);
+    const frontendUrl = await ctx.runAction(
+      (api as any).functions.auth.getEnv.getEnvVar,
+      { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
+    );
     return new Response(
       JSON.stringify({
         error: getErrorMessage(error),
@@ -109,7 +119,7 @@ export const meHandler = httpAction(async (ctx, request) => {
         status: 500,
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": process.env.CLIENT_ORIGIN || "*",
+          "Access-Control-Allow-Origin": frontendUrl || "http://localhost:3000",
         },
       }
     );

@@ -6,7 +6,7 @@
 /// <reference types="node" />
 
 import { httpAction } from "../../_generated/server";
-import { internal } from "../../_generated/api";
+import { internal, api } from "../../_generated/api";
 import { extractIpAddress, checkRateLimit } from "../../utils/security";
 import { getErrorMessage } from "../../utils/errors";
 import { isCodeExpired } from "../../utils/codeGeneration";
@@ -104,6 +104,12 @@ export const verifyCodeHandler = httpAction(async (ctx, request) => {
       }
     );
 
+    // Get frontend URL for CORS
+    const frontendUrl = await ctx.runAction(
+      (api as any).functions.auth.getEnv.getEnvVar,
+      { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
+    );
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -113,19 +119,23 @@ export const verifyCodeHandler = httpAction(async (ctx, request) => {
         status: 200,
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": process.env.CLIENT_ORIGIN || "*",
+          "Access-Control-Allow-Origin": frontendUrl || "http://localhost:3000",
         },
       }
     );
   } catch (error) {
     console.error("Verify code error:", error);
+    const frontendUrl = await ctx.runAction(
+      (api as any).functions.auth.getEnv.getEnvVar,
+      { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
+    );
     return new Response(
       JSON.stringify({ error: getErrorMessage(error) }),
       {
         status: 400,
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": process.env.CLIENT_ORIGIN || "*",
+          "Access-Control-Allow-Origin": frontendUrl || "http://localhost:3000",
         },
       }
     );

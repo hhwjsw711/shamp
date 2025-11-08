@@ -168,7 +168,7 @@ export const forwardToUser = action({
         <p><strong>Ticket:</strong> ${ticket.description}</p>
         <p><strong>Reply:</strong></p>
         <p>${args.message}</p>
-        <p><a href="${process.env.APP_URL || "http://localhost:3000"}/tickets/${args.ticketId}">View ticket in dashboard</a></p>
+        <p><a href="${process.env.FRONTEND_URL || "http://localhost:3000"}/tickets/${args.ticketId}">View ticket in dashboard</a></p>
       `,
     });
   },

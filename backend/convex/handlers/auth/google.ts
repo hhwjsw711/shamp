@@ -68,9 +68,6 @@ export const googleCallbackHandler = httpAction(async (ctx, request) => {
       const frontendUrl = await ctx.runAction(
         api.functions.auth.getEnv.getEnvVar as any,
         { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
-      ) || await ctx.runAction(
-        api.functions.auth.getEnv.getEnvVar as any,
-        { key: "CLIENT_ORIGIN", defaultValue: "http://localhost:3000" }
       ) || "http://localhost:3000";
       
       const errorUrl = new URL("/login", frontendUrl);
@@ -94,9 +91,6 @@ export const googleCallbackHandler = httpAction(async (ctx, request) => {
       const frontendUrl = await ctx.runAction(
         api.functions.auth.getEnv.getEnvVar as any,
         { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
-      ) || await ctx.runAction(
-        api.functions.auth.getEnv.getEnvVar as any,
-        { key: "CLIENT_ORIGIN", defaultValue: "http://localhost:3000" }
       ) || "http://localhost:3000";
       
       const errorUrl = new URL("/login", frontendUrl);
@@ -156,9 +150,6 @@ export const googleCallbackHandler = httpAction(async (ctx, request) => {
       const frontendUrl = await ctx.runAction(
         api.functions.auth.getEnv.getEnvVar as any,
         { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
-      ) || await ctx.runAction(
-        api.functions.auth.getEnv.getEnvVar as any,
-        { key: "CLIENT_ORIGIN", defaultValue: "http://localhost:3000" }
       ) || "http://localhost:3000";
       
       const errorUrl = new URL("/login", frontendUrl);
@@ -214,9 +205,6 @@ export const googleCallbackHandler = httpAction(async (ctx, request) => {
     const frontendUrl = await ctx.runAction(
       (api as any).functions.auth.getEnv.getEnvVar,
       { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
-    ) || await ctx.runAction(
-      (api as any).functions.auth.getEnv.getEnvVar,
-      { key: "CLIENT_ORIGIN", defaultValue: "http://localhost:3000" }
     ) || "http://localhost:3000";
     
     // For new users, redirect to onboarding; for existing users, redirect to dashboard
@@ -242,9 +230,6 @@ export const googleCallbackHandler = httpAction(async (ctx, request) => {
     const frontendUrl = await ctx.runAction(
       api.functions.auth.getEnv.getEnvVar as any,
       { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
-    ) || await ctx.runAction(
-      api.functions.auth.getEnv.getEnvVar as any,
-      { key: "CLIENT_ORIGIN", defaultValue: "http://localhost:3000" }
     ) || "http://localhost:3000";
     
     const errorUrl = new URL("/login", frontendUrl);
