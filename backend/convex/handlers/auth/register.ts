@@ -46,7 +46,7 @@ export const registerHandler = httpAction(async (ctx, request) => {
     if (existingUser) {
       return new Response(
         JSON.stringify({
-          error: "An account with this email already exists. Please sign in instead.",
+          error: "An account with this email already exists. Please log in instead.",
         }),
         {
           status: 400,

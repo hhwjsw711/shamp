@@ -20,6 +20,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Toggle } from '@/components/ui/toggle'
+import { Spinner } from '@/components/ui/spinner'
 
 export const Route = createFileRoute('/auth/create-account')({
   component: CreateAccountPage,
@@ -247,7 +248,14 @@ function CreateAccountPage() {
                   disabled={isLoading}
                   size="lg"
                 >
-                  {isLoading ? 'Creating account...' : 'Create account'}
+                  {isLoading ? (
+                    <>
+                      <Spinner className="mr-2" />
+                      Creating account...
+                    </>
+                  ) : (
+                    'Create account'
+                  )}
                 </Button>
               </form>
             </Form>

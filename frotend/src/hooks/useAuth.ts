@@ -29,7 +29,7 @@ export function useAuth() {
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Registration failed',
+        error: error instanceof Error ? error.message : 'Account creation failed',
       }
     } finally {
       setLoading(false)

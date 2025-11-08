@@ -12,7 +12,7 @@ import { api, components, internal } from "../../_generated/api";
 import type { Doc, Id } from "../../_generated/dataModel";
 
 const resend = new Resend((components as any).resend, {
-  testMode: process.env.NODE_ENV !== "production",
+  testMode: false, // Set to false to allow sending to real email addresses
   onEmailEvent: (internal as any).functions.emails.mutations.handleEmailEvent as any,
 });
 
