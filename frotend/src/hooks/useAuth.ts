@@ -3,17 +3,17 @@
  * Provides authentication methods and state
  */
 
-import { useAuthStore } from '@/stores/authStore'
-import { api } from '@/lib/api'
 import type {
-  RegisterInput,
-  LoginInput,
   EmailVerificationInput,
+  LoginInput,
+  OnboardingInput,
+  PasswordResetCompleteInput,
   PasswordResetRequestInput,
   PasswordResetVerifyInput,
-  PasswordResetCompleteInput,
-  OnboardingInput,
+  RegisterInput,
 } from '@/lib/validations'
+import { useAuthStore } from '@/stores/authStore'
+import { api } from '@/lib/api'
 
 export function useAuth() {
   const { user, isAuthenticated, isLoading, setUser, setLoading, logout } =
@@ -22,10 +22,10 @@ export function useAuth() {
   const register = async (data: RegisterInput) => {
     try {
       setLoading(true)
-      await api.auth.register(data)
-      // After registration, send verification code
-      await api.emailVerification.sendCode({ email: data.email })
-      return { success: true }
+      const response = await api.auth.register(data)
+      // Registration already sends verification code on the backend
+      // No need to call sendCode separately
+      return { success: true, message: response.message }
     } catch (error) {
       return {
         success: false,

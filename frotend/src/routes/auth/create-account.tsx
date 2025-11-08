@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Loader2Icon, OctagonXIcon } from 'lucide-react'
 import type { RegisterInput } from '@/lib/validations'
@@ -43,6 +43,16 @@ function CreateAccountPage() {
       setError(null)
     }
   }
+
+  // Auto-dismiss error after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError(null)
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [error])
 
   const onSubmit = async (data: RegisterInput) => {
     setIsLoading(true)
