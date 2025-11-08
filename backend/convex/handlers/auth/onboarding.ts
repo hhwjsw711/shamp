@@ -16,6 +16,15 @@ import { formatName } from "../../utils/nameUtils";
  */
 export const completeOnboardingHandler = httpAction(async (ctx, request) => {
   try {
+    // Get origin from request header for CORS
+    const origin = request.headers.get("origin");
+    const frontendUrl = await ctx.runAction(
+      (api as any).functions.auth.getEnv.getEnvVar,
+      { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
+    ) || "http://localhost:3000";
+    
+    const allowedOrigin = origin || frontendUrl;
+
     // Extract session token from cookie using action
     const cookieHeader = request.headers.get("cookie");
     const sessionToken = await ctx.runAction(
@@ -30,7 +39,8 @@ export const completeOnboardingHandler = httpAction(async (ctx, request) => {
           status: 401,
           headers: {
             "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Origin": allowedOrigin,
+            "Access-Control-Allow-Credentials": "true",
           },
         }
       );
@@ -49,7 +59,8 @@ export const completeOnboardingHandler = httpAction(async (ctx, request) => {
           status: 401,
           headers: {
             "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Origin": allowedOrigin,
+            "Access-Control-Allow-Credentials": "true",
           },
         }
       );
@@ -68,7 +79,8 @@ export const completeOnboardingHandler = httpAction(async (ctx, request) => {
           status: 404,
           headers: {
             "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Origin": allowedOrigin,
+            "Access-Control-Allow-Credentials": "true",
           },
         }
       );
@@ -82,7 +94,8 @@ export const completeOnboardingHandler = httpAction(async (ctx, request) => {
           status: 400,
           headers: {
             "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Origin": allowedOrigin,
+            "Access-Control-Allow-Credentials": "true",
           },
         }
       );
@@ -144,19 +157,28 @@ export const completeOnboardingHandler = httpAction(async (ctx, request) => {
         status: 200,
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Origin": allowedOrigin,
+          "Access-Control-Allow-Credentials": "true",
         },
       }
     );
   } catch (error) {
     console.error("Onboarding error:", error);
+    const origin = request.headers.get("origin");
+    const frontendUrl = await ctx.runAction(
+      (api as any).functions.auth.getEnv.getEnvVar,
+      { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
+    ) || "http://localhost:3000";
+    
+    const allowedOrigin = origin || frontendUrl;
     return new Response(
       JSON.stringify({ error: getErrorMessage(error) }),
       {
         status: 400,
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Origin": allowedOrigin,
+          "Access-Control-Allow-Credentials": "true",
         },
       }
     );

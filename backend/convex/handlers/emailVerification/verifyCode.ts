@@ -16,6 +16,15 @@ import { isCodeExpired } from "../../utils/codeGeneration";
  */
 export const verifyCodeHandler = httpAction(async (ctx, request) => {
   try {
+    // Get origin from request header for CORS
+    const origin = request.headers.get("origin");
+    const frontendUrl = await ctx.runAction(
+      (api as any).functions.auth.getEnv.getEnvVar,
+      { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
+    ) || "http://localhost:3000";
+    
+    const allowedOrigin = origin || frontendUrl;
+
     // Rate limiting
     const ipAddress = extractIpAddress(request.headers) || "unknown";
     checkRateLimit(`verify-code:${ipAddress}`, {
@@ -34,7 +43,8 @@ export const verifyCodeHandler = httpAction(async (ctx, request) => {
           status: 400,
           headers: {
             "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Origin": allowedOrigin,
+            "Access-Control-Allow-Credentials": "true",
           },
         }
       );
@@ -54,7 +64,8 @@ export const verifyCodeHandler = httpAction(async (ctx, request) => {
           status: 400,
           headers: {
             "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Origin": allowedOrigin,
+            "Access-Control-Allow-Credentials": "true",
           },
         }
       );
@@ -68,7 +79,8 @@ export const verifyCodeHandler = httpAction(async (ctx, request) => {
           status: 400,
           headers: {
             "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Origin": allowedOrigin,
+            "Access-Control-Allow-Credentials": "true",
           },
         }
       );
@@ -82,7 +94,8 @@ export const verifyCodeHandler = httpAction(async (ctx, request) => {
           status: 400,
           headers: {
             "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Origin": allowedOrigin,
+            "Access-Control-Allow-Credentials": "true",
           },
         }
       );
@@ -104,12 +117,6 @@ export const verifyCodeHandler = httpAction(async (ctx, request) => {
       }
     );
 
-    // Get frontend URL for CORS
-    const frontendUrl = await ctx.runAction(
-      (api as any).functions.auth.getEnv.getEnvVar,
-      { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
-    );
-
     return new Response(
       JSON.stringify({
         success: true,
@@ -119,23 +126,28 @@ export const verifyCodeHandler = httpAction(async (ctx, request) => {
         status: 200,
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": frontendUrl || "http://localhost:3000",
+          "Access-Control-Allow-Origin": allowedOrigin,
+          "Access-Control-Allow-Credentials": "true",
         },
       }
     );
   } catch (error) {
     console.error("Verify code error:", error);
+    const origin = request.headers.get("origin");
     const frontendUrl = await ctx.runAction(
       (api as any).functions.auth.getEnv.getEnvVar,
       { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
-    );
+    ) || "http://localhost:3000";
+    
+    const allowedOrigin = origin || frontendUrl;
     return new Response(
       JSON.stringify({ error: getErrorMessage(error) }),
       {
         status: 400,
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": frontendUrl || "http://localhost:3000",
+          "Access-Control-Allow-Origin": allowedOrigin,
+          "Access-Control-Allow-Credentials": "true",
         },
       }
     );

@@ -86,13 +86,20 @@ export const registerHandler = httpAction(async (ctx, request) => {
     }
 
     // Send email verification code
-    await ctx.runAction(
-      (api as any).functions.emailVerification.actions.sendVerificationCode,
-      {
-        userId: user._id,
-        email: user.email,
-      }
-    );
+    try {
+      await ctx.runAction(
+        (api as any).functions.emailVerification.actions.sendVerificationCode,
+        {
+          userId: user._id,
+          email: user.email,
+        }
+      );
+      console.log(`Verification code sent to ${user.email}`);
+    } catch (emailError) {
+      console.error("Failed to send verification email:", emailError);
+      // Don't fail registration if email fails - user can request code again
+      // Log the error but continue with registration
+    }
 
     // Generate JWT token using action (user can stay logged in but needs to verify email)
     const token = await ctx.runAction(

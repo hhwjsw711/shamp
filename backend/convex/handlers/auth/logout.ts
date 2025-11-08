@@ -14,6 +14,15 @@ import { getErrorMessage } from "../../utils/errors";
  */
 export const logoutHandler = httpAction(async (ctx, request) => {
   try {
+    // Get origin from request header for CORS
+    const origin = request.headers.get("origin");
+    const frontendUrl = await ctx.runAction(
+      (api as any).functions.auth.getEnv.getEnvVar,
+      { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
+    ) || "http://localhost:3000";
+    
+    const allowedOrigin = origin || frontendUrl;
+
     // Extract session token from cookie using action
     const cookieHeader = request.headers.get("cookie");
     const sessionToken = await ctx.runAction(
@@ -48,12 +57,21 @@ export const logoutHandler = httpAction(async (ctx, request) => {
         headers: {
           "Content-Type": "application/json",
           "Set-Cookie": deleteCookieHeader,
-          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Origin": allowedOrigin,
+          "Access-Control-Allow-Credentials": "true",
         },
       }
     );
   } catch (error) {
     console.error("Logout error:", error);
+    const origin = request.headers.get("origin");
+    const frontendUrl = await ctx.runAction(
+      (api as any).functions.auth.getEnv.getEnvVar,
+      { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
+    ) || "http://localhost:3000";
+    
+    const allowedOrigin = origin || frontendUrl;
+    
     // Even if there's an error, clear the cookie
     const deleteCookieHeader = await ctx.runAction(
       api.functions.auth.authHelpers.createDeleteCookieAction as any,
@@ -69,7 +87,8 @@ export const logoutHandler = httpAction(async (ctx, request) => {
         headers: {
           "Content-Type": "application/json",
           "Set-Cookie": deleteCookieHeader,
-          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Origin": allowedOrigin,
+          "Access-Control-Allow-Credentials": "true",
         },
       }
     );

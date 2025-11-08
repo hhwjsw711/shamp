@@ -16,6 +16,15 @@ import { AuthenticationError, getErrorMessage } from "../../utils/errors";
  */
 export const loginHandler = httpAction(async (ctx, request) => {
   try {
+    // Get origin from request header for CORS
+    const origin = request.headers.get("origin");
+    const frontendUrl = await ctx.runAction(
+      (api as any).functions.auth.getEnv.getEnvVar,
+      { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
+    ) || "http://localhost:3000";
+    
+    const allowedOrigin = origin || frontendUrl;
+
     // Rate limiting
     const ipAddress = extractIpAddress(request.headers) || "unknown";
     checkRateLimit(`login:${ipAddress}`, {
@@ -104,12 +113,20 @@ export const loginHandler = httpAction(async (ctx, request) => {
         headers: {
           "Content-Type": "application/json",
           "Set-Cookie": cookieHeader,
-          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Origin": allowedOrigin,
+          "Access-Control-Allow-Credentials": "true",
         },
       }
     );
   } catch (error) {
     console.error("Login error:", error);
+    const origin = request.headers.get("origin");
+    const frontendUrl = await ctx.runAction(
+      (api as any).functions.auth.getEnv.getEnvVar,
+      { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
+    ) || "http://localhost:3000";
+    
+    const allowedOrigin = origin || frontendUrl;
     const statusCode = error instanceof AuthenticationError ? 401 : 400;
     return new Response(
       JSON.stringify({
@@ -119,7 +136,8 @@ export const loginHandler = httpAction(async (ctx, request) => {
         status: statusCode,
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Origin": allowedOrigin,
+          "Access-Control-Allow-Credentials": "true",
         },
       }
     );

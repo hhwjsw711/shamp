@@ -41,20 +41,27 @@ export const sendVerificationCode = action({
     );
 
     // Send email via Resend
-    await resend.sendEmail(ctx, {
-      from:
-        process.env.RESEND_FROM_EMAIL ||
-        "Shamp <notifications@shamp.io>",
-      to: args.email,
-      subject: "Verify your email address",
-      html: `
-        <h2>Email Verification</h2>
-        <p>Your verification code is:</p>
-        <h1 style="font-size: 32px; letter-spacing: 8px; text-align: center; margin: 20px 0;">${code}</h1>
-        <p>This code will expire in 15 minutes.</p>
-        <p>If you didn't request this code, please ignore this email.</p>
-      `,
-    });
+    try {
+      const emailResult = await resend.sendEmail(ctx, {
+        from:
+          process.env.RESEND_FROM_EMAIL ||
+          "Shamp <notifications@shamp.io>",
+        to: args.email,
+        subject: "Verify your email address",
+        html: `
+          <h2>Email Verification</h2>
+          <p>Your verification code is:</p>
+          <h1 style="font-size: 32px; letter-spacing: 8px; text-align: center; margin: 20px 0;">${code}</h1>
+          <p>This code will expire in 15 minutes.</p>
+          <p>If you didn't request this code, please ignore this email.</p>
+        `,
+      });
+      console.log(`Email sent successfully to ${args.email}:`, emailResult);
+    } catch (emailError) {
+      console.error(`Failed to send email to ${args.email}:`, emailError);
+      // Re-throw the error so the caller knows email failed
+      throw new Error(`Failed to send verification email: ${emailError instanceof Error ? emailError.message : 'Unknown error'}`);
+    }
 
     return { code };
   },
