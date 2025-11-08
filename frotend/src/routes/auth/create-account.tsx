@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/form'
 import { Separator } from '@/components/ui/separator'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Toggle } from '@/components/ui/toggle'
 
 export const Route = createFileRoute('/auth/create-account')({
   component: CreateAccountPage,
@@ -28,6 +29,7 @@ function CreateAccountPage() {
   const { register, getGoogleAuthUrl } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
 
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
@@ -189,11 +191,20 @@ function CreateAccountPage() {
                   control={form.control}
                   name="password"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="relative">
                       <FormLabel>Password</FormLabel>
+                      <Toggle
+                        pressed={showPassword}
+                        onPressedChange={setShowPassword}
+                        size="sm"
+                        aria-label="Toggle password visibility"
+                        className="absolute text-muted-foreground top-0 right-0 z-10 bg-transparent hover:bg-transparent data-[state=on]:bg-transparent h-auto p-0 min-w-0"
+                      >
+                        {showPassword ? 'Hide password' : 'Show password'}
+                      </Toggle>
                       <FormControl>
                         <Input
-                          type="password"
+                          type={showPassword ? "text" : "password"}
                           {...field}
                           onChange={(e) => {
                             field.onChange(e)
