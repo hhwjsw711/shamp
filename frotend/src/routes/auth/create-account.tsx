@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { OctagonXIcon } from 'lucide-react'
 import type { RegisterInput } from '@/lib/validations'
 import { registerSchema } from '@/lib/validations'
 import { useAuth } from '@/hooks/useAuth'
@@ -17,6 +18,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Separator } from '@/components/ui/separator'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 
 export const Route = createFileRoute('/auth/create-account')({
   component: CreateAccountPage,
@@ -25,6 +27,7 @@ export const Route = createFileRoute('/auth/create-account')({
 function CreateAccountPage() {
   const { register, getGoogleAuthUrl } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
@@ -34,8 +37,17 @@ function CreateAccountPage() {
     },
   })
 
+  // Clear error when form fields change
+  const handleFieldChange = () => {
+    if (error) {
+      setError(null)
+    }
+  }
+
   const onSubmit = async (data: RegisterInput) => {
     setIsLoading(true)
+    setError(null) // Clear previous errors
+
     const result = await register(data)
 
     if (result.success) {
@@ -44,7 +56,8 @@ function CreateAccountPage() {
       // Using window.location since the route doesn't exist yet
       window.location.href = `/auth/verify-email?email=${encodeURIComponent(data.email)}`
     } else {
-      toast.error(result.error || 'Failed to create account')
+      // Set error to display in Alert component
+      setError(result.error || 'Failed to create account')
     }
 
     setIsLoading(false)
@@ -142,6 +155,10 @@ function CreateAccountPage() {
                         <Input
                           type="email"
                           {...field}
+                          onChange={(e) => {
+                            field.onChange(e)
+                            handleFieldChange()
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -159,12 +176,40 @@ function CreateAccountPage() {
                         <Input
                           type="password"
                           {...field}
+                          onChange={(e) => {
+                            field.onChange(e)
+                            handleFieldChange()
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
+                <p className="text-sm text-muted-foreground">
+                  By creating an account, you agree to Shamp's{' '}
+                  <a
+                    href="/terms"
+                    className="text-primary hover:underline underline-offset-4"
+                  >
+                    Terms of Service
+                  </a>{' '}
+                  and{' '}
+                  <a
+                    href="/privacy"
+                    className="text-primary hover:underline underline-offset-4"
+                  >
+                    Privacy Policy
+                  </a>
+                </p>
+
+                {error && (
+                  <Alert variant="destructive">
+                    <OctagonXIcon />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
 
                 <Button
                   type="submit"

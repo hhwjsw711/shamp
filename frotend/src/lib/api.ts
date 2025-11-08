@@ -6,7 +6,7 @@
 const CONVEX_URL =
   import.meta.env.VITE_CONVEX_URL || 'https://your-convex-deployment.convex.cloud'
 
-interface RequestOptions extends RequestInit {
+interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown
 }
 
@@ -32,10 +32,12 @@ async function request<T>(
   const response = await fetch(`${CONVEX_URL}${endpoint}`, config)
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({
-      message: response.statusText,
+    const errorData = await response.json().catch(() => ({
+      error: response.statusText,
     }))
-    throw new Error(error.message || 'An error occurred')
+    // Backend returns { error: "message" } format
+    const errorMessage = errorData.error || errorData.message || 'An error occurred'
+    throw new Error(errorMessage)
   }
 
   return response.json()
