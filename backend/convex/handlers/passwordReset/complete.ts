@@ -1,0 +1,132 @@
+/**
+ * Password reset complete handler
+ * POST /api/auth/password-reset/complete
+ */
+
+/// <reference types="node" />
+
+import { httpAction } from "../../_generated/server";
+import { internal, api } from "../../_generated/api";
+import { validate, passwordResetCompleteSchema } from "../../utils/validation";
+import { extractIpAddress, checkRateLimit } from "../../utils/security";
+import { getErrorMessage } from "../../utils/errors";
+import { isCodeExpired } from "../../utils/codeGeneration";
+
+/**
+ * Complete password reset handler
+ */
+export const completePasswordResetHandler = httpAction(async (ctx, request) => {
+  try {
+    // Rate limiting
+    const ipAddress = extractIpAddress(request.headers) || "unknown";
+    checkRateLimit(`password-reset-complete:${ipAddress}`, {
+      maxAttempts: 5,
+      windowMs: 15 * 60 * 1000, // 15 minutes
+    });
+
+    // Parse and validate request body
+    const body = await request.json();
+    const { code, newPassword } = validate(passwordResetCompleteSchema, body);
+
+    // Get reset code
+    const resetCode = await ctx.runQuery(
+      (internal as any).functions.passwordReset.queries.getResetCodeByCodeInternal,
+      { code }
+    );
+
+    if (!resetCode) {
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired reset code" }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+          },
+        }
+      );
+    }
+
+    // Check if already used
+    if (resetCode.used) {
+      return new Response(
+        JSON.stringify({ error: "This reset code has already been used" }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+          },
+        }
+      );
+    }
+
+    // Check if expired
+    if (isCodeExpired(resetCode.expiresAt)) {
+      return new Response(
+        JSON.stringify({ error: "Reset code has expired. Please request a new one." }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+          },
+        }
+      );
+    }
+
+    // Hash new password using action
+    const hashedPassword = await ctx.runAction(
+      (api as any).functions.auth.authHelpers.hashPasswordAction,
+      { password: newPassword }
+    );
+
+    // Update user password
+    await ctx.runMutation(
+      (internal as any).functions.auth.mutations.updatePasswordInternal,
+      {
+        userId: resetCode.userId,
+        hashedPassword,
+      }
+    );
+
+    // Mark reset code as used
+    await ctx.runMutation(
+      (internal as any).functions.passwordReset.mutations.markCodeAsUsedInternal,
+      { codeId: resetCode._id }
+    );
+
+    // Delete all sessions for this user (force re-login with new password)
+    await ctx.runMutation(
+      (internal as any).functions.sessions.mutations.deleteSessionsByUserId,
+      { userId: resetCode.userId }
+    );
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: "Password reset successfully. Please sign in with your new password.",
+      }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+      }
+    );
+  } catch (error) {
+    console.error("Complete password reset error:", error);
+    return new Response(
+      JSON.stringify({ error: getErrorMessage(error) }),
+      {
+        status: 400,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+      }
+    );
+  }
+});
+

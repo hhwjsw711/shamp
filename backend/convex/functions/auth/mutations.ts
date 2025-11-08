@@ -68,6 +68,7 @@ export const createUserInternal = mutation({
     hashedPassword: v.optional(v.string()),
     googleId: v.optional(v.string()),
     profilePic: v.optional(v.string()),
+    emailVerified: v.optional(v.boolean()),
   },
   handler: async (ctx, args): Promise<Id<"users">> => {
     const userId = await ctx.db.insert("users", {
@@ -78,7 +79,7 @@ export const createUserInternal = mutation({
       hashedPassword: args.hashedPassword,
       googleId: args.googleId,
       profilePic: args.profilePic,
-      emailVerified: args.googleId ? true : false,
+      emailVerified: args.emailVerified ?? (args.googleId ? true : false),
       createdAt: Date.now(),
     });
 
@@ -94,6 +95,7 @@ export const createUserInternal = mutation({
  * @param location - Updated location (optional)
  * @param profilePic - Updated profile picture URL (optional)
  * @param emailVerified - Updated email verified status (optional)
+ * @param onboardingCompleted - Updated onboarding completed status (optional)
  */
 export const updateUser = mutation({
   args: {
@@ -103,6 +105,7 @@ export const updateUser = mutation({
     location: v.optional(v.string()),
     profilePic: v.optional(v.string()),
     emailVerified: v.optional(v.boolean()),
+    onboardingCompleted: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const user = await ctx.db.get(args.userId);
@@ -116,6 +119,7 @@ export const updateUser = mutation({
       location?: string;
       profilePic?: string;
       emailVerified?: boolean;
+      onboardingCompleted?: boolean;
     } = {};
 
     if (args.name !== undefined) updates.name = args.name;
@@ -123,17 +127,16 @@ export const updateUser = mutation({
     if (args.location !== undefined) updates.location = args.location;
     if (args.profilePic !== undefined) updates.profilePic = args.profilePic;
     if (args.emailVerified !== undefined) updates.emailVerified = args.emailVerified;
+    if (args.onboardingCompleted !== undefined) updates.onboardingCompleted = args.onboardingCompleted;
 
     await ctx.db.patch(args.userId, updates);
   },
 });
 
 /**
- * Update user password
- * @param userId - User ID
- * @param hashedPassword - New hashed password
+ * Internal mutation to update password (no auth required, for password reset)
  */
-export const updatePassword = mutation({
+export const updatePasswordInternal = mutation({
   args: {
     userId: v.id("users"),
     hashedPassword: v.string(),

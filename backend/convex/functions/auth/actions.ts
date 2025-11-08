@@ -80,15 +80,13 @@ export async function getGoogleUser(code: string): Promise<{
 }
 
 /**
- * Handle Google ID token login (for mobile apps)
- * @param idToken - Google ID token from mobile app
- * @param name - Optional name override
+ * Handle Google ID token login (for web apps - removed mobile support)
+ * @param idToken - Google ID token from web app
  * @returns JWT token and user info
  */
 export const handleGoogleIdTokenLogin = action({
   args: {
     idToken: v.string(),
-    name: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<{
     token: string;
@@ -96,21 +94,18 @@ export const handleGoogleIdTokenLogin = action({
     email: string;
     name?: string;
   }> => {
-    // Support both iOS and Android client IDs
     const clientId = process.env.GOOGLE_CLIENT_ID;
-    const clientIdIOS = process.env.GOOGLE_CLIENT_ID_IOS;
-    const clientIdAndroid = process.env.GOOGLE_CLIENT_ID_ANDROID;
     
-    const clientIds = [clientId].filter(Boolean) as string[];
-    if (clientIdIOS) clientIds.push(clientIdIOS);
-    if (clientIdAndroid) clientIds.push(clientIdAndroid);
+    if (!clientId) {
+      throw new Error("Google OAuth client ID is not configured");
+    }
 
-    const oAuth2ClientForMobile = new OAuth2Client();
+    const oAuth2Client = new OAuth2Client();
 
     // Verify ID token with Google
-    const ticket = await oAuth2ClientForMobile.verifyIdToken({
+    const ticket = await oAuth2Client.verifyIdToken({
       idToken: args.idToken,
-      audience: clientIds,
+      audience: clientId,
     });
 
     const payload = ticket.getPayload();
@@ -130,9 +125,10 @@ export const handleGoogleIdTokenLogin = action({
         (internal as any).functions.auth.mutations.createUserInternal,
         {
           email: payload.email,
-          name: args.name || payload.name || payload.email.split("@")[0],
+          name: payload.name || payload.email.split("@")[0],
           googleId: payload.sub,
           profilePic: payload.picture,
+          emailVerified: true,
         }
       );
       user = await ctx.runQuery(

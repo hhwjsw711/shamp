@@ -11,6 +11,7 @@ import { internal, api } from "../../_generated/api";
 import { extractIpAddress, checkRateLimit } from "../../utils/security";
 import { getErrorMessage } from "../../utils/errors";
 import { isCodeExpired } from "../../utils/codeGeneration";
+import { validate, emailVerificationCodeSchema } from "../../utils/validation";
 
 /**
  * Send email verification code handler
@@ -144,22 +145,9 @@ export const verifyCodeHandler = httpAction(async (ctx, request) => {
       windowMs: 15 * 60 * 1000, // 15 minutes
     });
 
-    // Parse request body
+    // Parse and validate request body
     const body = await request.json();
-    const { code } = body;
-
-    if (!code || typeof code !== "string") {
-      return new Response(
-        JSON.stringify({ error: "Verification code is required" }),
-        {
-          status: 400,
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-          },
-        }
-      );
-    }
+    const { code } = validate(emailVerificationCodeSchema, body);
 
     // Get verification code
     const verificationCode = await ctx.runQuery(

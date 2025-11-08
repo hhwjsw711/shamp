@@ -1,6 +1,7 @@
 /**
  * Email/password registration handler
  * POST /api/auth/register
+ * Only requires email and password - user completes onboarding after email verification
  */
 
 /// <reference types="node" />
@@ -23,12 +24,9 @@ export const registerHandler = httpAction(async (ctx, request) => {
       windowMs: 60 * 60 * 1000, // 1 hour
     });
 
-    // Parse and validate request body
+    // Parse and validate request body (only email and password)
     const body = await request.json();
-    const { email, password, name, orgName, location } = validate(
-      registerSchema,
-      body
-    );
+    const { email, password } = validate(registerSchema, body);
 
     // Check if user already exists
     const existingUser = await ctx.runQuery(
@@ -39,13 +37,13 @@ export const registerHandler = httpAction(async (ctx, request) => {
     if (existingUser) {
       return new Response(
         JSON.stringify({
-          error: "User with this email already exists",
+          error: "An account with this email already exists. Please sign in instead.",
         }),
         {
           status: 400,
           headers: {
             "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": process.env.CLIENT_ORIGIN || "*",
+            "Access-Control-Allow-Origin": "*",
           },
         }
       );
@@ -53,19 +51,17 @@ export const registerHandler = httpAction(async (ctx, request) => {
 
     // Hash password using action
     const hashedPassword = await ctx.runAction(
-      api.functions.auth.authHelpers.hashPasswordAction as any,
+      (api as any).functions.auth.authHelpers.hashPasswordAction,
       { password }
     );
 
-    // Create user
+    // Create user (emailVerified defaults to false, will be set after verification)
     const userId = await ctx.runMutation(
       (internal as any).functions.auth.mutations.createUserInternal,
       {
         email,
-        name,
-        orgName,
-        location,
         hashedPassword,
+        emailVerified: false,
       }
     );
 
@@ -79,20 +75,28 @@ export const registerHandler = httpAction(async (ctx, request) => {
       throw new Error("Failed to create user");
     }
 
-    // Generate JWT token using action
-    const token = await ctx.runAction(
-      api.functions.auth.authHelpers.generateTokenAction as any,
+    // Send email verification code
+    await ctx.runAction(
+      (api as any).functions.emailVerification.actions.sendVerificationCode,
       {
         userId: user._id,
         email: user.email,
-        name: user.name,
+      }
+    );
+
+    // Generate JWT token using action (user can stay logged in but needs to verify email)
+    const token = await ctx.runAction(
+      (api as any).functions.auth.authHelpers.generateTokenAction,
+      {
+        userId: user._id,
+        email: user.email,
         provider: "email",
       }
     );
 
     // Create secure cookie using action
     const cookieHeader = await ctx.runAction(
-      api.functions.auth.authHelpers.createSecureCookieAction as any,
+      (api as any).functions.auth.authHelpers.createSecureCookieAction,
       { token }
     );
 
@@ -112,12 +116,11 @@ export const registerHandler = httpAction(async (ctx, request) => {
     return new Response(
       JSON.stringify({
         success: true,
+        message: "Account created successfully. Please check your email to verify your account.",
         user: {
           id: user._id,
           email: user.email,
-          name: user.name,
-          orgName: user.orgName,
-          location: user.location,
+          emailVerified: user.emailVerified,
           onboardingCompleted: user.onboardingCompleted,
         },
       }),

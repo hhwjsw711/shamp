@@ -12,6 +12,15 @@ import { loginHandler } from "./handlers/auth/login";
 import { registerHandler } from "./handlers/auth/register";
 import { meHandler } from "./handlers/auth/me";
 import { logoutHandler } from "./handlers/auth/logout";
+import { completeOnboardingHandler } from "./handlers/auth/onboarding";
+
+// Import email verification handlers
+import { sendCodeHandler, verifyCodeHandler } from "./handlers/emailVerification/sendCode";
+
+// Import password reset handlers
+import { requestPasswordResetHandler } from "./handlers/passwordReset/request";
+import { verifyPasswordResetCodeHandler } from "./handlers/passwordReset/verify";
+import { completePasswordResetHandler } from "./handlers/passwordReset/complete";
 
 const http = httpRouter();
 
@@ -98,6 +107,45 @@ http.route({
   path: "/api/auth/logout",
   method: "POST",
   handler: logoutHandler,
+});
+
+// Email verification routes
+http.route({
+  path: "/api/auth/email-verification/send-code",
+  method: "POST",
+  handler: sendCodeHandler,
+});
+
+http.route({
+  path: "/api/auth/email-verification/verify-code",
+  method: "POST",
+  handler: verifyCodeHandler,
+});
+
+// Password reset routes
+http.route({
+  path: "/api/auth/password-reset/request",
+  method: "POST",
+  handler: requestPasswordResetHandler,
+});
+
+http.route({
+  path: "/api/auth/password-reset/verify",
+  method: "POST",
+  handler: verifyPasswordResetCodeHandler,
+});
+
+http.route({
+  path: "/api/auth/password-reset/complete",
+  method: "POST",
+  handler: completePasswordResetHandler,
+});
+
+// Onboarding route
+http.route({
+  path: "/api/auth/onboarding",
+  method: "POST",
+  handler: completeOnboardingHandler,
 });
 
 export default http;

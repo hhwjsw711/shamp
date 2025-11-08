@@ -8,6 +8,7 @@ import { httpAction } from "../../_generated/server";
 import { internal, api } from "../../_generated/api";
 import { extractIpAddress, extractUserAgent } from "../../utils/security";
 import { getErrorMessage } from "../../utils/errors";
+import { formatName } from "../../utils/nameUtils";
 
 /**
  * Get Google OAuth URL endpoint
@@ -114,15 +115,19 @@ export const googleCallbackHandler = httpAction(async (ctx, request) => {
       { email: googleUser.email }
     );
 
+    const isNewUser = !user;
+    let formattedName = formatName(googleUser.name);
+
     if (!user) {
-      // Create new user account with Google info
+      // Create new user account with Google info (emailVerified is true for Google accounts)
       const userId = await ctx.runMutation(
         (internal as any).functions.auth.mutations.createUserInternal,
         {
           email: googleUser.email,
-          name: googleUser.name || googleUser.email.split("@")[0],
+          name: formattedName,
           googleId: googleUser.googleId,
           profilePic: googleUser.picture,
+          emailVerified: true, // Google accounts are pre-verified
         }
       );
       user = await ctx.runQuery(
@@ -136,7 +141,7 @@ export const googleCallbackHandler = httpAction(async (ctx, request) => {
         {
           userId: user._id,
           googleId: googleUser.googleId,
-          name: googleUser.name,
+          name: formattedName || user.name,
           profilePic: googleUser.picture,
         }
       );
@@ -168,7 +173,7 @@ export const googleCallbackHandler = httpAction(async (ctx, request) => {
 
     // Generate JWT token using action
     const token = await ctx.runAction(
-      api.functions.auth.authHelpers.generateTokenAction as any,
+      (api as any).functions.auth.authHelpers.generateTokenAction,
       {
         userId: user._id,
         email: user.email,
@@ -179,7 +184,7 @@ export const googleCallbackHandler = httpAction(async (ctx, request) => {
 
     // Create secure cookie using action
     const cookieHeader = await ctx.runAction(
-      api.functions.auth.authHelpers.createSecureCookieAction as any,
+      (api as any).functions.auth.authHelpers.createSecureCookieAction,
       { token }
     );
 
@@ -207,17 +212,19 @@ export const googleCallbackHandler = httpAction(async (ctx, request) => {
     // Redirect to frontend with cookie set
     // Get frontend URL from environment variable using action
     const frontendUrl = await ctx.runAction(
-      api.functions.auth.getEnv.getEnvVar as any,
+      (api as any).functions.auth.getEnv.getEnvVar,
       { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
     ) || await ctx.runAction(
-      api.functions.auth.getEnv.getEnvVar as any,
+      (api as any).functions.auth.getEnv.getEnvVar,
       { key: "CLIENT_ORIGIN", defaultValue: "http://localhost:3000" }
     ) || "http://localhost:3000";
     
-    const redirectUrl = new URL("/auth/callback", frontendUrl);
-    if (!user.onboardingCompleted) {
-      redirectUrl.searchParams.set("onboarding", "true");
-    }
+    // For new users, redirect to onboarding; for existing users, redirect to dashboard
+    const redirectUrl = new URL(
+      isNewUser || !user.onboardingCompleted ? "/onboarding" : "/dashboard",
+      frontendUrl
+    );
+    
     if (state) {
       redirectUrl.searchParams.set("state", state);
     }

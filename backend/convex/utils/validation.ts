@@ -6,20 +6,27 @@ import { z } from "zod";
 import { ValidationError } from "./errors";
 
 /**
- * Email validation schema
+ * Email validation schema with detailed error messages
  */
-export const emailSchema = z.string().email("Invalid email format").min(1).max(255);
+export const emailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(1, "Email is required")
+  .max(255, "Email must be less than 255 characters")
+  .email("Please enter a valid email address");
 
 /**
- * Password validation schema
+ * Password validation schema with detailed error messages
  * Requirements: min 8 characters, at least one letter and one number
  */
 export const passwordSchema = z
   .string()
-  .min(8, "Password must be at least 8 characters")
+  .min(8, "Password must be at least 8 characters long")
+  .max(128, "Password must be less than 128 characters")
   .regex(/[a-zA-Z]/, "Password must contain at least one letter")
   .regex(/[0-9]/, "Password must contain at least one number")
-  .max(128, "Password must be less than 128 characters");
+  .regex(/^[^\s]+$/, "Password cannot contain spaces");
 
 /**
  * Pin validation schema (6-digit pin)
@@ -63,14 +70,48 @@ export const loginSchema = z.object({
 });
 
 /**
- * Register request schema
+ * Register request schema (email and password only)
  */
 export const registerSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
-  name: nameSchema.optional(),
-  orgName: orgNameSchema.optional(),
-  location: locationSchema.optional(),
+});
+
+/**
+ * Password reset request schema
+ */
+export const passwordResetRequestSchema = z.object({
+  email: emailSchema,
+});
+
+/**
+ * 6-digit code validation schema (for email verification and password reset)
+ */
+export const sixDigitCodeSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{6}$/, "Verification code must be exactly 6 digits");
+
+/**
+ * Email verification code schema
+ */
+export const emailVerificationCodeSchema = z.object({
+  code: sixDigitCodeSchema,
+});
+
+/**
+ * Password reset verify schema
+ */
+export const passwordResetVerifySchema = z.object({
+  code: sixDigitCodeSchema,
+});
+
+/**
+ * Password reset complete schema
+ */
+export const passwordResetCompleteSchema = z.object({
+  code: sixDigitCodeSchema,
+  newPassword: passwordSchema,
 });
 
 /**
@@ -106,11 +147,11 @@ export const updateProfileSchema = z.object({
 });
 
 /**
- * Validate data against a Zod schema
+ * Validate data against a Zod schema and return user-friendly error messages
  * @param schema - Zod schema to validate against
  * @param data - Data to validate
  * @returns Validated data
- * @throws ValidationError if validation fails
+ * @throws ValidationError with user-friendly message if validation fails
  */
 export function validate<T>(
   schema: z.ZodSchema<T>,
@@ -120,9 +161,16 @@ export function validate<T>(
   
   if (!result.success) {
     const errors = result.error.issues;
+    // Get the first error with the most specific message
     const firstError = errors[0];
+    
+    // Build a user-friendly error message
+    const field = firstError.path.length > 0 
+      ? `${firstError.path.join(".")}: ` 
+      : "";
+    
     throw new ValidationError(
-      firstError.message,
+      `${field}${firstError.message}`,
       firstError.path.join(".")
     );
   }
@@ -131,21 +179,41 @@ export function validate<T>(
 }
 
 /**
- * Validate email format
+ * Validate email format with user-friendly error message
  * @param email - Email to validate
- * @throws ValidationError if invalid
+ * @throws ValidationError with user-friendly message if invalid
  */
 export function validateEmail(email: string): void {
-  emailSchema.parse(email);
+  try {
+    emailSchema.parse(email);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new ValidationError(
+        error.issues[0].message,
+        "email"
+      );
+    }
+    throw error;
+  }
 }
 
 /**
- * Validate password strength
+ * Validate password strength with user-friendly error message
  * @param password - Password to validate
- * @throws ValidationError if invalid
+ * @throws ValidationError with user-friendly message if invalid
  */
 export function validatePassword(password: string): void {
-  passwordSchema.parse(password);
+  try {
+    passwordSchema.parse(password);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new ValidationError(
+        error.issues[0].message,
+        "password"
+      );
+    }
+    throw error;
+  }
 }
 
 /**
