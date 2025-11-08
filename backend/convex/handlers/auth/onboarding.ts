@@ -107,6 +107,19 @@ export const completeOnboardingHandler = httpAction(async (ctx, request) => {
       }
     );
 
+    // Generate PIN for user (optional, but recommended)
+    // PIN allows staff/guests to submit tickets without creating accounts
+    let pin: string | undefined;
+    try {
+      pin = await ctx.runAction(
+        (api as any).functions.pin.actions.generatePinAction,
+        { userId: user._id }
+      );
+    } catch (error) {
+      console.error("Failed to generate PIN during onboarding:", error);
+      // Continue without PIN - user can generate it later
+    }
+
     // Get updated user
     const updatedUser = await ctx.runQuery(
       (internal as any).functions.auth.queries.getUserByIdInternal,
@@ -125,6 +138,7 @@ export const completeOnboardingHandler = httpAction(async (ctx, request) => {
           location: updatedUser.location,
           onboardingCompleted: updatedUser.onboardingCompleted,
         },
+        pin: pin, // Return PIN so user can see it once (frontend should show this)
       }),
       {
         status: 200,

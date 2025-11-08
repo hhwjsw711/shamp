@@ -12,6 +12,8 @@ export default defineSchema({
     googleId: v.optional(v.string()), // Google OAuth ID
     hashedPassword: v.optional(v.string()), // Hashed password for email/password auth
     pin: v.optional(v.string()), // Hashed pin for staff/guest auth
+    pinCreatedAt: v.optional(v.number()), // When PIN was created/regenerated
+    pinEnabled: v.optional(v.boolean()), // Whether PIN sharing is enabled
     emailVerified: v.optional(v.boolean()),
     createdAt: v.number(),
     lastLoginAt: v.optional(v.number()),
@@ -59,14 +61,28 @@ export default defineSchema({
     .index("by_email", ["email"])
     .index("by_code", ["code"]),
 
+  // PIN sessions table for temporary tokens (PIN-based ticket submission)
+  pinSessions: defineTable({
+    pinOwnerId: v.id("users"), // User whose PIN was used
+    sessionToken: v.string(), // Temporary JWT token
+    expiresAt: v.number(),
+    ipAddress: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_sessionToken", ["sessionToken"])
+    .index("by_pinOwnerId", ["pinOwnerId"])
+    .index("by_expiresAt", ["expiresAt"]),
+
   // Tickets table
   tickets: defineTable({
     createdBy: v.id("users"),
+    name: v.optional(v.string()), // Ticket creator name (optional, can get from user if authenticated)
     issueType: v.optional(v.string()),
     predictedTags: v.array(v.string()),
     description: v.string(),
     location: v.optional(v.string()),
-    photoId: v.optional(v.id("_storage")),
+    photoId: v.optional(v.id("_storage")), // Required for PIN submissions, optional for authenticated
     createdAt: v.number(),
     status: v.string(),
     firecrawlResultsId: v.optional(v.id("firecrawlResults")),
@@ -77,6 +93,11 @@ export default defineSchema({
     verificationPhotoId: v.optional(v.id("_storage")),
     closedAt: v.optional(v.number()),
     embedding: v.optional(v.array(v.float64())),
+    // PIN submission fields
+    submittedViaPin: v.optional(v.boolean()), // Whether ticket was submitted via PIN
+    pinOwnerId: v.optional(v.id("users")), // Which user's PIN was used
+    submittedByEmail: v.optional(v.string()), // Email of PIN submitter (optional)
+    submittedByPhone: v.optional(v.string()), // Phone of PIN submitter (optional)
     quoteStatus: v.optional(
       v.union(
         v.literal("awaiting_quotes"),
@@ -90,6 +111,8 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_selectedVendorId", ["selectedVendorId"])
     .index("by_quoteStatus", ["quoteStatus"])
+    .index("by_pinOwnerId", ["pinOwnerId"])
+    .index("by_submittedViaPin", ["submittedViaPin"])
     .vectorIndex("by_embedding", {
       vectorField: "embedding",
       dimensions: 1536,

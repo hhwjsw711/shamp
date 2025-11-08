@@ -2,7 +2,7 @@
  * Authentication queries - Find users by various criteria
  */
 
-import { query } from "../../_generated/server";
+import { query, internalQuery } from "../../_generated/server";
 import { v } from "convex/values";
 import type { Id } from "../../_generated/dataModel";
 
@@ -70,4 +70,19 @@ export const findUserByEmailInternal = query({
       .first();
   },
 });
+
+/**
+ * Get all users with PIN enabled (internal query)
+ * Used for PIN validation
+ */
+export const getAllUsersWithPinInternal = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("pinEnabled"), true))
+      .collect();
+  },
+});
+
 

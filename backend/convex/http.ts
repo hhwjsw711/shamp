@@ -14,6 +14,7 @@ import { registerHandler } from "./handlers/auth/register";
 import { meHandler } from "./handlers/auth/me";
 import { logoutHandler } from "./handlers/auth/logout";
 import { completeOnboardingHandler } from "./handlers/auth/onboarding";
+import { validatePinHandler } from "./handlers/auth/validatePin";
 
 // Import email verification handlers
 import { sendCodeHandler, verifyCodeHandler } from "./handlers/emailVerification/sendCode";
@@ -34,6 +35,7 @@ import {
   closeTicketHandler,
   scheduleRepairHandler,
 } from "./handlers/tickets/index";
+import { submitTicketWithPinHandler } from "./handlers/tickets/submitWithPin";
 
 // Import vendor handlers
 import {
@@ -194,6 +196,13 @@ http.route({
   handler: completeOnboardingHandler,
 });
 
+// PIN validation route
+http.route({
+  path: "/api/auth/validate-pin",
+  method: "POST",
+  handler: validatePinHandler,
+});
+
 /**
  * Ticket Routes
  */
@@ -252,6 +261,13 @@ http.route({
   path: "/api/tickets/:id/schedule",
   method: "POST",
   handler: scheduleRepairHandler,
+});
+
+// Submit ticket with PIN (for staff/guests)
+http.route({
+  path: "/api/tickets/submit-with-pin",
+  method: "POST",
+  handler: submitTicketWithPinHandler,
 });
 
 /**

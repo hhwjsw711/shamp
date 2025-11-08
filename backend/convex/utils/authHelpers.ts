@@ -12,9 +12,11 @@ import { AuthenticationError } from "./errors";
  */
 export interface JWTPayload {
   userId: string;
-  email: string;
+  email?: string;
   name?: string;
   provider: "google" | "email" | "pin";
+  pinOwnerId?: string; // For PIN sessions
+  type?: "pin_session"; // For PIN sessions
 }
 
 /**

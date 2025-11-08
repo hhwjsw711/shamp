@@ -38,6 +38,11 @@ import type * as functions_firecrawlResults_queries from "../functions/firecrawl
 import type * as functions_passwordReset_actions from "../functions/passwordReset/actions.js";
 import type * as functions_passwordReset_mutations from "../functions/passwordReset/mutations.js";
 import type * as functions_passwordReset_queries from "../functions/passwordReset/queries.js";
+import type * as functions_pin_actions from "../functions/pin/actions.js";
+import type * as functions_pin_mutations from "../functions/pin/mutations.js";
+import type * as functions_pin_queries from "../functions/pin/queries.js";
+import type * as functions_pinSessions_mutations from "../functions/pinSessions/mutations.js";
+import type * as functions_pinSessions_queries from "../functions/pinSessions/queries.js";
 import type * as functions_sessions_mutations from "../functions/sessions/mutations.js";
 import type * as functions_sessions_queries from "../functions/sessions/queries.js";
 import type * as functions_tickets_mutations from "../functions/tickets/mutations.js";
@@ -58,6 +63,7 @@ import type * as handlers_auth_logout from "../handlers/auth/logout.js";
 import type * as handlers_auth_me from "../handlers/auth/me.js";
 import type * as handlers_auth_onboarding from "../handlers/auth/onboarding.js";
 import type * as handlers_auth_register from "../handlers/auth/register.js";
+import type * as handlers_auth_validatePin from "../handlers/auth/validatePin.js";
 import type * as handlers_conversations_index from "../handlers/conversations/index.js";
 import type * as handlers_emailVerification_sendCode from "../handlers/emailVerification/sendCode.js";
 import type * as handlers_emailVerification_verifyCode from "../handlers/emailVerification/verifyCode.js";
@@ -67,6 +73,7 @@ import type * as handlers_passwordReset_complete from "../handlers/passwordReset
 import type * as handlers_passwordReset_request from "../handlers/passwordReset/request.js";
 import type * as handlers_passwordReset_verify from "../handlers/passwordReset/verify.js";
 import type * as handlers_tickets_index from "../handlers/tickets/index.js";
+import type * as handlers_tickets_submitWithPin from "../handlers/tickets/submitWithPin.js";
 import type * as handlers_vendors_index from "../handlers/vendors/index.js";
 import type * as http from "../http.js";
 import type * as prompts_classifyIssue from "../prompts/classifyIssue.js";
@@ -132,6 +139,11 @@ declare const fullApi: ApiFromModules<{
   "functions/passwordReset/actions": typeof functions_passwordReset_actions;
   "functions/passwordReset/mutations": typeof functions_passwordReset_mutations;
   "functions/passwordReset/queries": typeof functions_passwordReset_queries;
+  "functions/pin/actions": typeof functions_pin_actions;
+  "functions/pin/mutations": typeof functions_pin_mutations;
+  "functions/pin/queries": typeof functions_pin_queries;
+  "functions/pinSessions/mutations": typeof functions_pinSessions_mutations;
+  "functions/pinSessions/queries": typeof functions_pinSessions_queries;
   "functions/sessions/mutations": typeof functions_sessions_mutations;
   "functions/sessions/queries": typeof functions_sessions_queries;
   "functions/tickets/mutations": typeof functions_tickets_mutations;
@@ -152,6 +164,7 @@ declare const fullApi: ApiFromModules<{
   "handlers/auth/me": typeof handlers_auth_me;
   "handlers/auth/onboarding": typeof handlers_auth_onboarding;
   "handlers/auth/register": typeof handlers_auth_register;
+  "handlers/auth/validatePin": typeof handlers_auth_validatePin;
   "handlers/conversations/index": typeof handlers_conversations_index;
   "handlers/emailVerification/sendCode": typeof handlers_emailVerification_sendCode;
   "handlers/emailVerification/verifyCode": typeof handlers_emailVerification_verifyCode;
@@ -161,6 +174,7 @@ declare const fullApi: ApiFromModules<{
   "handlers/passwordReset/request": typeof handlers_passwordReset_request;
   "handlers/passwordReset/verify": typeof handlers_passwordReset_verify;
   "handlers/tickets/index": typeof handlers_tickets_index;
+  "handlers/tickets/submitWithPin": typeof handlers_tickets_submitWithPin;
   "handlers/vendors/index": typeof handlers_vendors_index;
   http: typeof http;
   "prompts/classifyIssue": typeof prompts_classifyIssue;

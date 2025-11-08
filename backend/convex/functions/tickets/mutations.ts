@@ -13,16 +13,23 @@ import type { Id } from "../../_generated/dataModel";
 export const createInternal = internalMutation({
   args: {
     createdBy: v.id("users"),
+    name: v.optional(v.string()), // Ticket creator name (optional, can get from user if authenticated)
     description: v.string(),
     location: v.optional(v.string()),
     photoId: v.optional(v.id("_storage")),
     issueType: v.optional(v.string()),
     predictedTags: v.optional(v.array(v.string())),
     status: v.optional(v.string()),
+    // PIN submission fields
+    submittedViaPin: v.optional(v.boolean()),
+    pinOwnerId: v.optional(v.id("users")),
+    submittedByEmail: v.optional(v.string()),
+    submittedByPhone: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<Id<"tickets">> => {
     const ticketId = await ctx.db.insert("tickets", {
       createdBy: args.createdBy,
+      name: args.name,
       description: args.description,
       location: args.location,
       photoId: args.photoId,
@@ -30,6 +37,10 @@ export const createInternal = internalMutation({
       predictedTags: args.predictedTags || [],
       status: args.status || "New",
       createdAt: Date.now(),
+      submittedViaPin: args.submittedViaPin || false,
+      pinOwnerId: args.pinOwnerId,
+      submittedByEmail: args.submittedByEmail,
+      submittedByPhone: args.submittedByPhone,
     });
 
     return ticketId;

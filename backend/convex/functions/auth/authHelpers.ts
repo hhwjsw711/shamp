@@ -103,3 +103,27 @@ export const createDeleteCookieAction = action({
   },
 });
 
+/**
+ * Generate PIN session token action (for HTTP handlers)
+ * Creates a short-lived token (1 hour) for PIN-based ticket submission
+ */
+export const generatePinSessionTokenAction = action({
+  args: {
+    pinOwnerId: v.string(),
+  },
+  handler: async (_ctx, args): Promise<string> => {
+    const jwt = require("jsonwebtoken");
+    const JWT_SECRET = process.env.JWT_SECRET || "FAKE_SECRET_MUST_REPLACE";
+    
+    const payload: JWTPayload = {
+      userId: args.pinOwnerId,
+      pinOwnerId: args.pinOwnerId,
+      provider: "pin",
+      type: "pin_session",
+    };
+    
+    // 1 hour expiry for PIN sessions
+    return jwt.sign(payload, JWT_SECRET, { expiresIn: "1h" });
+  },
+});
+

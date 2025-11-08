@@ -63,7 +63,7 @@ export const createTicketHandler = httpAction(async (ctx, request) => {
     }
 
     const body = await request.json();
-    const { description, location, photoId, issueType, predictedTags } = body;
+    const { description, location, photoId, issueType, predictedTags, name } = body;
 
     if (!description || typeof description !== "string") {
       return new Response(
@@ -82,6 +82,7 @@ export const createTicketHandler = httpAction(async (ctx, request) => {
       (internal as any).functions.tickets.mutations.createInternal,
       {
         createdBy: user.userId as any,
+        name: name || user.name, // Use provided name or user's name
         description,
         location,
         photoId: photoId ? (photoId as any) : undefined,
