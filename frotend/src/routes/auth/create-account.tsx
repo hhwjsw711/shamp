@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { OctagonXIcon } from 'lucide-react'
+import { Loader2Icon, OctagonXIcon } from 'lucide-react'
 import type { RegisterInput } from '@/lib/validations'
 import { registerSchema } from '@/lib/validations'
 import { useAuth } from '@/hooks/useAuth'
@@ -122,12 +122,21 @@ function CreateAccountPage() {
               onClick={handleGoogleSignUp}
               disabled={isLoading}
             >
-              <img
-                src="/google-icon-logo.svg"
-                alt="Google"
-                className="w-5 h-5 mr-2"
-              />
-              Get started with Google
+              {isLoading ? (
+                <>
+                  <Loader2Icon className="w-5 h-5 mr-2 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <img
+                    src="/google-icon-logo.svg"
+                    alt="Google"
+                    className="w-5 h-5 mr-2"
+                  />
+                  Get started with Google
+                </>
+              )}
             </Button>
           </section>
 
