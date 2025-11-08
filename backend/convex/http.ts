@@ -89,26 +89,111 @@ http.route({
 });
 
 /**
- * CORS preflight handler for all routes
+ * CORS preflight handler helper function
+ */
+const corsPreflightHandler = httpAction(async (ctx, request) => {
+  // Get origin from request header for CORS
+  const origin = request.headers.get("origin");
+  const frontendUrl = await ctx.runAction(
+    (api as any).functions.auth.getEnv.getEnvVar,
+    { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
+  ) || "http://localhost:3000";
+  
+  // Use origin from request if available, otherwise fallback to FRONTEND_URL
+  const allowedOrigin = origin || frontendUrl;
+  
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": allowedOrigin,
+      "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Allow-Credentials": "true",
+      "Access-Control-Max-Age": "86400",
+    },
+  });
+});
+
+/**
+ * CORS preflight handlers for specific routes
+ * Convex requires explicit OPTIONS handlers for each route
  */
 http.route({
-  path: "/:path*",
+  path: "/api/auth/google/url",
   method: "OPTIONS",
-  handler: httpAction(async (ctx) => {
-    const frontendUrl = await ctx.runAction(
-      (api as any).functions.auth.getEnv.getEnvVar,
-      { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
-    );
-    return new Response(null, {
-      status: 204,
-      headers: {
-        "Access-Control-Allow-Origin": frontendUrl || "http://localhost:3000",
-        "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        "Access-Control-Max-Age": "86400",
-      },
-    });
-  }),
+  handler: corsPreflightHandler,
+});
+
+http.route({
+  path: "/api/auth/google/callback",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
+});
+
+http.route({
+  path: "/api/auth/login",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
+});
+
+http.route({
+  path: "/api/auth/register",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
+});
+
+http.route({
+  path: "/api/auth/me",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
+});
+
+http.route({
+  path: "/api/auth/logout",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
+});
+
+http.route({
+  path: "/api/auth/email-verification/send-code",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
+});
+
+http.route({
+  path: "/api/auth/email-verification/verify-code",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
+});
+
+http.route({
+  path: "/api/auth/password-reset/request",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
+});
+
+http.route({
+  path: "/api/auth/password-reset/verify",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
+});
+
+http.route({
+  path: "/api/auth/password-reset/complete",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
+});
+
+http.route({
+  path: "/api/auth/onboarding",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
+});
+
+http.route({
+  path: "/api/auth/validate-pin",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
 });
 
 /**

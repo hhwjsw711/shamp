@@ -3,8 +3,21 @@
  * Handles all HTTP requests to the backend endpoints
  */
 
+// Get Convex HTTP routes URL from environment variable
+// For Convex HTTP routes, use: https://<deployment-name>.convex.site
+// VITE_CONVEX_URL is for API (queries/mutations) - uses .convex.cloud
+// VITE_CONVEX_SITE_URL is for HTTP routes - uses .convex.site
 const CONVEX_URL =
-  import.meta.env.VITE_CONVEX_URL || 'https://your-convex-deployment.convex.cloud'
+  import.meta.env.VITE_CONVEX_SITE_URL || 
+  import.meta.env.VITE_CONVEX_URL?.replace('.convex.cloud', '.convex.site') ||
+  (() => {
+    console.error(
+      'Missing VITE_CONVEX_SITE_URL or VITE_CONVEX_URL environment variable.\n' +
+      'Set VITE_CONVEX_SITE_URL=https://<your-deployment>.convex.site in your .env file.\n' +
+      'You can find your deployment URL by running: npx convex dev'
+    )
+    return ''
+  })()
 
 interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown
@@ -14,6 +27,13 @@ async function request<T>(
   endpoint: string,
   options: RequestOptions = {}
 ): Promise<T> {
+  if (!CONVEX_URL) {
+    throw new Error(
+      'Convex URL is not configured. Please set VITE_CONVEX_SITE_URL or VITE_CONVEX_URL in your .env file.\n' +
+      'For HTTP routes, use: VITE_CONVEX_SITE_URL=https://<your-deployment>.convex.site'
+    )
+  }
+
   const { body, headers = {}, ...restOptions } = options
 
   const config: RequestInit = {
@@ -29,7 +49,14 @@ async function request<T>(
     config.body = JSON.stringify(body)
   }
 
-  const response = await fetch(`${CONVEX_URL}${endpoint}`, config)
+  const fullUrl = `${CONVEX_URL}${endpoint}`
+  
+  // Log the URL in development for debugging
+  if (import.meta.env.DEV) {
+    console.log('API Request:', fullUrl)
+  }
+
+  const response = await fetch(fullUrl, config)
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({
@@ -37,6 +64,17 @@ async function request<T>(
     }))
     // Backend returns { error: "message" } format
     const errorMessage = errorData.error || errorData.message || 'An error occurred'
+    
+    // Log full error details in development
+    if (import.meta.env.DEV) {
+      console.error('API Error:', {
+        url: fullUrl,
+        status: response.status,
+        statusText: response.statusText,
+        error: errorMessage,
+      })
+    }
+    
     throw new Error(errorMessage)
   }
 

@@ -19,6 +19,16 @@ export const getGoogleAuthUrlHandler = httpAction(async (_ctx, request) => {
     const url = new URL(request.url);
     const state = url.searchParams.get("state") || "";
 
+    // Get origin from request header for CORS
+    const origin = request.headers.get("origin");
+    const frontendUrl = await _ctx.runAction(
+      (api as any).functions.auth.getEnv.getEnvVar,
+      { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
+    ) || "http://localhost:3000";
+    
+    // Use origin from request if available, otherwise fallback to FRONTEND_URL
+    const allowedOrigin = origin || frontendUrl;
+
     // Get Google OAuth URL using action
     const result = await _ctx.runAction(
       api.functions.auth.actions.getGoogleAuthUrlAction as any,
@@ -31,12 +41,23 @@ export const getGoogleAuthUrlHandler = httpAction(async (_ctx, request) => {
         status: 200,
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Origin": allowedOrigin,
+          "Access-Control-Allow-Credentials": "true",
+          "Access-Control-Allow-Methods": "GET, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
         },
       }
     );
   } catch (error) {
     console.error("Error generating Google OAuth URL:", error);
+    const origin = request.headers.get("origin");
+    const frontendUrl = await _ctx.runAction(
+      (api as any).functions.auth.getEnv.getEnvVar,
+      { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
+    ) || "http://localhost:3000";
+    
+    const allowedOrigin = origin || frontendUrl;
+    
     return new Response(
       JSON.stringify({
         error: "Failed to generate OAuth URL",
@@ -46,7 +67,10 @@ export const getGoogleAuthUrlHandler = httpAction(async (_ctx, request) => {
         status: 500,
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Origin": allowedOrigin,
+          "Access-Control-Allow-Credentials": "true",
+          "Access-Control-Allow-Methods": "GET, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
         },
       }
     );
