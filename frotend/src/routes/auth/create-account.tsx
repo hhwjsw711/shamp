@@ -171,7 +171,7 @@ function CreateAccountPage() {
                   disabled={isLoading}
                   size="lg"
                 >
-                  {isLoading ? 'Creating account...' : 'Create Account'}
+                  {isLoading ? 'Creating account...' : 'Create account'}
                 </Button>
               </form>
             </Form>
