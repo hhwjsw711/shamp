@@ -80,7 +80,7 @@ function CreateAccountPage() {
         }
       `}</style>
 
-      <section className="w-full max-w-md p-4 rounded-[22px] flex flex-col items-start gap-3 bg-background/95 backdrop-blur-sm">
+      <section className="w-full max-w-md p-4 rounded-[22px] flex flex-col items-start gap-8 bg-background/95 backdrop-blur-sm">
         {/* Logo and heading section */}
         <section className="flex flex-col gap-1 w-full items-start">
           <img
@@ -97,13 +97,14 @@ function CreateAccountPage() {
         </section>
 
         {/* Form section */}
-        <section className="flex flex-col gap-2 w-full">
+        <section className="flex flex-col gap-4 w-full">
           {/* Google sign up button */}
           <section>
             <Button
               type="button"
               variant="outline"
               className="w-full"
+              size="lg"
               onClick={handleGoogleSignUp}
               disabled={isLoading}
             >
@@ -124,11 +125,11 @@ function CreateAccountPage() {
           </section>
 
           {/* Email and password form */}
-          <section className="flex flex-col gap-2">
+          <section className="flex flex-col gap-4">
             <Form {...form}>
               <form
                 onSubmit={form.handleSubmit(onSubmit)}
-                className="flex flex-col gap-2"
+                className="flex flex-col gap-4"
               >
                 <FormField
                   control={form.control}
@@ -139,7 +140,6 @@ function CreateAccountPage() {
                       <FormControl>
                         <Input
                           type="email"
-                          placeholder="Enter your email"
                           {...field}
                         />
                       </FormControl>
@@ -157,7 +157,6 @@ function CreateAccountPage() {
                       <FormControl>
                         <Input
                           type="password"
-                          placeholder="Create a password"
                           {...field}
                         />
                       </FormControl>
@@ -168,8 +167,9 @@ function CreateAccountPage() {
 
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full mt-4"
                   disabled={isLoading}
+                  size="lg"
                 >
                   {isLoading ? 'Creating account...' : 'Create Account'}
                 </Button>
