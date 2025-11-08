@@ -28,7 +28,8 @@ export const Route = createFileRoute('/auth/create-account')({
 
 function CreateAccountPage() {
   const { register, getGoogleAuthUrl } = useAuth()
-  const [isLoading, setIsLoading] = useState(false)
+  const [isEmailLoading, setIsEmailLoading] = useState(false)
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
 
@@ -58,7 +59,7 @@ function CreateAccountPage() {
   }, [error])
 
   const onSubmit = async (data: RegisterInput) => {
-    setIsLoading(true)
+    setIsEmailLoading(true)
     setError(null) // Clear previous errors
 
     const result = await register(data)
@@ -71,20 +72,19 @@ function CreateAccountPage() {
     } else {
       // Set error to display in Alert component
       setError(result.error || 'Failed to create account')
+      setIsEmailLoading(false)
     }
-
-    setIsLoading(false)
   }
 
   const handleGoogleSignUp = async () => {
-    setIsLoading(true)
+    setIsGoogleLoading(true)
     const result = await getGoogleAuthUrl()
 
     if (result.success && result.url) {
       window.location.href = result.url
     } else {
       toast.error(result.error || 'Failed to initiate Google sign up')
-      setIsLoading(false)
+      setIsGoogleLoading(false)
     }
   }
 
@@ -133,9 +133,9 @@ function CreateAccountPage() {
               className="w-full"
               size="lg"
               onClick={handleGoogleSignUp}
-              disabled={isLoading}
+              disabled={isEmailLoading || isGoogleLoading}
             >
-              {isLoading ? (
+              {isGoogleLoading ? (
                 <>
                   <Loader2Icon className="w-5 h-5 mr-2 animate-spin" />
                   Connecting...
@@ -245,10 +245,10 @@ function CreateAccountPage() {
                 <Button
                   type="submit"
                   className="w-full mt-4"
-                  disabled={isLoading}
+                  disabled={isEmailLoading || isGoogleLoading}
                   size="lg"
                 >
-                  {isLoading ? (
+                  {isEmailLoading ? (
                     <>
                       <Spinner className="mr-2" />
                       Creating account...
