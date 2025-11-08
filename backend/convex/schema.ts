@@ -1,0 +1,259 @@
+import { defineSchema, defineTable } from "convex/server";
+import { v } from "convex/values";
+
+export default defineSchema({
+  // Users table for custom authentication (email/password, Google OAuth, pin)
+  users: defineTable({
+    email: v.string(),
+    name: v.optional(v.string()),
+    orgName: v.optional(v.string()),
+    location: v.optional(v.string()),
+    profilePic: v.optional(v.string()), // URL to profile picture
+    googleId: v.optional(v.string()), // Google OAuth ID
+    hashedPassword: v.optional(v.string()), // Hashed password for email/password auth
+    pin: v.optional(v.string()), // Hashed pin for staff/guest auth
+    emailVerified: v.optional(v.boolean()),
+    createdAt: v.number(),
+    lastLoginAt: v.optional(v.number()),
+    onboardingCompleted: v.optional(v.boolean()),
+  })
+    .index("by_email", ["email"])
+    .index("by_googleId", ["googleId"]),
+
+  // Sessions table for cookie-based auth
+  sessions: defineTable({
+    userId: v.id("users"),
+    sessionToken: v.string(), // JWT token stored in cookie
+    expiresAt: v.number(),
+    ipAddress: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_sessionToken", ["sessionToken"])
+    .index("by_userId", ["userId"])
+    .index("by_expiresAt", ["expiresAt"]),
+
+  // Email verification codes table
+  emailVerificationCodes: defineTable({
+    userId: v.id("users"),
+    email: v.string(),
+    code: v.string(), // 6-digit code
+    expiresAt: v.number(),
+    verified: v.optional(v.boolean()),
+    createdAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_email", ["email"])
+    .index("by_code", ["code"]),
+
+  // Password reset codes table
+  passwordResetCodes: defineTable({
+    userId: v.id("users"),
+    email: v.string(),
+    code: v.string(), // 6-digit code
+    expiresAt: v.number(),
+    used: v.optional(v.boolean()),
+    createdAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_email", ["email"])
+    .index("by_code", ["code"]),
+
+  // Tickets table
+  tickets: defineTable({
+    createdBy: v.id("users"),
+    issueType: v.optional(v.string()),
+    predictedTags: v.array(v.string()),
+    description: v.string(),
+    location: v.optional(v.string()),
+    photoId: v.optional(v.id("_storage")),
+    createdAt: v.number(),
+    status: v.string(),
+    firecrawlResultsId: v.optional(v.id("firecrawlResults")),
+    selectedVendorId: v.optional(v.id("vendors")),
+    selectedVendorQuoteId: v.optional(v.id("vendorQuotes")),
+    conversationId: v.optional(v.id("conversations")),
+    scheduledDate: v.optional(v.number()),
+    verificationPhotoId: v.optional(v.id("_storage")),
+    closedAt: v.optional(v.number()),
+    embedding: v.optional(v.array(v.float64())),
+    quoteStatus: v.optional(
+      v.union(
+        v.literal("awaiting_quotes"),
+        v.literal("quotes_received"),
+        v.literal("vendor_selected"),
+        v.literal("scheduling")
+      )
+    ),
+  })
+    .index("by_createdBy", ["createdBy"])
+    .index("by_status", ["status"])
+    .index("by_selectedVendorId", ["selectedVendorId"])
+    .index("by_quoteStatus", ["quoteStatus"])
+    .vectorIndex("by_embedding", {
+      vectorField: "embedding",
+      dimensions: 1536,
+      filterFields: ["status", "issueType"],
+    }),
+
+  // Vendors table
+  vendors: defineTable({
+    businessName: v.string(),
+    email: v.string(),
+    phone: v.optional(v.string()),
+    specialty: v.string(),
+    address: v.string(),
+    rating: v.optional(v.number()),
+    emailStatus: v.optional(
+      v.union(
+        v.literal("valid"),
+        v.literal("invalid"),
+        v.literal("bounced"),
+        v.literal("complained"),
+        v.literal("doNotEmail")
+      )
+    ),
+    lastEmailError: v.optional(v.string()),
+    jobs: v.array(
+      v.object({
+        ticketId: v.id("tickets"),
+        assignedAt: v.number(),
+        completedAt: v.optional(v.number()),
+        feedback: v.optional(v.string()),
+      })
+    ),
+    embedding: v.optional(v.array(v.float64())),
+  })
+    .index("by_email", ["email"])
+    .vectorIndex("by_embedding", {
+      vectorField: "embedding",
+      dimensions: 1536,
+      filterFields: ["specialty"],
+    }),
+
+  // Email mappings for tracking Resend emails
+  emailMappings: defineTable({
+    emailId: v.string(), // Resend email ID
+    ticketId: v.id("tickets"),
+    vendorId: v.id("vendors"),
+    sentAt: v.number(),
+    status: v.optional(
+      v.union(
+        v.literal("sent"),
+        v.literal("delivered"),
+        v.literal("bounced"),
+        v.literal("complained"),
+        v.literal("opened"),
+        v.literal("clicked")
+      )
+    ),
+    lastEventAt: v.optional(v.number()),
+    bounceReason: v.optional(v.string()),
+  })
+    .index("by_emailId", ["emailId"])
+    .index("by_ticketId", ["ticketId"])
+    .index("by_vendorId", ["vendorId"]),
+
+  // Firecrawl results for vendor discovery
+  firecrawlResults: defineTable({
+    ticketId: v.id("tickets"),
+    results: v.array(
+      v.object({
+        businessName: v.string(),
+        email: v.optional(v.string()),
+        phone: v.optional(v.string()),
+        specialty: v.string(),
+        address: v.string(),
+        rating: v.optional(v.number()),
+        vendorId: v.optional(v.id("vendors")), // Optional vendor ID if vendor exists in database
+      })
+    ),
+    createdAt: v.number(),
+  }).index("by_ticketId", ["ticketId"]),
+
+  // Conversations table for ticket messaging
+  conversations: defineTable({
+    ticketId: v.id("tickets"),
+    messages: v.array(
+      v.object({
+        sender: v.union(
+          v.literal("user"),
+          v.literal("agent"),
+          v.literal("vendor")
+        ),
+        message: v.string(),
+        date: v.number(),
+      })
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    embedding: v.optional(v.array(v.float64())),
+  })
+    .index("by_ticketId", ["ticketId"])
+    .vectorIndex("by_embedding", {
+      vectorField: "embedding",
+      dimensions: 1536,
+      filterFields: ["ticketId"],
+    }),
+
+  // Vendor outreach tracking
+  vendorOutreach: defineTable({
+    ticketId: v.id("tickets"),
+    vendorId: v.id("vendors"),
+    emailId: v.string(), // Resend email ID
+    emailSentAt: v.number(),
+    status: v.union(
+      v.literal("sent"),
+      v.literal("delivered"),
+      v.literal("opened"),
+      v.literal("responded"),
+      v.literal("bounced"),
+      v.literal("expired")
+    ),
+    followUpSentAt: v.optional(v.number()),
+    expiresAt: v.number(), // Quote request expiration time
+    embedding: v.optional(v.array(v.float64())),
+  })
+    .index("by_ticketId", ["ticketId"])
+    .index("by_vendorId", ["vendorId"])
+    .index("by_emailId", ["emailId"])
+    .index("by_status", ["status"])
+    .vectorIndex("by_embedding", {
+      vectorField: "embedding",
+      dimensions: 1536,
+      filterFields: ["ticketId", "vendorId", "status"],
+    }),
+
+  // Vendor quotes
+  vendorQuotes: defineTable({
+    ticketId: v.id("tickets"),
+    vendorId: v.id("vendors"),
+    vendorOutreachId: v.id("vendorOutreach"),
+    price: v.number(), // Price in cents or smallest currency unit
+    currency: v.string(), // Currency code (USD, EUR, etc.)
+    estimatedDeliveryTime: v.number(), // Estimated time in hours
+    ratings: v.optional(v.number()), // Vendor-provided rating/review score
+    responseText: v.string(), // Raw email response from vendor
+    status: v.union(
+      v.literal("pending"),
+      v.literal("received"),
+      v.literal("selected"),
+      v.literal("rejected"),
+      v.literal("expired")
+    ),
+    responseReceivedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    score: v.optional(v.number()), // Calculated ranking score
+    embedding: v.optional(v.array(v.float64())),
+  })
+    .index("by_ticketId", ["ticketId"])
+    .index("by_vendorId", ["vendorId"])
+    .index("by_status", ["status"])
+    .index("by_ticketId_status", ["ticketId", "status"])
+    .vectorIndex("by_embedding", {
+      vectorField: "embedding",
+      dimensions: 1536,
+      filterFields: ["ticketId", "vendorId", "status"],
+    }),
+});
+

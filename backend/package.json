@@ -1,0 +1,28 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "type": "module",
+  "dependencies": {
+    "@ai-sdk/openai": "^2.0.64",
+    "@convex-dev/resend": "^0.1.13",
+    "ai": "^5.0.89",
+    "bcryptjs": "^3.0.3",
+    "convex": "^1.28.2",
+    "cookie": "^1.0.2",
+    "dotenv": "^17.2.3",
+    "google-auth-library": "^10.5.0",
+    "jsonwebtoken": "^9.0.2",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0"
+  }
+}
