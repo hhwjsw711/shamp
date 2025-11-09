@@ -1,6 +1,7 @@
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
+import { HeadContent, Scripts, createRootRoute, useLocation } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
+import { AnimatePresence } from 'motion/react'
 
 import appCss from '../styles.css?url'
 import { Toaster } from '@/components/ui/sonner'
@@ -54,13 +55,19 @@ export const Route = createRootRoute({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const location = useLocation()
+  
   return (
     <html lang="en" style={{ fontFamily: 'Manrope, sans-serif' }}>
       <head>
         <HeadContent />
       </head>
       <body>
-        {children}
+        <AnimatePresence mode="wait">
+          <div key={location.pathname}>
+            {children}
+          </div>
+        </AnimatePresence>
         <Toaster />
         <TanStackDevtools
           config={{

@@ -1,8 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { motion } from 'motion/react'
 import { Loader2Icon, OctagonXIcon } from 'lucide-react'
 import type { RegisterInput } from '@/lib/validations'
 import { registerSchema } from '@/lib/validations'
@@ -27,6 +28,7 @@ export const Route = createFileRoute('/auth/create-account')({
 })
 
 function CreateAccountPage() {
+  const navigate = useNavigate()
   const { register, getGoogleAuthUrl } = useAuth()
   const [isEmailLoading, setIsEmailLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
@@ -67,8 +69,10 @@ function CreateAccountPage() {
     if (result.success) {
       toast.success('Account created successfully!')
       // Navigate to verify email page with email in query params
-      // Using window.location since the route doesn't exist yet
-      window.location.href = `/auth/verify-email?email=${encodeURIComponent(data.email)}`
+      navigate({
+        to: '/auth/verify-email',
+        search: { email: data.email },
+      })
     } else {
       // Set error to display in Alert component
       setError(result.error || 'Failed to create account')
@@ -89,7 +93,11 @@ function CreateAccountPage() {
   }
 
   return (
-    <main
+    <motion.main
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
       className="min-h-screen flex items-center justify-center p-4 relative"
       style={{
         backgroundImage: "url('/auth-background.png')",
@@ -107,7 +115,12 @@ function CreateAccountPage() {
         }
       `}</style>
 
-      <section className="w-full max-w-md p-8 rounded-[22px] flex flex-col items-start gap-8 bg-background/98 backdrop-blur-md shadow-2xl border border-border/20 relative z-10">
+      <motion.section
+        initial={{ x: 0, opacity: 1 }}
+        exit={{ x: -20, opacity: 0 }}
+        transition={{ duration: 0.3, ease: 'easeIn' }}
+        className="w-full max-w-md p-8 rounded-[22px] flex flex-col items-start gap-8 bg-background/98 backdrop-blur-md shadow-2xl border border-border/20 relative z-10"
+      >
         {/* Logo and heading section */}
         <section className="flex flex-col gap-1 w-full items-start">
           <img
@@ -262,8 +275,8 @@ function CreateAccountPage() {
             </Form>
           </section>
         </section>
-      </section>
-    </main>
+      </motion.section>
+    </motion.main>
   )
 }
 

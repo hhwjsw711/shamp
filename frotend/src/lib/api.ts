@@ -132,12 +132,12 @@ export const api = {
         }
       ),
 
-    verifyCode: (data: { email: string; code: string }) =>
+    verifyCode: (data: { code: string }) =>
       request<{ message: string }>(
         '/api/auth/email-verification/verify-code',
         {
           method: 'POST',
-          body: data,
+          body: { code: data.code },
         }
       ),
   },

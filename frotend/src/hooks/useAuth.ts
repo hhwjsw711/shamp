@@ -101,7 +101,7 @@ export function useAuth() {
 
   const verifyEmail = async (data: EmailVerificationInput) => {
     try {
-      await api.emailVerification.verifyCode(data)
+      await api.emailVerification.verifyCode({ code: data.code })
       // Refresh user data after verification
       await getCurrentUser()
       return { success: true }

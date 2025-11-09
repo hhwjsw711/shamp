@@ -60,6 +60,16 @@ export const markCodeAsVerified = mutation({
 });
 
 /**
+ * Delete verification code
+ */
+export const deleteVerificationCode = mutation({
+  args: { codeId: v.id("emailVerificationCodes") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.codeId);
+  },
+});
+
+/**
  * Internal mutation to create verification code (no auth required)
  */
 export const createVerificationCodeInternal = mutation({

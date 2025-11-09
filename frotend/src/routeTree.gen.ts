@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthVerifyEmailRouteImport } from './routes/auth/verify-email'
 import { Route as AuthCreateAccountRouteImport } from './routes/auth/create-account'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthVerifyEmailRoute = AuthVerifyEmailRouteImport.update({
+  id: '/auth/verify-email',
+  path: '/auth/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthCreateAccountRoute = AuthCreateAccountRouteImport.update({
@@ -26,27 +32,31 @@ const AuthCreateAccountRoute = AuthCreateAccountRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth/create-account': typeof AuthCreateAccountRoute
+  '/auth/verify-email': typeof AuthVerifyEmailRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth/create-account': typeof AuthCreateAccountRoute
+  '/auth/verify-email': typeof AuthVerifyEmailRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth/create-account': typeof AuthCreateAccountRoute
+  '/auth/verify-email': typeof AuthVerifyEmailRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth/create-account'
+  fullPaths: '/' | '/auth/create-account' | '/auth/verify-email'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth/create-account'
-  id: '__root__' | '/' | '/auth/create-account'
+  to: '/' | '/auth/create-account' | '/auth/verify-email'
+  id: '__root__' | '/' | '/auth/create-account' | '/auth/verify-email'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthCreateAccountRoute: typeof AuthCreateAccountRoute
+  AuthVerifyEmailRoute: typeof AuthVerifyEmailRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/verify-email': {
+      id: '/auth/verify-email'
+      path: '/auth/verify-email'
+      fullPath: '/auth/verify-email'
+      preLoaderRoute: typeof AuthVerifyEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/create-account': {
@@ -71,6 +88,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthCreateAccountRoute: AuthCreateAccountRoute,
+  AuthVerifyEmailRoute: AuthVerifyEmailRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
