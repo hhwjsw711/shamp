@@ -5,8 +5,8 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { motion } from 'motion/react'
 import { Loader2Icon, OctagonXIcon } from 'lucide-react'
-import type { RegisterInput } from '@/lib/validations'
-import { registerSchema } from '@/lib/validations'
+import type { LoginInput } from '@/lib/validations'
+import { loginSchema } from '@/lib/validations'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,20 +23,20 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Toggle } from '@/components/ui/toggle'
 import { Spinner } from '@/components/ui/spinner'
 
-export const Route = createFileRoute('/auth/create-account')({
-  component: CreateAccountPage,
+export const Route = createFileRoute('/auth/login')({
+  component: LoginPage,
 })
 
-function CreateAccountPage() {
+function LoginPage() {
   const navigate = useNavigate()
-  const { register, getGoogleAuthUrl } = useAuth()
+  const { login, getGoogleAuthUrl } = useAuth()
   const [isEmailLoading, setIsEmailLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
 
-  const form = useForm<RegisterInput>({
-    resolver: zodResolver(registerSchema),
+  const form = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
     defaultValues: {
       email: '',
       password: '',
@@ -60,34 +60,42 @@ function CreateAccountPage() {
     }
   }, [error])
 
-  const onSubmit = async (data: RegisterInput) => {
+  const onSubmit = async (data: LoginInput) => {
     setIsEmailLoading(true)
-    setError(null) // Clear previous errors
+    setError(null)
 
-    const result = await register(data)
+    const result = await login(data)
 
-    if (result.success) {
-      toast.success('Account created successfully!')
-      // Navigate to verify email page with email in query params
-      navigate({
-        to: '/auth/verify-email',
-        search: { email: data.email },
-      })
+    if (result.success && result.user) {
+      toast.success('Logged in successfully!')
+      
+      // Check if user needs onboarding
+      const user = result.user as {
+        onboardingCompleted?: boolean
+        emailVerified?: boolean
+      }
+      
+      if (!user.onboardingCompleted) {
+        // First-time user - redirect to onboarding
+        navigate({ to: '/auth/onboarding', search: { token: undefined } })
+      } else {
+        // Existing user - redirect to home
+        navigate({ to: '/' })
+      }
     } else {
-      // Set error to display in Alert component
-      setError(result.error || 'Failed to create account')
+      setError(result.error || 'Failed to login')
       setIsEmailLoading(false)
     }
   }
 
-  const handleGoogleSignUp = async () => {
+  const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true)
     const result = await getGoogleAuthUrl()
 
     if (result.success && result.url) {
       window.location.href = result.url
     } else {
-      toast.error(result.error || 'Failed to initiate Google sign up')
+      toast.error(result.error || 'Failed to initiate Google sign in')
       setIsGoogleLoading(false)
     }
   }
@@ -117,16 +125,15 @@ function CreateAccountPage() {
       `}</style>
 
       <motion.section
-        initial={{ x: 0, opacity: 1 }}
+        initial={{ x: 20, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
         exit={{ x: -20, opacity: 0 }}
-        transition={{ duration: 0.3, ease: 'easeIn' }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
         className="w-full max-w-md p-8 rounded-[22px] flex flex-col items-start gap-8 bg-background/98 backdrop-blur-md shadow-2xl border border-border/20 relative z-10"
       >
-        
-
         {/* Heading section */}
         <section className="flex flex-col gap-2 w-full items-start">
-          {/* Header with logo and login button */}
+          {/* Header with logo and create account button */}
           <section className="w-full flex items-center justify-between">
             <img
               src="/shamp-logo.svg"
@@ -136,35 +143,35 @@ function CreateAccountPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate({ to: '/auth/login' })}
+              onClick={() => navigate({ to: '/auth/create-account' })}
             >
-              Login
+              Create account
             </Button>
           </section>
           <h1 className="text-2xl font-semibold text-foreground">
-            Maintenance management made simple for hotels & restaurants
+            Welcome back
           </h1>
           <p className="text-sm text-muted-foreground">
-            Create account below to get started
+            Log in to your account to continue
           </p>
         </section>
 
         {/* Form section */}
         <section className="flex flex-col gap-4 w-full">
-          {/* Google sign up button */}
+          {/* Google sign in button */}
           <section>
             <Button
               type="button"
               variant="glass"
               className="w-full"
               size="lg"
-              onClick={handleGoogleSignUp}
+              onClick={handleGoogleSignIn}
               disabled={isEmailLoading || isGoogleLoading}
             >
               {isGoogleLoading ? (
                 <>
                   <Loader2Icon className="w-5 h-5 mr-2 animate-spin" />
-                  Connecting...
+                  Logging in...
                 </>
               ) : (
                 <>
@@ -173,7 +180,7 @@ function CreateAccountPage() {
                     alt="Google"
                     className="w-5 h-5 mr-2"
                   />
-                  Get started with Google
+                  Log in with Google
                 </>
               )}
             </Button>
@@ -231,7 +238,7 @@ function CreateAccountPage() {
                       </Toggle>
                       <FormControl>
                         <Input
-                          type={showPassword ? "text" : "password"}
+                          type={showPassword ? 'text' : 'password'}
                           {...field}
                           onChange={(e) => {
                             field.onChange(e)
@@ -243,23 +250,6 @@ function CreateAccountPage() {
                     </FormItem>
                   )}
                 />
-
-                <p className="text-sm text-muted-foreground">
-                  By creating an account, you agree to Shamp's{' '}
-                  <a
-                    href="/terms"
-                    className="text-primary hover:underline underline-offset-4"
-                  >
-                    Terms of Service
-                  </a>{' '}
-                  and{' '}
-                  <a
-                    href="/privacy"
-                    className="text-primary hover:underline underline-offset-4"
-                  >
-                    Privacy Policy
-                  </a>
-                </p>
 
                 {error && (
                   <Alert variant="destructive">
@@ -278,10 +268,10 @@ function CreateAccountPage() {
                   {isEmailLoading ? (
                     <>
                       <Spinner className="mr-2" />
-                      Creating account...
+                      Logging in...
                     </>
                   ) : (
-                    'Create account'
+                    'Log in'
                   )}
                 </Button>
               </form>

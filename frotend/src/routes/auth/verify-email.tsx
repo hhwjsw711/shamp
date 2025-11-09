@@ -68,7 +68,7 @@ function VerifyEmailPage() {
 
     if (result.success) {
       toast.success('Email verified successfully!')
-      navigate({ to: '/auth/onboarding', search: { token: undefined } })
+      navigate({ to: '/auth/login' })
     } else {
       setError(result.error || 'Failed to verify email')
       setIsVerifying(false)
@@ -111,6 +111,7 @@ function VerifyEmailPage() {
       transition={{ duration: 0.3 }}
       className="min-h-screen flex items-center justify-center p-4 relative"
       style={{
+        backgroundColor: '#fafafa',
         backgroundImage: "url('/auth-background.png')",
         backgroundSize: 'cover',
         backgroundPosition: 'right center',

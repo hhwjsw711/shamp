@@ -73,7 +73,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body style={{ backgroundColor: '#fafafa', margin: 0 }}>
         <AnimatePresence mode="wait">
           <div key={location.pathname}>
             {children}

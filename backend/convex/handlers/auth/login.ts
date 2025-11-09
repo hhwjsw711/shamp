@@ -106,6 +106,8 @@ export const loginHandler = httpAction(async (ctx, request) => {
           name: user.name,
           orgName: user.orgName,
           location: user.location,
+          emailVerified: user.emailVerified,
+          onboardingCompleted: user.onboardingCompleted,
         },
       }),
       {
