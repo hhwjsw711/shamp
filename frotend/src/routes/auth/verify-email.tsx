@@ -68,7 +68,7 @@ function VerifyEmailPage() {
 
     if (result.success) {
       toast.success('Email verified successfully!')
-      window.location.href = '/auth/onboarding'; // placeholder, real onboarding route TBD
+      navigate({ to: '/auth/onboarding', search: { token: undefined } })
     } else {
       setError(result.error || 'Failed to verify email')
       setIsVerifying(false)

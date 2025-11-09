@@ -36,10 +36,29 @@ async function request<T>(
 
   const { body, headers = {}, ...restOptions } = options
 
+  // Extract token from localStorage or cookie (for localhost fallback)
+  let sessionToken: string | null = null
+  if (typeof window !== 'undefined') {
+    // Try localStorage first (set from URL token)
+    sessionToken = localStorage.getItem('session_token')
+    
+    // Fallback to cookie if no localStorage token
+    if (!sessionToken && typeof document !== 'undefined') {
+      const cookies = document.cookie.split(';').map(c => c.trim())
+      const sessionCookie = cookies.find(c => c.startsWith('session='))
+      if (sessionCookie) {
+        sessionToken = sessionCookie.split('=')[1]
+      }
+    }
+  }
+
   const config: RequestInit = {
     ...restOptions,
     headers: {
       'Content-Type': 'application/json',
+      // For localhost: always use Authorization header if we have a token
+      // This bypasses cross-domain cookie issues
+      ...(sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {}),
       ...headers,
     },
     credentials: 'include', // Include cookies for session management
@@ -54,6 +73,8 @@ async function request<T>(
   // Log the URL in development for debugging
   if (import.meta.env.DEV) {
     console.log('API Request:', fullUrl)
+    console.log('Cookies:', document.cookie)
+    console.log('Session token from cookie:', sessionToken ? sessionToken.substring(0, 20) + '...' : 'None')
   }
 
   const response = await fetch(fullUrl, config)
@@ -72,6 +93,7 @@ async function request<T>(
         status: response.status,
         statusText: response.statusText,
         error: errorMessage,
+        cookies: document.cookie,
       })
     }
     

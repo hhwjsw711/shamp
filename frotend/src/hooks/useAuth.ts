@@ -80,6 +80,10 @@ export function useAuth() {
       // Continue with logout even if API call fails
       console.error('Logout error:', error)
     } finally {
+      // Clear localStorage token
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('session_token')
+      }
       logout()
     }
   }

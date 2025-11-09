@@ -197,10 +197,16 @@ export const googleCallbackHandler = httpAction(async (ctx, request) => {
       }
     );
 
+    // Get frontend URL for cookie configuration
+    const frontendUrl = await ctx.runAction(
+      (api as any).functions.auth.getEnv.getEnvVar,
+      { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
+    ) || "http://localhost:3000";
+
     // Create secure cookie using action
     const cookieHeader = await ctx.runAction(
       (api as any).functions.auth.authHelpers.createSecureCookieAction,
-      { token }
+      { token, frontendUrl }
     );
 
     // Create session in database
@@ -224,23 +230,34 @@ export const googleCallbackHandler = httpAction(async (ctx, request) => {
       }
     );
 
-    // Redirect to frontend with cookie set
-    // Get frontend URL from environment variable using action
-    const frontendUrl = await ctx.runAction(
-      (api as any).functions.auth.getEnv.getEnvVar,
-      { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
-    ) || "http://localhost:3000";
+    // For new users or users who haven't completed onboarding, redirect to onboarding
+    // For existing users who have completed onboarding, redirect to dashboard/home
+    const redirectPath = isNewUser || !user.onboardingCompleted 
+      ? "/auth/onboarding" 
+      : "/";
     
-    // For new users, redirect to onboarding; for existing users, redirect to dashboard
-    const redirectUrl = new URL(
-      isNewUser || !user.onboardingCompleted ? "/onboarding" : "/dashboard",
-      frontendUrl
-    );
+    const redirectUrl = new URL(redirectPath, frontendUrl);
     
     if (state) {
       redirectUrl.searchParams.set("state", state);
     }
 
+    // For localhost: browsers reject cookies in cross-origin redirects
+    // Solution: Pass token as URL parameter and let frontend set the cookie
+    const isLocalhost = frontendUrl.includes("localhost") || frontendUrl.includes("127.0.0.1");
+    if (isLocalhost) {
+      redirectUrl.searchParams.set("token", token);
+      // Still try to set cookie, but frontend will handle it if cookie fails
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: redirectUrl.toString(),
+          "Set-Cookie": cookieHeader,
+        },
+      });
+    }
+
+    // For production: use cookie only
     return new Response(null, {
       status: 302,
       headers: {

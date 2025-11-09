@@ -70,10 +70,10 @@ export const loginHandler = httpAction(async (ctx, request) => {
       }
     );
 
-    // Create secure cookie using action
+    // Create secure cookie using action (frontendUrl already declared above)
     const cookieHeader = await ctx.runAction(
       api.functions.auth.authHelpers.createSecureCookieAction as any,
-      { token }
+      { token, frontendUrl }
     );
 
     // Create session in database

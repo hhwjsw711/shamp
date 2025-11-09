@@ -6,6 +6,8 @@ import { AnimatePresence } from 'motion/react'
 import appCss from '../styles.css?url'
 import { Toaster } from '@/components/ui/sonner'
 
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
+
 export const Route = createRootRoute({
   head: () => ({
     meta: [
@@ -49,6 +51,15 @@ export const Route = createRootRoute({
         href: '/shamp-favicon.png',
       },
     ],
+    scripts: GOOGLE_MAPS_API_KEY
+      ? [
+          {
+            src: `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`,
+            async: true,
+            defer: true,
+          },
+        ]
+      : [],
   }),
 
   shellComponent: RootDocument,

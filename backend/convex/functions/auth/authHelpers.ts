@@ -87,9 +87,10 @@ export const createSecureCookieAction = action({
   args: {
     token: v.string(),
     maxAge: v.optional(v.number()),
+    frontendUrl: v.optional(v.string()),
   },
   handler: async (_ctx, args): Promise<string> => {
-    return createSecureCookie(args.token, args.maxAge);
+    return createSecureCookie(args.token, args.maxAge, args.frontendUrl);
   },
 });
 
@@ -97,9 +98,11 @@ export const createSecureCookieAction = action({
  * Create delete cookie action (for HTTP handlers)
  */
 export const createDeleteCookieAction = action({
-  args: {},
-  handler: async (_ctx): Promise<string> => {
-    return createDeleteCookie();
+  args: {
+    frontendUrl: v.optional(v.string()),
+  },
+  handler: async (_ctx, args): Promise<string> => {
+    return createDeleteCookie(args.frontendUrl);
   },
 });
 

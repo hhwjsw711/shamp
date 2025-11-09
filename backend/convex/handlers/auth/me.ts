@@ -16,10 +16,30 @@ export const meHandler = httpAction(async (ctx, request) => {
   try {
     // Extract session token from cookie using action
     const cookieHeader = request.headers.get("cookie");
-    const sessionToken = await ctx.runAction(
-      api.functions.auth.authHelpers.extractSessionTokenAction as any,
-      { cookieHeader }
-    );
+    
+    // Also check Authorization header as fallback for localhost
+    const authHeader = request.headers.get("authorization");
+    let sessionToken: string | null = null;
+    
+    // Try cookie first
+    if (cookieHeader) {
+      sessionToken = await ctx.runAction(
+        api.functions.auth.authHelpers.extractSessionTokenAction as any,
+        { cookieHeader }
+      );
+    }
+    
+    // Fallback to Authorization header if no cookie (for localhost development)
+    if (!sessionToken && authHeader?.startsWith("Bearer ")) {
+      sessionToken = authHeader.substring(7);
+    }
+    
+    // Debug logging
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[/api/auth/me] Cookie header:", cookieHeader ? "Present" : "Missing");
+      console.log("[/api/auth/me] Auth header:", authHeader ? "Present" : "Missing");
+      console.log("[/api/auth/me] Session token:", sessionToken ? "Found" : "Missing");
+    }
 
     // Get origin from request header for CORS
     const origin = request.headers.get("origin");
@@ -31,6 +51,9 @@ export const meHandler = httpAction(async (ctx, request) => {
     const allowedOrigin = origin || frontendUrl;
 
     if (!sessionToken) {
+      if (process.env.NODE_ENV !== "production") {
+        console.log("[/api/auth/me] No session token found. Cookie header:", cookieHeader);
+      }
       return new Response(
         JSON.stringify({
           error: "Not authenticated",

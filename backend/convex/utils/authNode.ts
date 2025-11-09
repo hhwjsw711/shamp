@@ -111,28 +111,63 @@ export async function comparePin(pin: string, hash: string): Promise<boolean> {
  * Create secure cookie string for session token
  * @param token - JWT token
  * @param maxAge - Max age in seconds (default: 7 days)
+ * @param frontendUrl - Frontend URL to determine cookie settings
  * @returns Cookie string
  */
 export function createSecureCookie(
   token: string,
-  maxAge: number = SESSION_EXPIRY_DAYS * 24 * 60 * 60
+  maxAge: number = SESSION_EXPIRY_DAYS * 24 * 60 * 60,
+  frontendUrl?: string
 ): string {
   const isProduction = process.env.NODE_ENV === "production";
+  const isLocalhost = frontendUrl?.includes("localhost") || frontendUrl?.includes("127.0.0.1");
   
-  return `session=${token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${maxAge}${
-    isProduction ? "; Domain=.convex.site" : ""
-  }`;
+  // For localhost: use None with Secure=false workaround, or Lax
+  // For cross-origin redirects, browsers may reject cookies set FROM different origin
+  // Solution: Use SameSite=None with Secure for cross-site, but for localhost we need a workaround
+  // Actually, for localhost redirects FROM convex.site, we MUST use SameSite=None and Secure
+  // But Secure requires HTTPS... so we need to pass token via URL param for localhost
+  
+  // Build cookie parts array
+  const parts: string[] = [`session=${token}`];
+  parts.push("HttpOnly");
+  
+  if (isLocalhost) {
+    // For localhost: Use Lax (works for same-site redirects)
+    // But if redirecting FROM convex.site TO localhost, this won't work
+    // So we'll use None without Secure as a workaround (some browsers allow this)
+    parts.push("SameSite=None");
+    // Don't add Secure for localhost HTTP
+  } else if (isProduction) {
+    // Production: Use None with Secure for cross-site
+    parts.push("Secure");
+    parts.push("SameSite=None");
+    parts.push("Domain=.convex.site");
+  } else {
+    // Staging/dev: Use Lax with Secure
+    parts.push("Secure");
+    parts.push("SameSite=Lax");
+  }
+  
+  parts.push("Path=/");
+  parts.push(`Max-Age=${maxAge}`);
+  
+  return parts.join("; ");
 }
 
 /**
  * Create cookie deletion string (expires immediately)
+ * @param frontendUrl - Frontend URL to determine cookie settings
  * @returns Cookie deletion string
  */
-export function createDeleteCookie(): string {
+export function createDeleteCookie(frontendUrl?: string): string {
   const isProduction = process.env.NODE_ENV === "production";
+  const isLocalhost = frontendUrl?.includes("localhost") || frontendUrl?.includes("127.0.0.1");
   
-  return `session=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0${
-    isProduction ? "; Domain=.convex.site" : ""
-  }`;
+  const sameSite = isLocalhost ? "Lax" : (isProduction ? "None" : "Lax");
+  const secure = isLocalhost ? "" : "Secure";
+  const domain = isProduction && !isLocalhost ? "; Domain=.convex.site" : "";
+  
+  return `session=; HttpOnly; ${secure}; SameSite=${sameSite}; Path=/; Max-Age=0${domain}`.replace(/;\s+/g, "; ").replace(/;\s*$/, "");
 }
 
