@@ -9,11 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthVerifyEmailRouteImport } from './routes/auth/verify-email'
-import { Route as AuthOnboardingRouteImport } from './routes/auth/onboarding'
 import { Route as AuthCreateAccountRouteImport } from './routes/auth/create-account'
+import { Route as AuthenticatedAuthOnboardingRouteImport } from './routes/_authenticated/auth/onboarding'
 
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -24,62 +29,72 @@ const AuthVerifyEmailRoute = AuthVerifyEmailRouteImport.update({
   path: '/auth/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthOnboardingRoute = AuthOnboardingRouteImport.update({
-  id: '/auth/onboarding',
-  path: '/auth/onboarding',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthCreateAccountRoute = AuthCreateAccountRouteImport.update({
   id: '/auth/create-account',
   path: '/auth/create-account',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAuthOnboardingRoute =
+  AuthenticatedAuthOnboardingRouteImport.update({
+    id: '/auth/onboarding',
+    path: '/auth/onboarding',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth/create-account': typeof AuthCreateAccountRoute
-  '/auth/onboarding': typeof AuthOnboardingRoute
   '/auth/verify-email': typeof AuthVerifyEmailRoute
+  '/auth/onboarding': typeof AuthenticatedAuthOnboardingRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth/create-account': typeof AuthCreateAccountRoute
-  '/auth/onboarding': typeof AuthOnboardingRoute
   '/auth/verify-email': typeof AuthVerifyEmailRoute
+  '/auth/onboarding': typeof AuthenticatedAuthOnboardingRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/auth/create-account': typeof AuthCreateAccountRoute
-  '/auth/onboarding': typeof AuthOnboardingRoute
   '/auth/verify-email': typeof AuthVerifyEmailRoute
+  '/_authenticated/auth/onboarding': typeof AuthenticatedAuthOnboardingRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/auth/create-account'
-    | '/auth/onboarding'
     | '/auth/verify-email'
+    | '/auth/onboarding'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth/create-account' | '/auth/onboarding' | '/auth/verify-email'
+  to: '/' | '/auth/create-account' | '/auth/verify-email' | '/auth/onboarding'
   id:
     | '__root__'
     | '/'
+    | '/_authenticated'
     | '/auth/create-account'
-    | '/auth/onboarding'
     | '/auth/verify-email'
+    | '/_authenticated/auth/onboarding'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthCreateAccountRoute: typeof AuthCreateAccountRoute
-  AuthOnboardingRoute: typeof AuthOnboardingRoute
   AuthVerifyEmailRoute: typeof AuthVerifyEmailRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -94,13 +109,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthVerifyEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/auth/onboarding': {
-      id: '/auth/onboarding'
-      path: '/auth/onboarding'
-      fullPath: '/auth/onboarding'
-      preLoaderRoute: typeof AuthOnboardingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/auth/create-account': {
       id: '/auth/create-account'
       path: '/auth/create-account'
@@ -108,13 +116,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCreateAccountRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/auth/onboarding': {
+      id: '/_authenticated/auth/onboarding'
+      path: '/auth/onboarding'
+      fullPath: '/auth/onboarding'
+      preLoaderRoute: typeof AuthenticatedAuthOnboardingRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedAuthOnboardingRoute: typeof AuthenticatedAuthOnboardingRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAuthOnboardingRoute: AuthenticatedAuthOnboardingRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthCreateAccountRoute: AuthCreateAccountRoute,
-  AuthOnboardingRoute: AuthOnboardingRoute,
   AuthVerifyEmailRoute: AuthVerifyEmailRoute,
 }
 export const routeTree = rootRouteImport
