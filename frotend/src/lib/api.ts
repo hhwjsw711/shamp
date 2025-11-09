@@ -187,23 +187,22 @@ export const api = {
   // Password reset endpoints
   passwordReset: {
     request: (data: { email: string }) =>
-      request<{ message: string }>('/api/auth/password-reset/request', {
+      request<{ success: boolean; message: string }>('/api/auth/password-reset/request', {
         method: 'POST',
         body: data,
       }),
 
-    verify: (data: { email: string; code: string }) =>
-      request<{ message: string }>('/api/auth/password-reset/verify', {
+    verify: (data: { code: string }) =>
+      request<{ success: boolean; message: string }>('/api/auth/password-reset/verify', {
         method: 'POST',
         body: data,
       }),
 
     complete: (data: {
-      email: string
       code: string
       newPassword: string
     }) =>
-      request<{ message: string }>('/api/auth/password-reset/complete', {
+      request<{ success: boolean; message: string }>('/api/auth/password-reset/complete', {
         method: 'POST',
         body: data,
       }),

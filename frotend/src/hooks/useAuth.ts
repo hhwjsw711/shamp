@@ -140,9 +140,9 @@ export function useAuth() {
     }
   }
 
-  const verifyPasswordResetCode = async (data: PasswordResetVerifyInput) => {
+  const verifyPasswordResetCode = async (data: { code: string }) => {
     try {
-      await api.passwordReset.verify(data)
+      await api.passwordReset.verify({ code: data.code })
       return { success: true }
     } catch (error) {
       return {
@@ -160,7 +160,6 @@ export function useAuth() {
   ) => {
     try {
       await api.passwordReset.complete({
-        email: data.email,
         code: data.code,
         newPassword: data.newPassword,
       })

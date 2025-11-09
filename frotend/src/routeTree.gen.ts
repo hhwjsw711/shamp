@@ -10,8 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthVerifyEmailRouteImport } from './routes/auth/verify-email'
+import { Route as AuthResetPasswordCodeRouteImport } from './routes/auth/reset-password-code'
+import { Route as AuthResetPasswordRouteImport } from './routes/auth/reset-password'
+import { Route as AuthRequestResetPasswordRouteImport } from './routes/auth/request-reset-password'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthCreateAccountRouteImport } from './routes/auth/create-account'
 import { Route as AuthenticatedAuthOnboardingRouteImport } from './routes/_authenticated/auth/onboarding'
@@ -20,16 +23,32 @@ const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthVerifyEmailRoute = AuthVerifyEmailRouteImport.update({
   id: '/auth/verify-email',
   path: '/auth/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthResetPasswordCodeRoute = AuthResetPasswordCodeRouteImport.update({
+  id: '/auth/reset-password-code',
+  path: '/auth/reset-password-code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
+  id: '/auth/reset-password',
+  path: '/auth/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRequestResetPasswordRoute =
+  AuthRequestResetPasswordRouteImport.update({
+    id: '/auth/request-reset-password',
+    path: '/auth/request-reset-password',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/auth/login',
   path: '/auth/login',
@@ -48,58 +67,78 @@ const AuthenticatedAuthOnboardingRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
   '/auth/create-account': typeof AuthCreateAccountRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/request-reset-password': typeof AuthRequestResetPasswordRoute
+  '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/auth/reset-password-code': typeof AuthResetPasswordCodeRoute
   '/auth/verify-email': typeof AuthVerifyEmailRoute
+  '/': typeof AuthenticatedIndexRoute
   '/auth/onboarding': typeof AuthenticatedAuthOnboardingRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
   '/auth/create-account': typeof AuthCreateAccountRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/request-reset-password': typeof AuthRequestResetPasswordRoute
+  '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/auth/reset-password-code': typeof AuthResetPasswordCodeRoute
   '/auth/verify-email': typeof AuthVerifyEmailRoute
+  '/': typeof AuthenticatedIndexRoute
   '/auth/onboarding': typeof AuthenticatedAuthOnboardingRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/auth/create-account': typeof AuthCreateAccountRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/request-reset-password': typeof AuthRequestResetPasswordRoute
+  '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/auth/reset-password-code': typeof AuthResetPasswordCodeRoute
   '/auth/verify-email': typeof AuthVerifyEmailRoute
+  '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/auth/onboarding': typeof AuthenticatedAuthOnboardingRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
     | '/auth/create-account'
     | '/auth/login'
+    | '/auth/request-reset-password'
+    | '/auth/reset-password'
+    | '/auth/reset-password-code'
     | '/auth/verify-email'
+    | '/'
     | '/auth/onboarding'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
     | '/auth/create-account'
     | '/auth/login'
+    | '/auth/request-reset-password'
+    | '/auth/reset-password'
+    | '/auth/reset-password-code'
     | '/auth/verify-email'
+    | '/'
     | '/auth/onboarding'
   id:
     | '__root__'
-    | '/'
     | '/_authenticated'
     | '/auth/create-account'
     | '/auth/login'
+    | '/auth/request-reset-password'
+    | '/auth/reset-password'
+    | '/auth/reset-password-code'
     | '/auth/verify-email'
+    | '/_authenticated/'
     | '/_authenticated/auth/onboarding'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthCreateAccountRoute: typeof AuthCreateAccountRoute
   AuthLoginRoute: typeof AuthLoginRoute
+  AuthRequestResetPasswordRoute: typeof AuthRequestResetPasswordRoute
+  AuthResetPasswordRoute: typeof AuthResetPasswordRoute
+  AuthResetPasswordCodeRoute: typeof AuthResetPasswordCodeRoute
   AuthVerifyEmailRoute: typeof AuthVerifyEmailRoute
 }
 
@@ -112,18 +151,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
+    '/_authenticated/': {
+      id: '/_authenticated/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/auth/verify-email': {
       id: '/auth/verify-email'
       path: '/auth/verify-email'
       fullPath: '/auth/verify-email'
       preLoaderRoute: typeof AuthVerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/reset-password-code': {
+      id: '/auth/reset-password-code'
+      path: '/auth/reset-password-code'
+      fullPath: '/auth/reset-password-code'
+      preLoaderRoute: typeof AuthResetPasswordCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/reset-password': {
+      id: '/auth/reset-password'
+      path: '/auth/reset-password'
+      fullPath: '/auth/reset-password'
+      preLoaderRoute: typeof AuthResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/request-reset-password': {
+      id: '/auth/request-reset-password'
+      path: '/auth/request-reset-password'
+      fullPath: '/auth/request-reset-password'
+      preLoaderRoute: typeof AuthRequestResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/login': {
@@ -151,10 +211,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAuthOnboardingRoute: typeof AuthenticatedAuthOnboardingRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAuthOnboardingRoute: AuthenticatedAuthOnboardingRoute,
 }
 
@@ -163,10 +225,12 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 )
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthCreateAccountRoute: AuthCreateAccountRoute,
   AuthLoginRoute: AuthLoginRoute,
+  AuthRequestResetPasswordRoute: AuthRequestResetPasswordRoute,
+  AuthResetPasswordRoute: AuthResetPasswordRoute,
+  AuthResetPasswordCodeRoute: AuthResetPasswordCodeRoute,
   AuthVerifyEmailRoute: AuthVerifyEmailRoute,
 }
 export const routeTree = rootRouteImport

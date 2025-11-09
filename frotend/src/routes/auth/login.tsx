@@ -271,6 +271,19 @@ function LoginPage() {
                   )}
                 />
 
+                {/* Reset password link */}
+                <section className="flex justify-start">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => navigate({ to: '/auth/request-reset-password' })}
+                    className="h-auto p-0 text-sm font-normal text-muted-foreground hover:text-foreground"
+                  >
+                    Reset password
+                  </Button>
+                </section>
+
                 {error && (
                   <Alert variant="destructive">
                     <OctagonXIcon />

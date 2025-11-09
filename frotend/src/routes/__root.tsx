@@ -75,11 +75,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body style={{ backgroundColor: '#fafafa', margin: 0 }}>
         <AnimatePresence mode="wait">
-          <div key={location.pathname}>
+          <main key={location.pathname}>
             {children}
-          </div>
+          </main>
         </AnimatePresence>
-        <Toaster />
+        <Toaster position="top-center" />
         <TanStackDevtools
           config={{
             position: 'bottom-right',
