@@ -10,13 +10,21 @@ const GOOGLE_MAPS_API_KEY =
 
 const GOOGLE_MAPS_SCRIPT_ID = 'google-maps-script'
 
+// Type-safe helper to check if Google Maps is loaded
+const getGoogleMaps = (): boolean => {
+  // Use type assertion to access window.google safely
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const win = window as any
+  return !!win.google?.maps?.places
+}
+
 export function useGoogleMaps() {
   const [isLoaded, setIsLoaded] = useState(false)
   const [loadError, setLoadError] = useState<Error | null>(null)
 
   useEffect(() => {
     // Check if script is already loaded
-    if (window.google?.maps?.places) {
+    if (getGoogleMaps()) {
       setIsLoaded(true)
       return
     }
@@ -25,7 +33,7 @@ export function useGoogleMaps() {
     if (document.getElementById(GOOGLE_MAPS_SCRIPT_ID)) {
       // Script exists but not loaded yet, wait for it
       const checkLoaded = setInterval(() => {
-        if (window.google?.maps?.places) {
+        if (getGoogleMaps()) {
           setIsLoaded(true)
           clearInterval(checkLoaded)
         }
@@ -67,7 +75,7 @@ export function useGoogleMaps() {
     return () => {
       // Cleanup: remove script if component unmounts before loading
       const existingScript = document.getElementById(GOOGLE_MAPS_SCRIPT_ID)
-      if (existingScript && !window.google?.maps?.places) {
+      if (existingScript && !getGoogleMaps()) {
         existingScript.remove()
       }
     }
