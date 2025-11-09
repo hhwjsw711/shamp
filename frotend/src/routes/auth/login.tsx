@@ -165,7 +165,7 @@ function LoginPage() {
               size="sm"
               onClick={() => navigate({ to: '/auth/create-account' })}
             >
-              Create account
+              Create Account
             </Button>
           </section>
           <h1 className="text-2xl font-semibold text-foreground">
@@ -191,7 +191,7 @@ function LoginPage() {
               {isGoogleLoading ? (
                 <>
                   <Loader2Icon className="w-5 h-5 mr-2 animate-spin" />
-                  Logging in...
+                  Logging In...
                 </>
               ) : (
                 <>
@@ -200,7 +200,7 @@ function LoginPage() {
                     alt="Google"
                     className="w-5 h-5 mr-2"
                   />
-                  Log in with Google
+                  Log In with Google
                 </>
               )}
             </Button>
@@ -288,10 +288,10 @@ function LoginPage() {
                   {isEmailLoading ? (
                     <>
                       <Spinner className="mr-2" />
-                      Logging in...
+                      Logging In...
                     </>
                   ) : (
-                    'Log in'
+                    'Log In'
                   )}
                 </Button>
               </form>

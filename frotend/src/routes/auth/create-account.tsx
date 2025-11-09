@@ -138,7 +138,7 @@ function CreateAccountPage() {
               size="sm"
               onClick={() => navigate({ to: '/auth/login' })}
             >
-              Login
+              Log In
             </Button>
           </section>
           <h1 className="text-2xl font-semibold text-foreground">
@@ -278,10 +278,10 @@ function CreateAccountPage() {
                   {isEmailLoading ? (
                     <>
                       <Spinner className="mr-2" />
-                      Creating account...
+                      Creating Account...
                     </>
                   ) : (
-                    'Create account'
+                    'Create Account'
                   )}
                 </Button>
               </form>
