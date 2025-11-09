@@ -9,7 +9,7 @@ import { httpAction } from "../../_generated/server";
 import { internal, api } from "../../_generated/api";
 import { validate, updateProfileSchema } from "../../utils/validation";
 import { getErrorMessage } from "../../utils/errors";
-import { formatName } from "../../utils/nameUtils";
+import { formatName, sanitizeName } from "../../utils/nameUtils";
 
 /**
  * Complete onboarding handler
@@ -101,11 +101,33 @@ export const completeOnboardingHandler = httpAction(async (ctx, request) => {
       );
     }
 
-    // Parse and validate request body
+    // Parse request body
     const body = await request.json();
+    
+    // CRITICAL: Sanitize name BEFORE validation to remove quotes, brackets, etc.
+    // This MUST happen before validation or validation will fail
+    if (body.name && typeof body.name === 'string') {
+      // Trim first
+      body.name = body.name.trim();
+      
+      // Sanitize to remove all invalid characters (quotes, brackets, etc.)
+      body.name = sanitizeName(body.name);
+      
+      // If sanitized name is valid, format it (capitalize)
+      // formatName will sanitize again (redundant but safe) and capitalize
+      if (body.name && body.name.length > 0) {
+        const formatted = formatName(body.name);
+        body.name = formatted || body.name;
+      } else {
+        body.name = '';
+      }
+    }
+    
+    // Validate request body (after sanitization - name should now be clean)
+    // The validate function will check against the schema which requires /^[a-zA-Z\s'-]+$/
     const { name, orgName, location } = validate(updateProfileSchema, body);
 
-    // Format name if provided
+    // Format name if provided (formatName already sanitizes, but ensure it's formatted)
     const formattedName = name ? formatName(name) : user.name;
 
     // Update user profile

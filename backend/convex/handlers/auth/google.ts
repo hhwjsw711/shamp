@@ -134,7 +134,9 @@ export const googleCallbackHandler = httpAction(async (ctx, request) => {
     );
 
     const isNewUser = !user;
-    let formattedName = formatName(googleUser.name);
+    // Format name from Google (sanitizes quotes, brackets, etc.)
+    // formatName returns null if name is empty/invalid, which is fine for optional field
+    const formattedName = formatName(googleUser.name);
 
     if (!user) {
       // Create new user account with Google info (emailVerified is true for Google accounts)
@@ -142,7 +144,7 @@ export const googleCallbackHandler = httpAction(async (ctx, request) => {
         (internal as any).functions.auth.mutations.createUserInternal,
         {
           email: googleUser.email,
-          name: formattedName,
+          name: formattedName, // Can be null, which is fine
           googleId: googleUser.googleId,
           profilePic: googleUser.picture,
           emailVerified: true, // Google accounts are pre-verified
@@ -154,12 +156,13 @@ export const googleCallbackHandler = httpAction(async (ctx, request) => {
       );
     } else if (!user.googleId && googleUser.googleId) {
       // Link Google account to existing user
+      // Only update name if formattedName is not null and user doesn't have a name
       await ctx.runMutation(
         (internal as any).functions.auth.mutations.linkGoogleAccountInternal,
         {
           userId: user._id,
           googleId: googleUser.googleId,
-          name: formattedName || user.name,
+          name: formattedName || user.name, // Use formatted name if available, otherwise keep existing
           profilePic: googleUser.picture,
         }
       );

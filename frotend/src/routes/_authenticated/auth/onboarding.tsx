@@ -186,8 +186,14 @@ function OnboardingPage() {
           }
           
           // Set name if available and not already set
+          // Sanitize name before setting (remove quotes, brackets)
           if (userData.name && !hasSetName.current) {
-            form.setValue('name', userData.name)
+            const sanitizedName = userData.name
+              .replace(/[[\]]/g, '') // Remove brackets
+              .replace(/[""''„‟«»]/g, '') // Remove all types of quotes
+              .replace(/\s+/g, ' ') // Remove extra whitespace
+              .trim()
+            form.setValue('name', sanitizedName)
             hasSetName.current = true
           }
         }
@@ -206,7 +212,13 @@ function OnboardingPage() {
   // Also sync name when user changes (in case it updates after initial fetch)
   useEffect(() => {
     if (user?.name && !hasSetName.current) {
-      form.setValue('name', user.name)
+      // Sanitize name before setting (remove quotes, brackets)
+      const sanitizedName = user.name
+        .replace(/[[\]]/g, '') // Remove brackets
+        .replace(/[""''„‟«»]/g, '') // Remove all types of quotes
+        .replace(/\s+/g, ' ') // Remove extra whitespace
+        .trim()
+      form.setValue('name', sanitizedName)
       hasSetName.current = true
     }
   }, [user?.name])
@@ -344,7 +356,19 @@ function OnboardingPage() {
     setError(null)
 
     try {
-      const result = await completeOnboarding(formData)
+      // Sanitize name before submission (remove quotes, brackets)
+      const sanitizedFormData = {
+        ...formData,
+        name: formData.name
+          ? formData.name
+              .replace(/[[\]]/g, '') // Remove brackets
+              .replace(/[""''„‟«»]/g, '') // Remove all types of quotes
+              .replace(/\s+/g, ' ') // Remove extra whitespace
+              .trim()
+          : formData.name,
+      }
+
+      const result = await completeOnboarding(sanitizedFormData)
 
       if (result.success) {
         toast.success('Profile completed successfully!')
@@ -477,7 +501,6 @@ function OnboardingPage() {
                             field.onChange(e)
                             handleFieldChange()
                           }}
-                          placeholder="Enter your business location"
                           autoComplete="address-line1"
                         />
                       ) : (
@@ -494,7 +517,6 @@ function OnboardingPage() {
                               onChange={(e) => {
                                 handleLocationChange(e.target.value)
                               }}
-                              placeholder="Search for your business location"
                               autoComplete="off"
                               variant="md"
                             />
@@ -545,10 +567,10 @@ function OnboardingPage() {
                 {isLoading ? (
                   <>
                     <Spinner className="mr-2" />
-                    Finishing up...
+                    Finishing Up...
                   </>
                 ) : (
-                  'Finish setup'
+                  'Finish Setup'
                 )}
               </Button>
             </form>

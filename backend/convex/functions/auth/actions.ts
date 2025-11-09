@@ -11,6 +11,7 @@ import { OAuth2Client } from "google-auth-library";
 import { api, internal } from "../../_generated/api";
 import { generateToken } from "../../utils/authNode";
 import type { Id } from "../../_generated/dataModel";
+import { formatName } from "../../utils/nameUtils";
 
 /**
  * Get OAuth2Client instance (lazy initialization)
@@ -120,12 +121,15 @@ export const handleGoogleIdTokenLogin = action({
       { email: payload.email }
     );
 
+    // Format name from Google (sanitizes quotes, brackets, etc.)
+    const formattedName = formatName(payload.name) || formatName(payload.email.split("@")[0]);
+
     if (!user) {
       const userId = await ctx.runMutation(
         (internal as any).functions.auth.mutations.createUserInternal,
         {
           email: payload.email,
-          name: payload.name || payload.email.split("@")[0],
+          name: formattedName,
           googleId: payload.sub,
           profilePic: payload.picture,
           emailVerified: true,
@@ -142,7 +146,7 @@ export const handleGoogleIdTokenLogin = action({
         {
           userId: user._id,
           googleId: payload.sub,
-          name: payload.name,
+          name: formattedName || user.name,
           profilePic: payload.picture,
         }
       );

@@ -7,6 +7,7 @@ import { v } from "convex/values";
 import type { Id } from "../../_generated/dataModel";
 // Note: Password/pin hashing should be done in actions, not mutations
 import { NotFoundError } from "../../utils/errors";
+import { formatName } from "../../utils/nameUtils";
 
 /**
  * Create a new user account
@@ -221,7 +222,8 @@ export const linkGoogleAccount = mutation({
     };
 
     if (args.name && !user.name) {
-      updates.name = args.name;
+      // Format name (sanitizes quotes, brackets, etc.)
+      updates.name = formatName(args.name) || args.name;
     }
     if (args.profilePic && !user.profilePic) {
       updates.profilePic = args.profilePic;
@@ -258,7 +260,8 @@ export const linkGoogleAccountInternal = mutation({
     };
 
     if (args.name && !user.name) {
-      updates.name = args.name;
+      // Format name (sanitizes quotes, brackets, etc.)
+      updates.name = formatName(args.name) || args.name;
     }
     if (args.profilePic && !user.profilePic) {
       updates.profilePic = args.profilePic;
