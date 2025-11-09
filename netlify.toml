@@ -7,4 +7,9 @@
   
 [build.environment]
   NODE_VERSION = "20"
+  # Allow VITE_ prefixed env vars in build output (they're meant to be public/client-side)
+  # These are intentionally bundled into the client code by Vite
+  SECRETS_SCAN_OMIT_KEYS = "VITE_CONVEX_SITE_URL,VITE_GOOGLE_MAPS_API_KEY,VITE_CONVEX_URL"
+
+
 
