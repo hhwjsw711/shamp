@@ -69,7 +69,22 @@ function LoginPage() {
     if (result.success && result.user) {
       toast.success('Logged in successfully!')
       
-      // Check if user needs onboarding
+      // Detect if using ngrok/production (HTTPS) - cookies work properly
+      const isNgrok = typeof window !== 'undefined' && (
+        window.location.hostname.includes('ngrok.io') ||
+        window.location.hostname.includes('ngrok-free.app') ||
+        window.location.hostname.includes('ngrok-free.dev')
+      )
+      const hasHttps = typeof window !== 'undefined' && window.location.protocol === 'https:'
+      const useSecureCookies = isNgrok || hasHttps
+      
+      // Store token in localStorage only for localhost HTTP (fallback)
+      // For ngrok/production, rely solely on secure cookies
+      if (result.token && typeof window !== 'undefined' && !useSecureCookies) {
+        localStorage.setItem('session_token', result.token)
+      }
+      
+      // Use login response data to determine redirect
       const user = result.user as {
         onboardingCompleted?: boolean
         emailVerified?: boolean
@@ -77,7 +92,12 @@ function LoginPage() {
       
       if (!user.onboardingCompleted) {
         // First-time user - redirect to onboarding
-        navigate({ to: '/auth/onboarding', search: { token: undefined } })
+        // For ngrok/production: use secure cookies (no URL token)
+        // For localhost HTTP: pass token as URL parameter (fallback)
+        const onboardingUrl = (!useSecureCookies && result.token)
+          ? `/auth/onboarding?token=${encodeURIComponent(result.token)}`
+          : '/auth/onboarding'
+        window.location.href = onboardingUrl
       } else {
         // Existing user - redirect to home
         navigate({ to: '/' })

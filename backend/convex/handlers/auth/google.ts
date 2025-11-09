@@ -242,10 +242,15 @@ export const googleCallbackHandler = httpAction(async (ctx, request) => {
       redirectUrl.searchParams.set("state", state);
     }
 
-    // For localhost: browsers reject cookies in cross-origin redirects
+    // For localhost HTTP: browsers reject cookies in cross-origin redirects
     // Solution: Pass token as URL parameter and let frontend set the cookie
+    // For ngrok/production (HTTPS): cookies work properly, no URL token needed
     const isLocalhost = frontendUrl.includes("localhost") || frontendUrl.includes("127.0.0.1");
-    if (isLocalhost) {
+    const isNgrok = frontendUrl.includes("ngrok.io") || frontendUrl.includes("ngrok-free.app") || frontendUrl.includes("ngrok-free.dev");
+    const hasHttps = isNgrok || frontendUrl.startsWith("https://");
+    
+    // Only use URL token workaround for localhost HTTP (not HTTPS/ngrok)
+    if (isLocalhost && !hasHttps) {
       redirectUrl.searchParams.set("token", token);
       // Still try to set cookie, but frontend will handle it if cookie fails
       return new Response(null, {
@@ -257,7 +262,7 @@ export const googleCallbackHandler = httpAction(async (ctx, request) => {
       });
     }
 
-    // For production: use cookie only
+    // For ngrok/production (HTTPS): use secure cookies only
     return new Response(null, {
       status: 302,
       headers: {

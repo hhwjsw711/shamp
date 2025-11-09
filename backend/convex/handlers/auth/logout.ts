@@ -40,10 +40,10 @@ export const logoutHandler = httpAction(async (ctx, request) => {
       );
     }
 
-    // Create delete cookie using action
+    // Create delete cookie using action (pass frontendUrl for proper cookie deletion)
     const deleteCookieHeader = await ctx.runAction(
       api.functions.auth.authHelpers.createDeleteCookieAction as any,
-      {}
+      { frontendUrl }
     );
 
     // Return success response with cookie deletion
@@ -72,10 +72,10 @@ export const logoutHandler = httpAction(async (ctx, request) => {
     
     const allowedOrigin = origin || frontendUrl;
     
-    // Even if there's an error, clear the cookie
+    // Even if there's an error, clear the cookie (pass frontendUrl for proper cookie deletion)
     const deleteCookieHeader = await ctx.runAction(
       api.functions.auth.authHelpers.createDeleteCookieAction as any,
-      {}
+      { frontendUrl }
     );
     return new Response(
       JSON.stringify({

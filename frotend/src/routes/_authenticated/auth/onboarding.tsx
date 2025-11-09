@@ -39,11 +39,65 @@ export const Route = createFileRoute('/_authenticated/auth/onboarding')({
       token: (search.token as string) || undefined,
     }
   },
-  beforeLoad: async () => {
+  beforeLoad: async ({ search, location }) => {
     // Parent layout (_authenticated.tsx) already handles authentication
     // Here we only need onboarding-specific checks
     try {
-      const response = await api.auth.me()
+      // Detect if using ngrok/production (HTTPS) - cookies work properly
+      // Use location.href for SSR compatibility (works in beforeLoad)
+      let isNgrok = false
+      let hasHttps = false
+      
+      if (location.href) {
+        try {
+          const url = new URL(location.href)
+          isNgrok = url.hostname.includes('ngrok.io') ||
+            url.hostname.includes('ngrok-free.app') ||
+            url.hostname.includes('ngrok-free.dev')
+          hasHttps = url.protocol === 'https:'
+        } catch (err) {
+          // If URL parsing fails, fall back to window check (client-side only)
+          if (typeof window !== 'undefined') {
+            isNgrok = window.location.hostname.includes('ngrok.io') ||
+              window.location.hostname.includes('ngrok-free.app') ||
+              window.location.hostname.includes('ngrok-free.dev')
+            hasHttps = window.location.protocol === 'https:'
+          }
+        }
+      } else if (typeof window !== 'undefined') {
+        // Fallback to window check (client-side only)
+        isNgrok = window.location.hostname.includes('ngrok.io') ||
+          window.location.hostname.includes('ngrok-free.app') ||
+          window.location.hostname.includes('ngrok-free.dev')
+        hasHttps = window.location.protocol === 'https:'
+      }
+      
+      const useSecureCookies = isNgrok || hasHttps
+      
+      // Extract token from search params (only for localhost HTTP fallback)
+      let token: string | null = null
+      if (!useSecureCookies) {
+        const urlToken = (search as { token?: string }).token
+        if (urlToken && typeof urlToken === 'string') {
+          token = urlToken
+        }
+        
+        // If no token from URL, try localStorage/cookie (only for localhost HTTP)
+        if (!token && typeof window !== 'undefined') {
+          token = localStorage.getItem('session_token')
+          if (!token && typeof document !== 'undefined') {
+            const cookies = document.cookie.split(';').map(c => c.trim())
+            const sessionCookie = cookies.find(c => c.startsWith('session='))
+            if (sessionCookie) {
+              token = sessionCookie.split('=')[1]
+            }
+          }
+        }
+      }
+      
+      // For ngrok/production: rely solely on cookies (no token needed)
+      // For localhost HTTP: pass token if available
+      const response = await api.auth.me(useSecureCookies ? null : token)
       
       if (response.user) {
         const user = response.user as {
@@ -138,7 +192,6 @@ function OnboardingPage() {
           }
         }
       } catch (err) {
-        console.error('Failed to fetch user:', err)
         // Don't block the form - beforeLoad already verified auth
       }
     }
@@ -319,6 +372,7 @@ function OnboardingPage() {
       transition={{ duration: 0.3 }}
       className="min-h-screen flex items-center justify-center p-4 relative"
       style={{
+        backgroundColor: '#fafafa',
         backgroundImage: "url('/auth-background.png')",
         backgroundSize: 'cover',
         backgroundPosition: 'right center',

@@ -121,30 +121,30 @@ export function createSecureCookie(
 ): string {
   const isProduction = process.env.NODE_ENV === "production";
   const isLocalhost = frontendUrl?.includes("localhost") || frontendUrl?.includes("127.0.0.1");
-  
-  // For localhost: use None with Secure=false workaround, or Lax
-  // For cross-origin redirects, browsers may reject cookies set FROM different origin
-  // Solution: Use SameSite=None with Secure for cross-site, but for localhost we need a workaround
-  // Actually, for localhost redirects FROM convex.site, we MUST use SameSite=None and Secure
-  // But Secure requires HTTPS... so we need to pass token via URL param for localhost
+  // Detect ngrok URLs (supports .ngrok.io, .ngrok-free.app, and .ngrok-free.dev domains)
+  const isNgrok = frontendUrl?.includes("ngrok.io") || frontendUrl?.includes("ngrok-free.app") || frontendUrl?.includes("ngrok-free.dev");
+  // If using ngrok or production, we have HTTPS - use secure cookies
+  const hasHttps = isNgrok || isProduction || (frontendUrl?.startsWith("https://"));
   
   // Build cookie parts array
   const parts: string[] = [`session=${token}`];
   parts.push("HttpOnly");
   
-  if (isLocalhost) {
-    // For localhost: Use Lax (works for same-site redirects)
-    // But if redirecting FROM convex.site TO localhost, this won't work
-    // So we'll use None without Secure as a workaround (some browsers allow this)
+  if (isLocalhost && !hasHttps) {
+    // For localhost HTTP: Use None without Secure (browsers may reject, but it's a fallback)
+    // This is the problematic case - cookies won't work reliably
     parts.push("SameSite=None");
     // Don't add Secure for localhost HTTP
-  } else if (isProduction) {
-    // Production: Use None with Secure for cross-site
+  } else if (hasHttps) {
+    // For HTTPS (ngrok, production, or any HTTPS URL): Use Secure + SameSite=None for cross-site
     parts.push("Secure");
     parts.push("SameSite=None");
-    parts.push("Domain=.convex.site");
+    if (isProduction && !isNgrok) {
+      // Only set Domain for production (not ngrok, as ngrok domains are dynamic)
+      parts.push("Domain=.convex.site");
+    }
   } else {
-    // Staging/dev: Use Lax with Secure
+    // Staging/dev HTTPS: Use Lax with Secure
     parts.push("Secure");
     parts.push("SameSite=Lax");
   }
@@ -163,10 +163,12 @@ export function createSecureCookie(
 export function createDeleteCookie(frontendUrl?: string): string {
   const isProduction = process.env.NODE_ENV === "production";
   const isLocalhost = frontendUrl?.includes("localhost") || frontendUrl?.includes("127.0.0.1");
+  const isNgrok = frontendUrl?.includes("ngrok.io") || frontendUrl?.includes("ngrok-free.app") || frontendUrl?.includes("ngrok-free.dev");
+  const hasHttps = isNgrok || isProduction || (frontendUrl?.startsWith("https://"));
   
-  const sameSite = isLocalhost ? "Lax" : (isProduction ? "None" : "Lax");
-  const secure = isLocalhost ? "" : "Secure";
-  const domain = isProduction && !isLocalhost ? "; Domain=.convex.site" : "";
+  const sameSite = (isLocalhost && !hasHttps) ? "Lax" : (hasHttps ? "None" : "Lax");
+  const secure = hasHttps ? "Secure" : "";
+  const domain = isProduction && !isLocalhost && !isNgrok ? "; Domain=.convex.site" : "";
   
   return `session=; HttpOnly; ${secure}; SameSite=${sameSite}; Path=/; Max-Age=0${domain}`.replace(/;\s+/g, "; ").replace(/;\s*$/, "");
 }

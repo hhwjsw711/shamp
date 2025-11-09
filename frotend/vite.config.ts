@@ -14,6 +14,15 @@ const config = defineConfig({
     tanstackStart(),
     viteReact(),
   ],
+  server: {
+    host: true, // Allow external connections
+    allowedHosts: [
+      'localhost',
+      '.ngrok.io',
+      '.ngrok-free.app',
+      '.ngrok-free.dev',
+    ],
+  },
 })
 
 export default config

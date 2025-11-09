@@ -25,7 +25,8 @@ interface RequestOptions extends Omit<RequestInit, 'body'> {
 
 async function request<T>(
   endpoint: string,
-  options: RequestOptions = {}
+  options: RequestOptions = {},
+  providedToken?: string | null
 ): Promise<T> {
   if (!CONVEX_URL) {
     throw new Error(
@@ -36,10 +37,31 @@ async function request<T>(
 
   const { body, headers = {}, ...restOptions } = options
 
-  // Extract token from localStorage or cookie (for localhost fallback)
-  let sessionToken: string | null = null
-  if (typeof window !== 'undefined') {
-    // Try localStorage first (set from URL token)
+  // Detect if we're using ngrok/production (HTTPS) - cookies work properly
+  const isNgrok = typeof window !== 'undefined' && (
+    window.location.hostname.includes('ngrok.io') ||
+    window.location.hostname.includes('ngrok-free.app') ||
+    window.location.hostname.includes('ngrok-free.dev')
+  )
+  const hasHttps = typeof window !== 'undefined' && window.location.protocol === 'https:'
+  const useSecureCookies = isNgrok || hasHttps
+
+  // Extract token from provided token, localStorage, or cookie
+  // For ngrok/production: rely solely on cookies (no localStorage/URL tokens)
+  // For localhost HTTP: use localStorage/cookie as fallback
+  // IMPORTANT: If providedToken is explicitly null, don't try to extract from localStorage/cookie
+  // This means the caller wants to rely solely on cookies
+  let sessionToken: string | null = providedToken || null
+  
+  if (providedToken === null) {
+    // Explicitly null means "use cookies only, don't try localStorage/cookie extraction"
+    sessionToken = null
+  } else if (!sessionToken && typeof window !== 'undefined' && !useSecureCookies) {
+    // Only try localStorage/cookie extraction if:
+    // 1. No token was provided
+    // 2. We're on client-side
+    // 3. We're NOT using secure cookies (localhost HTTP fallback)
+    // Try localStorage first (set from URL token) - only for localhost HTTP
     sessionToken = localStorage.getItem('session_token')
     
     // Fallback to cookie if no localStorage token
@@ -51,6 +73,9 @@ async function request<T>(
       }
     }
   }
+  
+  // For ngrok/production: cookies are sent automatically with credentials: 'include'
+  // No need to extract token - backend reads from cookie header
 
   const config: RequestInit = {
     ...restOptions,
@@ -58,6 +83,7 @@ async function request<T>(
       'Content-Type': 'application/json',
       // For localhost: always use Authorization header if we have a token
       // This bypasses cross-domain cookie issues
+      // For ngrok/production: don't add Authorization header, rely on cookies
       ...(sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {}),
       ...headers,
     },
@@ -69,13 +95,6 @@ async function request<T>(
   }
 
   const fullUrl = `${CONVEX_URL}${endpoint}`
-  
-  // Log the URL in development for debugging
-  if (import.meta.env.DEV) {
-    console.log('API Request:', fullUrl)
-    console.log('Cookies:', document.cookie)
-    console.log('Session token from cookie:', sessionToken ? sessionToken.substring(0, 20) + '...' : 'None')
-  }
 
   const response = await fetch(fullUrl, config)
 
@@ -85,17 +104,6 @@ async function request<T>(
     }))
     // Backend returns { error: "message" } format
     const errorMessage = errorData.error || errorData.message || 'An error occurred'
-    
-    // Log full error details in development
-    if (import.meta.env.DEV) {
-      console.error('API Error:', {
-        url: fullUrl,
-        status: response.status,
-        statusText: response.statusText,
-        error: errorMessage,
-        cookies: document.cookie,
-      })
-    }
     
     throw new Error(errorMessage)
   }
@@ -122,15 +130,27 @@ export const api = {
       }),
 
     login: (data: { email: string; password: string }) =>
-      request<{ user: unknown; message: string }>('/api/auth/login', {
+      request<{
+        user: {
+          id: string
+          email: string
+          name?: string
+          orgName?: string
+          location?: string
+          emailVerified?: boolean
+          onboardingCompleted?: boolean
+        }
+        message?: string
+        token?: string // For localhost fallback
+      }>('/api/auth/login', {
         method: 'POST',
         body: data,
       }),
 
-    me: () =>
+    me: (token?: string | null) =>
       request<{ user: unknown }>('/api/auth/me', {
         method: 'GET',
-      }),
+      }, token),
 
     logout: () =>
       request<{ message: string }>('/api/auth/logout', {
@@ -200,4 +220,5 @@ export const api = {
       body: data,
     }),
 }
+
 
