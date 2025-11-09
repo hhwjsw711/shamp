@@ -1,8 +1,9 @@
 # Netlify configuration for TanStack Start
+# This file should be in the repo root (shamp/)
 [build]
   base = "frotend"
   command = "npm run build"
-  publish = "dist/client"
+  publish = "frotend/dist/client"
   
 [build.environment]
   NODE_VERSION = "20"
