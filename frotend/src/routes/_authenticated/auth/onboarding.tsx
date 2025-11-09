@@ -340,7 +340,7 @@ function OnboardingPage() {
         transition={{ duration: 0.3, ease: 'easeIn' }}
         className="w-full max-w-md p-8 rounded-[22px] flex flex-col items-start gap-8 bg-background/98 backdrop-blur-md shadow-2xl border border-border/20 relative z-10"
       >
-        <section className="flex flex-col gap-1 w-full items-start">
+        <section className="flex flex-col gap-2 w-full items-start">
           <img
             src="/shamp-logo.svg"
             alt="Shamp Logo"

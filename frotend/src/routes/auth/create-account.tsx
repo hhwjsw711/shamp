@@ -121,13 +121,25 @@ function CreateAccountPage() {
         transition={{ duration: 0.3, ease: 'easeIn' }}
         className="w-full max-w-md p-8 rounded-[22px] flex flex-col items-start gap-8 bg-background/98 backdrop-blur-md shadow-2xl border border-border/20 relative z-10"
       >
-        {/* Logo and heading section */}
-        <section className="flex flex-col gap-1 w-full items-start">
-          <img
-            src="/shamp-logo.svg"
-            alt="Shamp Logo"
-            className="h-8 w-auto"
-          />
+        
+
+        {/* Heading section */}
+        <section className="flex flex-col gap-2 w-full items-start">
+          {/* Header with logo and login button */}
+          <section className="w-full flex items-center justify-between">
+            <img
+              src="/shamp-logo.svg"
+              alt="Shamp Logo"
+              className="h-8 w-auto"
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate({ to: '/auth/login' })}
+            >
+              Login
+            </Button>
+          </section>
           <h1 className="text-2xl font-semibold text-foreground">
             Maintenance management made simple for hotels & restaurants
           </h1>
