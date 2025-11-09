@@ -16,7 +16,9 @@ const buttonVariants = cva(
         outline:
           "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
         glass:
-          "relative border border-white/30 bg-background/80 shadow-lg hover:bg-background/90 text-foreground dark:border-white/20 dark:bg-background/60 dark:hover:bg-background/70 after:absolute after:inset-0 after:rounded-full after:bg-gradient-to-br after:from-white/15 after:via-white/5 after:to-transparent after:pointer-events-none after:shadow-inner [&>*]:relative [&>*]:z-10",
+          "relative border border-white/30 bg-background/80 shadow-lg hover:bg-background/90 hover:shadow-xl hover:scale-[1.02] text-foreground dark:border-white/20 dark:bg-background/60 dark:hover:bg-background/70 transition-all duration-200 ease-out after:absolute after:inset-0 after:rounded-full after:bg-gradient-to-br after:from-white/15 after:via-white/5 after:to-transparent after:pointer-events-none after:shadow-inner [&>*]:relative [&>*]:z-10",
+        "default-glass":
+          "relative bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg after:absolute after:inset-0 after:rounded-full after:bg-gradient-to-br after:from-white/30 after:via-white/10 after:to-white/5 after:pointer-events-none after:shadow-[inset_0_1px_0_0_rgba(255,255,255,0.4)] [&>*]:relative [&>*]:z-10",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost:

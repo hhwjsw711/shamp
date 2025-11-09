@@ -244,6 +244,7 @@ function CreateAccountPage() {
 
                 <Button
                   type="submit"
+                  variant="default-glass"
                   className="w-full mt-4"
                   disabled={isEmailLoading || isGoogleLoading}
                   size="lg"
