@@ -129,7 +129,7 @@ function CreateAccountPage() {
           <section>
             <Button
               type="button"
-              variant="outline"
+              variant="glass"
               className="w-full"
               size="lg"
               onClick={handleGoogleSignUp}
