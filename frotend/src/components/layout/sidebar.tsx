@@ -147,7 +147,7 @@ function UserDropdown() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <SidebarMenuButton
-          className="w-full justify-start gap-2 bg-red-500 p-4"
+          className="w-full justify-start gap-2 !p-2 h-auto"
           tooltip={state === "collapsed" ? `${user?.name || 'User'} - ${user?.orgName || 'Organization'}` : undefined}
         >
           <Avatar className="size-8">
