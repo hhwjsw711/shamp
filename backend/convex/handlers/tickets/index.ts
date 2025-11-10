@@ -8,6 +8,9 @@
  * POST /api/tickets/:id/assign-vendor - Assign vendor to ticket
  * POST /api/tickets/:id/close - Close ticket
  * POST /api/tickets/:id/schedule - Schedule repair
+ * PATCH /api/tickets/:id/vendor-status - Update vendor status (arrived, in_progress, completed)
+ * POST /api/tickets/:id/after-photos - Upload after photos
+ * PATCH /api/tickets/:id/guest-impact - Update guest impact tracking
  * DELETE /api/tickets/:id - Delete ticket
  * DELETE /api/tickets/:id/photos/:photoId - Delete photo from ticket
  */

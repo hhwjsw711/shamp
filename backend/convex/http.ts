@@ -37,6 +37,9 @@ import {
   deleteTicketHandler,
   deletePhotoFromTicketHandler,
 } from "./handlers/tickets/index";
+import { updateVendorStatusHandler } from "./handlers/tickets/vendorStatus";
+import { uploadAfterPhotosHandler } from "./handlers/tickets/afterPhotos";
+import { updateGuestImpactHandler } from "./handlers/tickets/guestImpact";
 import { submitTicketWithPinHandler } from "./handlers/tickets/submitWithPin";
 
 // Import vendor handlers
@@ -401,6 +404,45 @@ http.route({
   path: "/api/tickets/submit-with-pin",
   method: "POST",
   handler: submitTicketWithPinHandler,
+});
+
+// Update vendor status
+http.route({
+  path: "/api/tickets/:id/vendor-status",
+  method: "PATCH",
+  handler: updateVendorStatusHandler,
+});
+
+http.route({
+  path: "/api/tickets/:id/vendor-status",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
+});
+
+// Upload after photos
+http.route({
+  path: "/api/tickets/:id/after-photos",
+  method: "POST",
+  handler: uploadAfterPhotosHandler,
+});
+
+http.route({
+  path: "/api/tickets/:id/after-photos",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
+});
+
+// Update guest impact
+http.route({
+  path: "/api/tickets/:id/guest-impact",
+  method: "PATCH",
+  handler: updateGuestImpactHandler,
+});
+
+http.route({
+  path: "/api/tickets/:id/guest-impact",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
 });
 
 /**
