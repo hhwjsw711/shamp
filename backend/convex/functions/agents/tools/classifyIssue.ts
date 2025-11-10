@@ -27,8 +27,8 @@ export function createClassifyIssueTool() {
           issueType: z.string().describe("Type of maintenance issue"),
           tags: z.array(z.string()).describe("Relevant tags for the issue"),
           urgency: z
-            .enum(["low", "medium", "high", "critical"])
-            .describe("Urgency level"),
+            .enum(["emergency", "urgent", "normal", "low"])
+            .describe("Urgency level: emergency (fire, flood, security, guest safety), urgent (guest-facing, operational disruption), normal (routine maintenance), low (non-critical, cosmetic)"),
         }),
         prompt: getClassifyIssuePrompt(description),
       });

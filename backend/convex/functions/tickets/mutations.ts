@@ -52,9 +52,11 @@ export const createInternal = internalMutation({
       description: args.description,
       location: args.location,
       photoIds: args.photoIds,
+      beforePhotoIds: args.photoIds, // Set beforePhotoIds to initial photos
       issueType: args.issueType,
       predictedTags: args.predictedTags || [],
       status: args.status || "pending",
+      vendorStatus: "not_started", // Initialize vendor status
       createdAt: Date.now(),
       submittedViaPin: args.submittedViaPin || false,
       pinOwnerId: args.pinOwnerId,
@@ -85,6 +87,44 @@ export const updateInternal = internalMutation({
     scheduledDate: v.optional(v.number()),
     verificationPhotoId: v.optional(v.id("_storage")),
     closedAt: v.optional(v.number()),
+    // Urgency/Priority
+    urgency: v.optional(
+      v.union(
+        v.literal("emergency"),
+        v.literal("urgent"),
+        v.literal("normal"),
+        v.literal("low")
+      )
+    ),
+    // Real-Time Vendor Status
+    vendorStatus: v.optional(
+      v.union(
+        v.literal("not_started"),
+        v.literal("arrived"),
+        v.literal("in_progress"),
+        v.literal("completed")
+      )
+    ),
+    vendorArrivedAt: v.optional(v.number()),
+    vendorStartedAt: v.optional(v.number()),
+    vendorCompletedAt: v.optional(v.number()),
+    // Before/After Photos
+    beforePhotoIds: v.optional(v.array(v.id("_storage"))),
+    afterPhotoIds: v.optional(v.array(v.id("_storage"))),
+    // Guest Impact Tracking
+    affectedRooms: v.optional(v.array(v.string())),
+    guestsAffected: v.optional(v.number()),
+    guestsNotified: v.optional(v.boolean()),
+    guestNotificationMethod: v.optional(
+      v.union(
+        v.literal("email"),
+        v.literal("sms"),
+        v.literal("phone"),
+        v.literal("in_person"),
+        v.literal("none")
+      )
+    ),
+    guestNotificationSentAt: v.optional(v.number()),
     quoteStatus: v.optional(
       v.union(
         v.literal("awaiting_quotes"),

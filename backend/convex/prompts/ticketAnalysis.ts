@@ -51,6 +51,8 @@ Steps:
    - Combine insights from all images to understand the full scope of the problem
 
 2. Classify the issue from the description text, considering the hospitality context
+   - Use the classifyIssue tool to get issue type, tags, and urgency level
+   - Urgency levels: emergency (fire, flood, security, guest safety), urgent (guest-facing issues, operational disruption), normal (routine maintenance), low (non-critical, cosmetic)
 
 3. Generate a COMPREHENSIVE problem description in SIMPLE, PLAIN LANGUAGE:
    - Combine information from ALL images and the user's description
@@ -61,6 +63,6 @@ Steps:
 
 4. Combine all analyses to generate comprehensive tags and issue type relevant to hospitality maintenance
 
-5. Update the ticket with your findings, including the detailed problem description`
+5. Update the ticket with your findings, including the detailed problem description and urgency level`
 }
 
