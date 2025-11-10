@@ -1,20 +1,22 @@
 /**
- * Tool for querying vendor quotes
+ * Tool for querying vendor quotes using semantic search
  */
 
 "use node";
 
 import { z } from "zod";
 import { tool } from "ai";
-import { internal } from "../../../_generated/api";
+import { api, internal } from "../../../_generated/api";
 import type { ActionCtx } from "../../../_generated/server";
 import type { Doc } from "../../../_generated/dataModel";
 
 const queryQuotesSchema = z.object({
+  userId: z.string().describe("User ID to query quotes for"),
+  query: z.string().describe("Natural language query describing what quotes to find (e.g., 'cheapest quotes', 'quotes for plumbing ticket', 'fastest delivery times', 'quotes under $500')"),
   ticketId: z.string().optional().describe("Filter by ticket ID"),
   vendorId: z.string().optional().describe("Filter by vendor ID"),
   status: z.string().optional().describe("Filter by quote status"),
-  limit: z.number().optional().describe("Maximum number of quotes to return"),
+  limit: z.number().optional().describe("Maximum number of quotes to return (default: 10)"),
 });
 
 type QueryQuotesParams = z.infer<typeof queryQuotesSchema>;
@@ -22,48 +24,37 @@ type QueryQuotesParams = z.infer<typeof queryQuotesSchema>;
 export function createQueryQuotesTool(ctx: ActionCtx) {
   return tool({
     description:
-      "Query vendor quotes. Can filter by ticket ID, vendor ID, or status. Returns quote details including price, currency, delivery time, ratings, and vendor information.",
+      "Query vendor quotes using semantic search. Understands natural language queries to find relevant quotes. Returns quote details including price, currency, delivery time, ratings, and vendor information. Use this when the user asks about quotes, pricing, vendors, or comparisons.",
     parameters: queryQuotesSchema,
     execute: async ({
+      userId,
+      query,
       ticketId,
       vendorId,
       status,
-      limit = 50,
+      limit = 10,
     }: QueryQuotesParams) => {
-      let quotes: Array<Doc<"vendorQuotes">>;
+      // Use semantic search to find relevant quotes
+      const semanticResults = await ctx.runAction(
+        (api as any).functions.embeddings.semanticSearch.searchQuotesSemantic,
+        {
+          userId: userId as any,
+          query,
+          ticketId: ticketId as any,
+          status: status as any,
+          limit: limit * 2, // Get more results for filtering
+        }
+      );
 
-      if (ticketId) {
-        quotes = await ctx.runQuery(
-          (internal as any).functions.vendorQuotes.queries.getByTicketIdInternal,
-          { ticketId: ticketId as any }
-        );
-        
-        // Filter by vendor if provided
-        if (vendorId) {
-          quotes = quotes.filter((q) => q.vendorId === (vendorId as any));
-        }
-        
-        // Filter by status if provided
-        if (status) {
-          quotes = quotes.filter((q) => q.status === status);
-        }
-      } else {
-        // Get all quotes with filters
-        const result = await ctx.runQuery(
-          (internal as any).functions.vendorQuotes.queries.getAllInternal,
-          {
-            limit,
-            status: status as any,
-            vendorId: vendorId as any,
-          }
-        );
-        quotes = result.quotes;
+      let quotes = semanticResults;
+
+      // Apply additional filters if provided
+      if (vendorId) {
+        quotes = quotes.filter((q) => q.vendorId === (vendorId as any));
       }
 
-      // Apply limit (for ticketId case, since getAllInternal already applies limit)
-      if (ticketId) {
-        quotes = quotes.slice(0, limit);
-      }
+      // Apply final limit
+      quotes = quotes.slice(0, limit);
 
       // Get vendor details for each quote
       const quotesWithVendors = await Promise.all(
@@ -95,6 +86,7 @@ export function createQueryQuotesTool(ctx: ActionCtx) {
             responseReceivedAt: quote.responseReceivedAt,
             createdAt: quote.createdAt,
             vendorOutreachId: quote.vendorOutreachId,
+            relevanceScore: quote._score, // Include semantic similarity score
           };
         })
       );
@@ -102,6 +94,7 @@ export function createQueryQuotesTool(ctx: ActionCtx) {
       return {
         quotes: quotesWithVendors,
         count: quotesWithVendors.length,
+        query: query, // Return the query used for transparency
       };
     },
   } as any);

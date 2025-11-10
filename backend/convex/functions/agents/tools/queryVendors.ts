@@ -1,19 +1,20 @@
 /**
- * Tool for querying vendors
+ * Tool for querying vendors using semantic search
  */
 
 "use node";
 
 import { z } from "zod";
 import { tool } from "ai";
-import { internal } from "../../../_generated/api";
+import { api, internal } from "../../../_generated/api";
 import type { ActionCtx } from "../../../_generated/server";
 import type { Doc } from "../../../_generated/dataModel";
 
 const queryVendorsSchema = z.object({
-  specialty: z.string().optional().describe("Filter by vendor specialty"),
+  query: z.string().describe("Natural language query describing what vendors to find (e.g., 'plumbing contractors', 'HVAC specialists near me', 'electricians', 'vendors for kitchen repairs')"),
+  specialty: z.string().optional().describe("Filter by vendor specialty (optional, can be inferred from query)"),
   ticketId: z.string().optional().describe("Get vendors for a specific ticket"),
-  limit: z.number().optional().describe("Maximum number of vendors to return"),
+  limit: z.number().optional().describe("Maximum number of vendors to return (default: 10)"),
 });
 
 type QueryVendorsParams = z.infer<typeof queryVendorsSchema>;
@@ -21,14 +22,15 @@ type QueryVendorsParams = z.infer<typeof queryVendorsSchema>;
 export function createQueryVendorsTool(ctx: ActionCtx) {
   return tool({
     description:
-      "Query vendors. Can filter by specialty or get vendors for a specific ticket. Returns vendor details including business name, email, specialty, address, and rating.",
+      "Query vendors using semantic search. Understands natural language queries to find relevant vendors. Returns vendor details including business name, email, specialty, address, and rating. Use this when the user asks about vendors, contractors, or service providers.",
     parameters: queryVendorsSchema,
     execute: async ({
+      query,
       specialty,
       ticketId,
-      limit = 50,
+      limit = 10,
     }: QueryVendorsParams) => {
-      let vendors: Array<Doc<"vendors">>;
+      let vendors: Array<Doc<"vendors"> & { _score: number }>;
 
       if (ticketId) {
         // Get vendors associated with a ticket via quotes or outreach
@@ -39,7 +41,7 @@ export function createQueryVendorsTool(ctx: ActionCtx) {
 
         const vendorIds = [...new Set(quotes.map((q) => q.vendorId))];
 
-        vendors = await Promise.all(
+        const vendorDocs = await Promise.all(
           vendorIds.map(async (vendorId) => {
             return await ctx.runQuery(
               (internal as any).functions.vendors.queries.getByIdInternal,
@@ -48,21 +50,22 @@ export function createQueryVendorsTool(ctx: ActionCtx) {
           })
         );
 
-        vendors = vendors.filter((v): v is Doc<"vendors"> => v !== null);
+        vendors = vendorDocs
+          .filter((v): v is Doc<"vendors"> => v !== null)
+          .map((v) => ({ ...v, _score: 1.0 })); // No semantic score for ticket-based lookup
       } else {
-        // Get all vendors (would need a list query, but for now we'll return empty)
-        // In a real implementation, you'd have a listAllInternal query
-        vendors = [];
-      }
-
-      // Filter by specialty if provided
-      if (specialty) {
-        vendors = vendors.filter((v) =>
-          v.specialty.toLowerCase().includes(specialty.toLowerCase())
+        // Use semantic search to find relevant vendors
+        vendors = await ctx.runAction(
+          (api as any).functions.embeddings.semanticSearch.searchVendorsSemantic,
+          {
+            query,
+            specialty,
+            limit: limit * 2, // Get more results for filtering
+          }
         );
       }
 
-      // Apply limit
+      // Apply final limit
       vendors = vendors.slice(0, limit);
 
       return {
@@ -75,8 +78,10 @@ export function createQueryVendorsTool(ctx: ActionCtx) {
           address: v.address,
           rating: v.rating,
           jobsCount: v.jobs.length,
+          relevanceScore: v._score, // Include semantic similarity score
         })),
         count: vendors.length,
+        query: query, // Return the query used for transparency
       };
     },
   } as any);

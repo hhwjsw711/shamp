@@ -41,6 +41,7 @@ import type * as functions_emails_documentParser from "../functions/emails/docum
 import type * as functions_emails_mutations from "../functions/emails/mutations.js";
 import type * as functions_embeddings_actions from "../functions/embeddings/actions.js";
 import type * as functions_embeddings_mutations from "../functions/embeddings/mutations.js";
+import type * as functions_embeddings_semanticSearch from "../functions/embeddings/semanticSearch.js";
 import type * as functions_escalations_mutations from "../functions/escalations/mutations.js";
 import type * as functions_files_queries from "../functions/files/queries.js";
 import type * as functions_firecrawlResults_mutations from "../functions/firecrawlResults/mutations.js";
@@ -159,6 +160,7 @@ declare const fullApi: ApiFromModules<{
   "functions/emails/mutations": typeof functions_emails_mutations;
   "functions/embeddings/actions": typeof functions_embeddings_actions;
   "functions/embeddings/mutations": typeof functions_embeddings_mutations;
+  "functions/embeddings/semanticSearch": typeof functions_embeddings_semanticSearch;
   "functions/escalations/mutations": typeof functions_escalations_mutations;
   "functions/files/queries": typeof functions_files_queries;
   "functions/firecrawlResults/mutations": typeof functions_firecrawlResults_mutations;
