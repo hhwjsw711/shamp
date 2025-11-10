@@ -78,7 +78,10 @@ function SidebarContentComponent() {
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleSidebarClick}
     >
-      <SidebarHeader className="w-full flex justify-between items-center px-4 pt-4">
+      <SidebarHeader className={cn(
+        "w-full flex items-center px-4 pt-4",
+        state === "collapsed" ? "justify-center" : "justify-between"
+      )}>
         <section className="relative w-full flex justify-center items-center">
           {/* Favicon - shows when expanded or when collapsed and not hovering */}
           <img
@@ -105,18 +108,20 @@ function SidebarContentComponent() {
 
       <SidebarContent className={cn(
         "px-4 gap-4",
-        state === "collapsed" && "overflow-visible"
+        state === "collapsed" && "overflow-visible flex flex-col items-center"
       )}>
         {/* Create New Ticket Button Group */}
         <SidebarGroup className="p-0">
-          <SidebarGroupContent>
+          <SidebarGroupContent className={cn(
+            state === "collapsed" && "flex justify-center"
+          )}>
             {state === "collapsed" ? (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant="default-glass"
                     size="icon"
-                    className="w-10 h-10 min-w-10 min-h-10 rounded-full flex items-center justify-center mx-auto p-0"
+                    className="w-10 h-10 min-w-10 min-h-10 rounded-full flex items-center justify-center p-0"
                     onClick={() => navigate({ to: '/' })}
                   >
                     <PlusIcon className="size-5 shrink-0" />
