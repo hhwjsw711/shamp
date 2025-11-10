@@ -50,35 +50,68 @@ const menuItems = [
 
 function SidebarContentComponent() {
   const location = useLocation()
-  const { state } = useSidebar()
+  const { state, setOpen } = useSidebar()
+  const [isHovered, setIsHovered] = React.useState(false)
+
+  const handleSidebarClick = (e: React.MouseEvent) => {
+    // Only expand if sidebar is collapsed and not clicking on interactive elements
+    if (state === "collapsed") {
+      const target = e.target as HTMLElement
+      const isInteractiveElement = target.closest('button, a, [role="button"], [tabindex]')
+      
+      if (!isInteractiveElement) {
+        setOpen(true)
+      }
+    }
+  }
 
   return (
-    <div className="flex flex-col p-4 gap-4 bg-background h-full">
+    <div 
+      className={cn(
+        "flex flex-col p-4 gap-4 bg-background h-full",
+        state === "collapsed" && "cursor-ew-resize"
+      )}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={handleSidebarClick}
+    >
       <SidebarHeader className="w-full flex justify-between items-center p-0">
-        <div className="relative w-full flex justify-between items-center">
+        <div className="relative w-full flex justify-center items-center">
           {/* Favicon - shows when expanded or when collapsed and not hovering */}
           <img
             src="/shamp-favicon.png"
             alt="Shamp Logo"
             className={cn(
-              "size-8 transition-opacity duration-200",
-              state === "collapsed" && "opacity-100 group-hover/sidebar-wrapper:opacity-0"
+              "h-6 w-auto transition-opacity duration-200 object-contain",
+              state === "expanded" && "mr-auto",
+              state === "collapsed" && isHovered && "opacity-0",
+              state === "collapsed" && !isHovered && "opacity-100"
             )}
           />
           {/* SidebarTrigger - shows when expanded or when collapsed and hovering */}
           <SidebarTrigger
             className={cn(
               "transition-opacity duration-200",
-              state === "collapsed" && "opacity-0 group-hover/sidebar-wrapper:opacity-100 absolute right-0"
+              state === "expanded" && "ml-auto",
+              state === "collapsed" && isHovered && "opacity-100 absolute",
+              state === "collapsed" && !isHovered && "opacity-0 absolute"
             )}
           />
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="p-0">
+      <SidebarContent className={cn(
+        "p-0",
+        state === "collapsed" && "overflow-visible"
+      )}>
         <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu className="flex flex-col gap-2">
+          <SidebarGroupContent className={cn(
+            state === "collapsed" && "flex flex-col items-center gap-2"
+          )}>
+            <SidebarMenu className={cn(
+              "flex flex-col gap-2",
+              state === "collapsed" && "items-center"
+            )}>
               {menuItems.map((item) => {
                 const Icon = item.icon
                 const isActive = location.pathname === item.href || 
@@ -106,7 +139,7 @@ function SidebarContentComponent() {
 
       <SidebarFooter className="p-0">
         <SidebarGroup>
-          <SidebarGroupContent>
+          <SidebarGroupContent className={cn(state === "collapsed" && "flex justify-center")}>
             <SidebarMenu>
               <SidebarMenuItem>
                 <UserDropdown />
@@ -147,10 +180,13 @@ function UserDropdown() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <SidebarMenuButton
-          className="w-full justify-start gap-2 !p-2 h-auto"
+          className={cn(
+            "w-full justify-start gap-2 !p-2 h-auto",
+            state === "collapsed" && "!size-8 !p-2 justify-center"
+          )}
           tooltip={state === "collapsed" ? `${user?.name || 'User'} - ${user?.orgName || 'Organization'}` : undefined}
         >
-          <Avatar className="size-8">
+          <Avatar className="size-8 shrink-0">
             <AvatarImage src={user?.profilePic} alt={user?.name || 'User'} />
             <AvatarFallback className="text-xs">
               {getInitials(user?.name)}
