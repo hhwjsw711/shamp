@@ -267,6 +267,8 @@ export default defineSchema({
     estimatedDeliveryTime: v.number(), // Estimated time in hours
     ratings: v.optional(v.number()), // Vendor-provided rating/review score
     responseText: v.string(), // Raw email response from vendor
+    quoteDocumentId: v.optional(v.id("_storage")), // Stored quote document (PDF, image, etc.)
+    quoteDocumentType: v.optional(v.string()), // Document type (pdf, image, etc.)
     status: v.union(
       v.literal("pending"),
       v.literal("received"),

@@ -148,6 +148,14 @@ export const handleInboundEmail = httpAction(async (ctx, request) => {
       payload.from?.email ||
       payload.from ||
       "";
+    
+    // Extract email_id for fetching attachments
+    const emailId: string | null =
+      eventData.email_id ||
+      eventData.emailId ||
+      payload.email_id ||
+      payload.emailId ||
+      null;
 
     const vendor: Doc<"vendors"> | null = await ctx.runQuery(
       (internal as any).functions.vendors.queries.getByEmailInternal,
@@ -171,16 +179,113 @@ export const handleInboundEmail = httpAction(async (ctx, request) => {
 
       if (outreach) {
         try {
-          const quoteData = await ctx.runAction(
-            (api as any).functions.agents.vendorResponseAgent.parseVendorResponse,
-            {
-              ticketId: ticketId as Id<"tickets">,
-              vendorId: vendor._id,
-              vendorOutreachId: outreach._id,
-              emailBody,
-              emailSubject: emailSubject || "",
+          // Process attachments if email_id is available
+          let quoteDocumentId: Id<"_storage"> | undefined;
+          let quoteDocumentType: string | undefined;
+          let documentExtractedText: string | null = null;
+
+          if (emailId) {
+            try {
+              // Fetch attachments from Resend
+              const attachments = await ctx.runAction(
+                (api as any).utils.attachmentUtils.fetchEmailAttachments,
+                { emailId }
+              );
+
+              // Process each attachment (PDFs, images, etc.)
+              for (const attachment of attachments) {
+                const contentType = attachment.contentType.toLowerCase();
+                const isQuoteDocument =
+                  contentType.includes("pdf") ||
+                  contentType.includes("image") ||
+                  attachment.filename.toLowerCase().includes("quote") ||
+                  attachment.filename.toLowerCase().includes("estimate") ||
+                  attachment.filename.toLowerCase().includes("invoice");
+
+                if (isQuoteDocument) {
+                  try {
+                    // Download attachment
+                    const downloaded = await ctx.runAction(
+                      (api as any).utils.attachmentUtils.downloadAttachment,
+                      {
+                        downloadUrl: attachment.downloadUrl,
+                        filename: attachment.filename,
+                        contentType: attachment.contentType,
+                      }
+                    );
+
+                    // Store in Convex storage
+                    const storedFileId = await ctx.runAction(
+                      (api as any).utils.attachmentUtils.storeAttachment,
+                      {
+                        buffer: downloaded.buffer,
+                        filename: downloaded.filename,
+                        contentType: downloaded.contentType,
+                      }
+                    );
+
+                    quoteDocumentId = storedFileId as Id<"_storage">;
+                    quoteDocumentType = contentType.includes("pdf")
+                      ? "pdf"
+                      : contentType.includes("image")
+                      ? "image"
+                      : "document";
+
+                    // Extract text from document for parsing
+                    // Get file URL from storage (need to use a query/action that can access storage)
+                    // For now, we'll pass the file directly to the parser
+                    documentExtractedText = await ctx.runAction(
+                      (api as any).functions.emails.documentParser.extractTextFromDocument,
+                      {
+                        fileUrl: attachment.downloadUrl, // Use original download URL before it expires
+                        filename: attachment.filename,
+                        contentType: attachment.contentType,
+                      }
+                    );
+
+                    // Only process the first quote document found
+                    break;
+                  } catch (error) {
+                    console.error(`Error processing attachment ${attachment.filename}:`, error);
+                    // Continue to next attachment or fall back to email body parsing
+                  }
+                }
+              }
+            } catch (error) {
+              console.error("Error fetching attachments:", error);
+              // Continue with email body parsing as fallback
             }
-          );
+          }
+
+          // Parse vendor response - use document text if available, otherwise use email body
+          const textToParse = documentExtractedText || emailBody;
+          let quoteData;
+
+          if (documentExtractedText) {
+            // Parse quote from document
+            quoteData = await ctx.runAction(
+              (api as any).functions.emails.documentParser.parseQuoteFromText,
+              {
+                extractedText: documentExtractedText,
+                ticketDescription: ticket.description,
+                issueType: ticket.issueType,
+                location: ticket.location,
+                vendorBusinessName: vendor.businessName,
+              }
+            );
+          } else {
+            // Fall back to email body parsing
+            quoteData = await ctx.runAction(
+              (api as any).functions.agents.vendorResponseAgent.parseVendorResponse,
+              {
+                ticketId: ticketId as Id<"tickets">,
+                vendorId: vendor._id,
+                vendorOutreachId: outreach._id,
+                emailBody,
+                emailSubject: emailSubject || "",
+              }
+            );
+          }
 
           if (quoteData.hasQuote && !quoteData.isDeclining) {
             const quoteId: Id<"vendorQuotes"> = await ctx.runMutation(
@@ -193,7 +298,9 @@ export const handleInboundEmail = httpAction(async (ctx, request) => {
                 currency: quoteData.currency!,
                 estimatedDeliveryTime: quoteData.estimatedDeliveryTime!,
                 ratings: quoteData.ratings,
-                responseText: emailBody,
+                responseText: emailBody, // Keep original email body
+                quoteDocumentId,
+                quoteDocumentType,
               }
             );
 
@@ -269,14 +376,9 @@ export const handleInboundEmail = httpAction(async (ctx, request) => {
       }
     );
 
-    if (ticket.status !== "Fixed") {
-      await ctx.runMutation(
-        (api as any).functions.tickets.mutations.updateStatusInternal,
-        {
-          ticketId: ticketId as Id<"tickets">,
-          status: "Replied",
-        }
-      );
+    if (ticket.status !== "fixed" && ticket.status !== "closed") {
+      // Don't update status if ticket is already fixed or closed
+      // The ticket status will be managed through other workflows
     }
 
     await ctx.runAction((api as any).functions.emails.actions.forwardToUser, {

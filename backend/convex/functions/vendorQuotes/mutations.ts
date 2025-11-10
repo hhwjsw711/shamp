@@ -20,6 +20,8 @@ export const createInternal = internalMutation({
     estimatedDeliveryTime: v.number(),
     ratings: v.optional(v.number()),
     responseText: v.string(),
+    quoteDocumentId: v.optional(v.id("_storage")), // Stored quote document
+    quoteDocumentType: v.optional(v.string()), // Document type (pdf, image, etc.)
   },
   handler: async (ctx, args): Promise<Id<"vendorQuotes">> => {
     const now = Date.now();
@@ -33,6 +35,8 @@ export const createInternal = internalMutation({
       estimatedDeliveryTime: args.estimatedDeliveryTime,
       ratings: args.ratings,
       responseText: args.responseText,
+      quoteDocumentId: args.quoteDocumentId,
+      quoteDocumentType: args.quoteDocumentType,
       status: "received",
       responseReceivedAt: now,
       createdAt: now,

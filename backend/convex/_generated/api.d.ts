@@ -31,6 +31,7 @@ import type * as functions_emailVerification_actions from "../functions/emailVer
 import type * as functions_emailVerification_mutations from "../functions/emailVerification/mutations.js";
 import type * as functions_emailVerification_queries from "../functions/emailVerification/queries.js";
 import type * as functions_emails_actions from "../functions/emails/actions.js";
+import type * as functions_emails_documentParser from "../functions/emails/documentParser.js";
 import type * as functions_emails_mutations from "../functions/emails/mutations.js";
 import type * as functions_embeddings_actions from "../functions/embeddings/actions.js";
 import type * as functions_embeddings_mutations from "../functions/embeddings/mutations.js";
@@ -81,6 +82,7 @@ import type * as handlers_tickets_submitWithPin from "../handlers/tickets/submit
 import type * as handlers_vendors_index from "../handlers/vendors/index.js";
 import type * as http from "../http.js";
 import type * as prompts_classifyIssue from "../prompts/classifyIssue.js";
+import type * as prompts_documentParser from "../prompts/documentParser.js";
 import type * as prompts_draftEmail from "../prompts/draftEmail.js";
 import type * as prompts_emailDraft from "../prompts/emailDraft.js";
 import type * as prompts_ticketAnalysis from "../prompts/ticketAnalysis.js";
@@ -88,6 +90,7 @@ import type * as prompts_vendorConversation from "../prompts/vendorConversation.
 import type * as prompts_vendorDiscovery from "../prompts/vendorDiscovery.js";
 import type * as prompts_vendorExtraction from "../prompts/vendorExtraction.js";
 import type * as prompts_vendorResponse from "../prompts/vendorResponse.js";
+import type * as utils_attachmentUtils from "../utils/attachmentUtils.js";
 import type * as utils_authHelpers from "../utils/authHelpers.js";
 import type * as utils_authNode from "../utils/authNode.js";
 import type * as utils_codeGeneration from "../utils/codeGeneration.js";
@@ -136,6 +139,7 @@ declare const fullApi: ApiFromModules<{
   "functions/emailVerification/mutations": typeof functions_emailVerification_mutations;
   "functions/emailVerification/queries": typeof functions_emailVerification_queries;
   "functions/emails/actions": typeof functions_emails_actions;
+  "functions/emails/documentParser": typeof functions_emails_documentParser;
   "functions/emails/mutations": typeof functions_emails_mutations;
   "functions/embeddings/actions": typeof functions_embeddings_actions;
   "functions/embeddings/mutations": typeof functions_embeddings_mutations;
@@ -186,6 +190,7 @@ declare const fullApi: ApiFromModules<{
   "handlers/vendors/index": typeof handlers_vendors_index;
   http: typeof http;
   "prompts/classifyIssue": typeof prompts_classifyIssue;
+  "prompts/documentParser": typeof prompts_documentParser;
   "prompts/draftEmail": typeof prompts_draftEmail;
   "prompts/emailDraft": typeof prompts_emailDraft;
   "prompts/ticketAnalysis": typeof prompts_ticketAnalysis;
@@ -193,6 +198,7 @@ declare const fullApi: ApiFromModules<{
   "prompts/vendorDiscovery": typeof prompts_vendorDiscovery;
   "prompts/vendorExtraction": typeof prompts_vendorExtraction;
   "prompts/vendorResponse": typeof prompts_vendorResponse;
+  "utils/attachmentUtils": typeof utils_attachmentUtils;
   "utils/authHelpers": typeof utils_authHelpers;
   "utils/authNode": typeof utils_authNode;
   "utils/codeGeneration": typeof utils_codeGeneration;
