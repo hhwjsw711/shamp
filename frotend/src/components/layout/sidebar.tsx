@@ -115,8 +115,8 @@ function SidebarContentComponent() {
                 <TooltipTrigger asChild>
                   <Button
                     variant="default-glass"
-                    size="lg"
-                    className="w-full justify-center px-2"
+                    size="icon"
+                    className="w-10 h-10 min-w-10 min-h-10 rounded-full flex items-center justify-center mx-auto p-0"
                     onClick={() => navigate({ to: '/' })}
                   >
                     <PlusIcon className="size-5 shrink-0" />
