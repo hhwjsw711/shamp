@@ -82,6 +82,22 @@ export const selectVendor = action({
       }
     );
 
+    // If a vendor was previously selected, reject that quote first
+    if (ticket.selectedVendorQuoteId) {
+      const previousQuote = allQuotes.find(
+        (q) => q._id === ticket.selectedVendorQuoteId
+      );
+      if (previousQuote && previousQuote.status === "selected") {
+        await ctx.runMutation(
+          (internal as any).functions.vendorQuotes.mutations.updateStatus,
+          {
+            quoteId: previousQuote._id,
+            status: "rejected",
+          }
+        );
+      }
+    }
+
     const vendorIds = allQuotes
       .filter(
         (q: Doc<"vendorQuotes">) =>
@@ -183,7 +199,7 @@ export const selectVendor = action({
         selectedVendorId: quote.vendorId,
         selectedVendorQuoteId: args.quoteId,
         quoteStatus: "vendor_selected",
-        status: "Vendor Selected",
+        status: "vendor_selected", // Fixed: use lowercase with underscore, not "Vendor Selected"
       }
     );
 
