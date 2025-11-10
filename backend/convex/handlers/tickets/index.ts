@@ -286,6 +286,23 @@ export const createTicketHandler = httpAction(async (ctx, request) => {
       }
     );
 
+    // Automatically trigger ticket analysis agent
+    await ctx.scheduler.runAfter(
+      0,
+      (api as any).functions.agents.ticketAnalysisAgent.analyzeTicket,
+      {
+        ticketId,
+        userId: user.userId as any,
+      }
+    );
+
+    // Generate embedding for ticket
+    await ctx.scheduler.runAfter(
+      0,
+      (internal as any).functions.embeddings.actions.generateTicketEmbedding,
+      { ticketId }
+    );
+
     const ticket = await ctx.runQuery(
       (internal as any).functions.tickets.queries.getByIdInternal,
       { ticketId }
@@ -870,13 +887,14 @@ export const closeTicketHandler = httpAction(async (ctx, request) => {
       );
     }
 
-    // Extract ticket ID and verification photo ID from request body (POST request)
-    const body = await request.json();
-    const { id: ticketId, verificationPhotoId } = body;
-
-    if (!ticketId) {
+    // Extract ticket ID from URL path (POST /api/tickets/:id/close)
+    const url = new URL(request.url);
+    const pathParts = url.pathname.split("/").filter(Boolean);
+    const ticketIdIndex = pathParts.indexOf("tickets");
+    
+    if (ticketIdIndex === -1 || ticketIdIndex + 1 >= pathParts.length) {
       return new Response(
-        JSON.stringify({ error: "Ticket ID is required in request body" }),
+        JSON.stringify({ error: "Invalid URL format. Expected: /api/tickets/:id/close" }),
         {
           status: 400,
           headers: {
@@ -886,6 +904,25 @@ export const closeTicketHandler = httpAction(async (ctx, request) => {
         }
       );
     }
+
+    const ticketId = pathParts[ticketIdIndex + 1];
+
+    if (!ticketId) {
+      return new Response(
+        JSON.stringify({ error: "Ticket ID is required" }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+          },
+        }
+      );
+    }
+
+    // Extract verification photo ID from request body (optional)
+    const body = await request.json().catch(() => ({})); // Handle empty body gracefully
+    const { verificationPhotoId } = body;
 
     // Verify user owns the ticket
     const ticket = await ctx.runQuery(

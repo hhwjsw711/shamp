@@ -48,10 +48,15 @@ export const analyzeTicket = action({
       throw new Error("Not authorized to analyze this ticket");
     }
 
-    // Get first photo URL for analysis (use first photo if available)
-    let imageUrl: string | null = null;
+    // Get ALL photo URLs for analysis
+    const imageUrls: string[] = [];
     if (ticket.photoIds && ticket.photoIds.length > 0) {
-      imageUrl = await ctx.storage.getUrl(ticket.photoIds[0]);
+      for (const photoId of ticket.photoIds) {
+        const url = await ctx.storage.getUrl(photoId);
+        if (url) {
+          imageUrls.push(url);
+        }
+      }
     }
 
     // Create tools
@@ -68,17 +73,28 @@ export const analyzeTicket = action({
         classifyIssue,
         updateTicket,
       },
-      stopWhen: stepCountIs(5),
+      stopWhen: stepCountIs(10), // Increased step count to allow analyzing multiple images
     });
 
     // Generate analysis
     const prompt = getTicketAnalysisPrompt({
       description: ticket.description,
       location: ticket.location,
-      imageUrl,
+      imageUrls, // Pass array of all image URLs
     });
 
     const result = await agent.generate({ prompt });
+
+    // After analysis completes, ensure status is set to "analyzed"
+    // The agent should have already updated the status via updateTicket tool,
+    // but we'll ensure it's set here as a safety measure
+    await ctx.runMutation(
+      (internal as any).functions.tickets.mutations.updateStatusInternal,
+      {
+        ticketId: args.ticketId,
+        status: "analyzed",
+      }
+    );
 
     // Trigger embedding generation after analysis
     await ctx.scheduler.runAfter(

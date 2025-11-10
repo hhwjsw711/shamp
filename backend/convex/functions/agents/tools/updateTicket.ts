@@ -14,6 +14,7 @@ const updateTicketSchema = z.object({
   ticketId: z.string().describe("Ticket ID to update"),
   issueType: z.string().optional().describe("Issue type"),
   predictedTags: z.array(z.string()).optional().describe("Predicted tags"),
+  problemDescription: z.string().optional().describe("Detailed problem description in simple, plain language"),
   status: z.string().optional().describe("Ticket status"),
 });
 
@@ -27,6 +28,7 @@ export function createUpdateTicketTool(ctx: ActionCtx) {
       ticketId,
       issueType,
       predictedTags,
+      problemDescription,
       status,
     }: UpdateTicketParams) => {
       await ctx.runMutation(
@@ -35,6 +37,7 @@ export function createUpdateTicketTool(ctx: ActionCtx) {
           ticketId: ticketId as any,
           issueType,
           predictedTags,
+          problemDescription,
         }
       );
 

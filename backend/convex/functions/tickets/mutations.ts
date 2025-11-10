@@ -22,6 +22,7 @@ export const createInternal = internalMutation({
     status: v.optional(
       v.union(
         v.literal("pending"),
+        v.literal("analyzed"),
         v.literal("processing"),
         v.literal("vendors_available"),
         v.literal("vendor_selected"),
@@ -74,6 +75,7 @@ export const updateInternal = internalMutation({
     ticketId: v.id("tickets"),
     issueType: v.optional(v.string()),
     predictedTags: v.optional(v.array(v.string())),
+    problemDescription: v.optional(v.string()), // Detailed problem description in simple terms
     description: v.optional(v.string()),
     location: v.optional(v.string()),
     firecrawlResultsId: v.optional(v.id("firecrawlResults")),
@@ -94,6 +96,7 @@ export const updateInternal = internalMutation({
     status: v.optional(
       v.union(
         v.literal("pending"),
+        v.literal("analyzed"),
         v.literal("processing"),
         v.literal("vendors_available"),
         v.literal("vendor_selected"),
@@ -128,6 +131,7 @@ export const updateStatusInternal = internalMutation({
     ticketId: v.id("tickets"),
     status: v.union(
       v.literal("pending"),
+      v.literal("analyzed"),
       v.literal("processing"),
       v.literal("vendors_available"),
       v.literal("vendor_selected"),

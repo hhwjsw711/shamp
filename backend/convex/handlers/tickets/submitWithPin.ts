@@ -151,11 +151,14 @@ export const submitTicketWithPinHandler = httpAction(async (ctx, request) => {
       }
     );
 
-    // Trigger ticket analysis agent (same as regular tickets)
+    // Automatically trigger ticket analysis agent
     await ctx.scheduler.runAfter(
       0,
       (api as any).functions.agents.ticketAnalysisAgent.analyzeTicket,
-      { ticketId }
+      {
+        ticketId,
+        userId: pinOwner._id, // PIN owner is the ticket creator
+      }
     );
 
     // Generate embedding for ticket
