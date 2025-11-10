@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
-import { Building2Icon, ChevronRightIcon, HelpCircleIcon, HomeIcon, LogOutIcon, MessageSquareIcon, SettingsIcon, TicketIcon } from 'lucide-react'
+import { Building2Icon, ChevronRightIcon, HelpCircleIcon, HomeIcon, LogOutIcon, MessageSquareIcon, PlusIcon, SettingsIcon, TicketIcon } from 'lucide-react'
 import * as React from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -23,6 +23,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
 const menuItems = [
@@ -50,6 +52,7 @@ const menuItems = [
 
 function SidebarContentComponent() {
   const location = useLocation()
+  const navigate = useNavigate()
   const { state, setOpen } = useSidebar()
   const [isHovered, setIsHovered] = React.useState(false)
 
@@ -101,9 +104,43 @@ function SidebarContentComponent() {
       </SidebarHeader>
 
       <SidebarContent className={cn(
-        "px-4",
+        "px-4 gap-4",
         state === "collapsed" && "overflow-visible"
       )}>
+        {/* Create New Ticket Button Group */}
+        <SidebarGroup className="p-0">
+          <SidebarGroupContent>
+            {state === "collapsed" ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="default-glass"
+                    size="lg"
+                    className="w-full justify-center px-2"
+                    onClick={() => navigate({ to: '/' })}
+                  >
+                    <PlusIcon className="size-5 shrink-0" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>Create New Ticket</p>
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <Button
+                variant="default-glass"
+                size="lg"
+                className="w-full justify-start gap-2"
+                onClick={() => navigate({ to: '/' })}
+              >
+                <PlusIcon className="size-5 shrink-0" />
+                <span>Create New Ticket</span>
+              </Button>
+            )}
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Menu Items Group */}
         <SidebarGroup className="p-0">
           <SidebarGroupContent className={cn(
             state === "collapsed" && "flex flex-col items-center gap-2"
@@ -125,8 +162,8 @@ function SidebarContentComponent() {
                       tooltip={item.title}
                     >
                       <Link to={item.href}>
-                        <Icon />
-                        <span>{item.title}</span>
+                        <Icon className={cn(isActive && "stroke-3")} />
+                        <span className={cn(isActive && "font-bold")}>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
