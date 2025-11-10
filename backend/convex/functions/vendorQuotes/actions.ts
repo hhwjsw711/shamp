@@ -182,7 +182,9 @@ export const selectVendor = action({
           html: `
             <p>Dear ${vendor.businessName},</p>
             <p>Congratulations! Your quote for Ticket #${args.ticketId} has been selected.</p>
-            <p>We'll be in touch shortly to schedule the work.</p>
+            ${quote.scheduledDate ? `<p><strong>Scheduled Date:</strong> ${new Date(quote.scheduledDate).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>` : ""}
+            ${quote.fixDuration ? `<p><strong>Estimated Duration:</strong> ${quote.fixDuration} hour${quote.fixDuration !== 1 ? "s" : ""}</p>` : ""}
+            ${quote.scheduledDate ? "" : "<p>We'll be in touch shortly to schedule the work.</p>"}
             <p>Thank you for being part of the Shamp network.</p>
             <p>Best regards,<br>Shamp Team</p>
           `,
@@ -192,6 +194,7 @@ export const selectVendor = action({
       }
     }
 
+    // Update ticket with selected vendor and scheduling information
     await ctx.runMutation(
       (internal as any).functions.tickets.mutations.updateInternal,
       {
@@ -199,7 +202,8 @@ export const selectVendor = action({
         selectedVendorId: quote.vendorId,
         selectedVendorQuoteId: args.quoteId,
         quoteStatus: "vendor_selected",
-        status: "vendor_selected", // Fixed: use lowercase with underscore, not "Vendor Selected"
+        status: quote.scheduledDate ? "vendor_scheduled" : "vendor_selected", // Set to vendor_scheduled if scheduledDate is provided
+        scheduledDate: quote.scheduledDate, // Use scheduled date from quote
       }
     );
 

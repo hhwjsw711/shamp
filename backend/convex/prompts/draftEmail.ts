@@ -21,7 +21,9 @@ The email should:
 - Clearly describe the issue and location (mentioning it's for a hospitality business - hotel or restaurant)
 - Request a detailed quote with the following information:
   1. **Price**: Please provide your total price/quote for this work (include currency)
-  2. **Delivery Time**: Please provide your estimated completion/delivery time (in hours or days)
+  2. **Scheduling**: Please let us know:
+     - **When you can come**: What date and time can you come to fix this issue? (Please provide a specific date/time or date range)
+     - **How long it will take**: How many hours will the fix take once you arrive? (e.g., "2 hours", "half a day", "1 day")
   3. **Ratings/Reviews**: If available, please share any relevant ratings or reviews from previous similar work, especially for hospitality businesses
 - Explain that Shamp is a hospitality maintenance platform that helps connect service providers with maintenance needs for hotels and restaurants
 - Include that we're collecting quotes from multiple vendors to provide the best options to our hospitality client

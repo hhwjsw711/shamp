@@ -104,6 +104,8 @@ export const parseQuoteFromText = action({
     price?: number;
     currency: string;
     estimatedDeliveryTime?: number;
+    scheduledDate?: number;
+    fixDuration?: number;
     ratings?: number;
     notes?: string;
     isDeclining: boolean;
@@ -146,6 +148,8 @@ export const parseQuoteFromText = action({
         price: parsed.price,
         currency: parsed.currency || "USD",
         estimatedDeliveryTime: parsed.estimatedDeliveryTime,
+        scheduledDate: parsed.scheduledDate,
+        fixDuration: parsed.fixDuration,
         ratings: parsed.ratings,
         notes: parsed.notes,
         isDeclining: parsed.isDeclining ?? false,

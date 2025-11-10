@@ -22,6 +22,8 @@ export const createInternal = internalMutation({
     responseText: v.string(),
     quoteDocumentId: v.optional(v.id("_storage")), // Stored quote document
     quoteDocumentType: v.optional(v.string()), // Document type (pdf, image, etc.)
+    scheduledDate: v.optional(v.number()), // When vendor can come to fix the issue (timestamp in milliseconds)
+    fixDuration: v.optional(v.number()), // How long the fix will take (in hours)
   },
   handler: async (ctx, args): Promise<Id<"vendorQuotes">> => {
     const now = Date.now();
@@ -37,6 +39,8 @@ export const createInternal = internalMutation({
       responseText: args.responseText,
       quoteDocumentId: args.quoteDocumentId,
       quoteDocumentType: args.quoteDocumentType,
+      scheduledDate: args.scheduledDate,
+      fixDuration: args.fixDuration,
       status: "received",
       responseReceivedAt: now,
       createdAt: now,

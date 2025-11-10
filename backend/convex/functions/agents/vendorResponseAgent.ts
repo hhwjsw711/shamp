@@ -33,6 +33,8 @@ export const parseVendorResponse = action({
     price?: number;
     currency: string;
     estimatedDeliveryTime?: number;
+    scheduledDate?: number;
+    fixDuration?: number;
     ratings?: number;
     notes?: string;
     isDeclining: boolean;
@@ -79,6 +81,14 @@ export const parseVendorResponse = action({
             .number()
             .optional()
             .describe("Estimated delivery/completion time in hours"),
+          scheduledDate: z
+            .number()
+            .optional()
+            .describe("When vendor can come to fix the issue (Unix timestamp in milliseconds). Extract from dates like 'Monday, January 15th', 'next week', date ranges, etc. If date range provided, use earliest date."),
+          fixDuration: z
+            .number()
+            .optional()
+            .describe("How long the actual fix/work will take once vendor arrives (in hours). Different from delivery time - this is on-site work duration. Convert '2 hours', 'half a day' (4h), '1 day' (8h), etc."),
           ratings: z
             .number()
             .optional()

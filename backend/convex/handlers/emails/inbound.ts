@@ -359,6 +359,8 @@ export const handleInboundEmail = httpAction(async (ctx, request) => {
                 responseText: emailBody, // Keep original email body
                 quoteDocumentId,
                 quoteDocumentType,
+                scheduledDate: quoteData.scheduledDate,
+                fixDuration: quoteData.fixDuration,
               }
             );
 

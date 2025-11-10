@@ -269,6 +269,8 @@ export default defineSchema({
     responseText: v.string(), // Raw email response from vendor
     quoteDocumentId: v.optional(v.id("_storage")), // Stored quote document (PDF, image, etc.)
     quoteDocumentType: v.optional(v.string()), // Document type (pdf, image, etc.)
+    scheduledDate: v.optional(v.number()), // When vendor can come to fix the issue (timestamp in milliseconds)
+    fixDuration: v.optional(v.number()), // How long the fix will take (in hours)
     status: v.union(
       v.literal("pending"),
       v.literal("received"),
