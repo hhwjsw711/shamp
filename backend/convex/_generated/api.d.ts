@@ -87,6 +87,7 @@ import type * as handlers_passwordReset_request from "../handlers/passwordReset/
 import type * as handlers_passwordReset_verify from "../handlers/passwordReset/verify.js";
 import type * as handlers_tickets_index from "../handlers/tickets/index.js";
 import type * as handlers_tickets_submitWithPin from "../handlers/tickets/submitWithPin.js";
+import type * as handlers_vendorQuotes_index from "../handlers/vendorQuotes/index.js";
 import type * as handlers_vendors_index from "../handlers/vendors/index.js";
 import type * as http from "../http.js";
 import type * as prompts_classifyIssue from "../prompts/classifyIssue.js";
@@ -204,6 +205,7 @@ declare const fullApi: ApiFromModules<{
   "handlers/passwordReset/verify": typeof handlers_passwordReset_verify;
   "handlers/tickets/index": typeof handlers_tickets_index;
   "handlers/tickets/submitWithPin": typeof handlers_tickets_submitWithPin;
+  "handlers/vendorQuotes/index": typeof handlers_vendorQuotes_index;
   "handlers/vendors/index": typeof handlers_vendors_index;
   http: typeof http;
   "prompts/classifyIssue": typeof prompts_classifyIssue;

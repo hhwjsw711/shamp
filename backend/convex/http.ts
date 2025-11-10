@@ -47,6 +47,12 @@ import {
   updateVendorHandler,
 } from "./handlers/vendors/index";
 
+// Import vendor quotes handlers
+import {
+  listVendorQuotesHandler,
+  getVendorQuoteByIdHandler,
+} from "./handlers/vendorQuotes/index";
+
 // Import conversation handlers
 import {
   createConversationHandler,
@@ -427,6 +433,36 @@ http.route({
   path: "/api/vendors/update",
   method: "PATCH",
   handler: updateVendorHandler,
+});
+
+/**
+ * Vendor Quotes Routes
+ */
+
+// List vendor quotes
+http.route({
+  path: "/api/vendor-quotes",
+  method: "GET",
+  handler: listVendorQuotesHandler,
+});
+
+http.route({
+  path: "/api/vendor-quotes",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
+});
+
+// Get vendor quote by ID
+http.route({
+  path: "/api/vendor-quotes/:id",
+  method: "GET",
+  handler: getVendorQuoteByIdHandler,
+});
+
+http.route({
+  path: "/api/vendor-quotes/:id",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
 });
 
 /**

@@ -37,23 +37,33 @@ export function createQueryQuotesTool(ctx: ActionCtx) {
           (internal as any).functions.vendorQuotes.queries.getByTicketIdInternal,
           { ticketId: ticketId as any }
         );
+        
+        // Filter by vendor if provided
+        if (vendorId) {
+          quotes = quotes.filter((q) => q.vendorId === (vendorId as any));
+        }
+        
+        // Filter by status if provided
+        if (status) {
+          quotes = quotes.filter((q) => q.status === status);
+        }
       } else {
-        // Get all quotes (would need a different query, but for now we'll use ticket-based)
-        quotes = [];
+        // Get all quotes with filters
+        const result = await ctx.runQuery(
+          (internal as any).functions.vendorQuotes.queries.getAllInternal,
+          {
+            limit,
+            status: status as any,
+            vendorId: vendorId as any,
+          }
+        );
+        quotes = result.quotes;
       }
 
-      // Filter by vendor if provided
-      if (vendorId) {
-        quotes = quotes.filter((q) => q.vendorId === (vendorId as any));
+      // Apply limit (for ticketId case, since getAllInternal already applies limit)
+      if (ticketId) {
+        quotes = quotes.slice(0, limit);
       }
-
-      // Filter by status if provided
-      if (status) {
-        quotes = quotes.filter((q) => q.status === status);
-      }
-
-      // Apply limit
-      quotes = quotes.slice(0, limit);
 
       // Get vendor details for each quote
       const quotesWithVendors = await Promise.all(
@@ -68,14 +78,23 @@ export function createQueryQuotesTool(ctx: ActionCtx) {
             ticketId: quote.ticketId,
             vendorId: quote.vendorId,
             vendorName: vendor?.businessName || "Unknown",
+            vendorEmail: vendor?.email,
+            vendorPhone: vendor?.phone,
+            vendorSpecialty: vendor?.specialty,
+            vendorAddress: vendor?.address,
+            vendorRating: vendor?.rating,
             price: quote.price,
             currency: quote.currency,
             estimatedDeliveryTime: quote.estimatedDeliveryTime,
             ratings: quote.ratings,
             status: quote.status,
             score: quote.score,
+            responseText: quote.responseText,
+            quoteDocumentId: quote.quoteDocumentId,
+            quoteDocumentType: quote.quoteDocumentType,
+            responseReceivedAt: quote.responseReceivedAt,
             createdAt: quote.createdAt,
-            responseText: quote.responseText.substring(0, 200), // Truncate for context
+            vendorOutreachId: quote.vendorOutreachId,
           };
         })
       );
