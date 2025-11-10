@@ -5,8 +5,11 @@
  */
 
 import { Outlet, createFileRoute, useRouterState } from '@tanstack/react-router'
+import * as React from 'react'
+import { useEffect } from 'react'
 import { requireAuth } from '@/lib/auth'
 import { Spinner } from '@/components/ui/spinner'
+import { useAuth } from '@/hooks/useAuth'
 
 export const Route = createFileRoute('/_authenticated')({
   ssr: false, // Disable SSR for protected routes - auth checks require cookies which aren't available during SSR
@@ -20,6 +23,23 @@ export const Route = createFileRoute('/_authenticated')({
 })
 
 function AuthenticatedLayout() {
+  const { getCurrentUser } = useAuth()
+  const hasFetchedRef = React.useRef(false)
+
+  // Fetch user data on mount to populate the store (only once)
+  useEffect(() => {
+    // Always fetch on mount if we haven't fetched yet
+    if (!hasFetchedRef.current && typeof window !== 'undefined') {
+      hasFetchedRef.current = true
+      getCurrentUser().catch((error) => {
+        console.error('Failed to fetch user:', error)
+        // Reset ref on error so we can retry
+        hasFetchedRef.current = false
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Empty array - only run once on mount
+
   return <Outlet />
 }
 

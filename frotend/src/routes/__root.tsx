@@ -5,6 +5,8 @@ import { AnimatePresence } from 'motion/react'
 
 import appCss from '../styles.css?url'
 import { Toaster } from '@/components/ui/sonner'
+import { AppSidebar } from '@/components/layout/sidebar'
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
 
@@ -67,6 +69,8 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   const location = useLocation()
+  // Show sidebar for authenticated routes (not auth pages)
+  const isAuthenticatedRoute = !location.pathname.startsWith('/auth')
   
   return (
     <html lang="en" style={{ fontFamily: 'Manrope, sans-serif' }}>
@@ -75,8 +79,21 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body style={{ backgroundColor: '#fafafa', margin: 0 }}>
         <AnimatePresence mode="wait">
-          <main key={location.pathname}>
-            {children}
+          <main key={location.pathname} className="flex flex-row h-screen overflow-hidden">
+            {isAuthenticatedRoute ? (
+              <SidebarProvider>
+                <AppSidebar />
+                <SidebarInset className="flex-1 p-4 overflow-hidden">
+                  <section className="bg-zinc-100 rounded-[22px] overflow-hidden h-full">
+                    {children}
+                  </section>
+                </SidebarInset>
+              </SidebarProvider>
+            ) : (
+              <section className="flex-1">
+                {children}
+              </section>
+            )}
           </main>
         </AnimatePresence>
         <Toaster position="top-center" />

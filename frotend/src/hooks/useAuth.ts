@@ -16,6 +16,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { api } from '@/lib/api'
 
 export function useAuth() {
+  // Zustand automatically subscribes to changes when destructuring
   const { user, isAuthenticated, isLoading, setUser, setLoading, logout } =
     useAuthStore()
 
@@ -56,11 +57,26 @@ export function useAuth() {
     try {
       setLoading(true)
       const response = await api.auth.me()
+      console.log('getCurrentUser - API response:', response)
       if (response.user) {
-        setUser(response.user as typeof user)
+        // Properly type the user data
+        const userData = response.user as {
+          id: string
+          email: string
+          name?: string
+          orgName?: string
+          location?: string
+          profilePic?: string
+          emailVerified?: boolean
+          onboardingCompleted?: boolean
+        }
+        console.log('getCurrentUser - Setting user data:', userData)
+        setUser(userData)
+        console.log('getCurrentUser - User set in store')
       }
       return { success: true, user: response.user }
     } catch (error) {
+      console.error('getCurrentUser - Error:', error)
       setUser(null)
       return {
         success: false,
