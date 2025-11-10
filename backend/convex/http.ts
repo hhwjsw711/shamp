@@ -34,6 +34,7 @@ import {
   assignVendorHandler,
   closeTicketHandler,
   scheduleRepairHandler,
+  deleteTicketHandler,
 } from "./handlers/tickets/index";
 import { submitTicketWithPinHandler } from "./handlers/tickets/submitWithPin";
 
@@ -68,6 +69,13 @@ import { handleWebhook } from "./handlers/emails/webhook";
 
 // Import analytics handlers
 import { getDashboardStatsHandler } from "./handlers/analytics/index";
+
+// Import file handlers
+import {
+  uploadFileHandler,
+  getFileUrlHandler,
+  deleteFileHandler,
+} from "./handlers/files/index";
 
 const http = httpRouter();
 
@@ -352,6 +360,19 @@ http.route({
   handler: scheduleRepairHandler,
 });
 
+// Delete ticket
+http.route({
+  path: "/api/tickets/:id",
+  method: "DELETE",
+  handler: deleteTicketHandler,
+});
+
+http.route({
+  path: "/api/tickets/:id",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
+});
+
 // Submit ticket with PIN (for staff/guests)
 http.route({
   path: "/api/tickets/submit-with-pin",
@@ -493,6 +514,49 @@ http.route({
 
 http.route({
   path: "/api/analytics/dashboard",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
+});
+
+/**
+ * File Routes
+ */
+
+// Upload file
+http.route({
+  path: "/api/files/upload",
+  method: "POST",
+  handler: uploadFileHandler,
+});
+
+http.route({
+  path: "/api/files/upload",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
+});
+
+// Get file URL
+http.route({
+  path: "/api/files/:id/url",
+  method: "GET",
+  handler: getFileUrlHandler,
+});
+
+http.route({
+  path: "/api/files/:id/url",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
+});
+
+// Delete file
+http.route({
+  path: "/api/files/:id",
+  method: "DELETE",
+  handler: deleteFileHandler,
+});
+
+http.route({
+  path: "/api/files/:id",
   method: "OPTIONS",
   handler: corsPreflightHandler,
 });

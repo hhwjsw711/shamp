@@ -34,6 +34,7 @@ import type * as functions_emails_actions from "../functions/emails/actions.js";
 import type * as functions_emails_mutations from "../functions/emails/mutations.js";
 import type * as functions_embeddings_actions from "../functions/embeddings/actions.js";
 import type * as functions_embeddings_mutations from "../functions/embeddings/mutations.js";
+import type * as functions_files_queries from "../functions/files/queries.js";
 import type * as functions_firecrawlResults_mutations from "../functions/firecrawlResults/mutations.js";
 import type * as functions_firecrawlResults_queries from "../functions/firecrawlResults/queries.js";
 import type * as functions_passwordReset_actions from "../functions/passwordReset/actions.js";
@@ -71,6 +72,7 @@ import type * as handlers_emailVerification_sendCode from "../handlers/emailVeri
 import type * as handlers_emailVerification_verifyCode from "../handlers/emailVerification/verifyCode.js";
 import type * as handlers_emails_inbound from "../handlers/emails/inbound.js";
 import type * as handlers_emails_webhook from "../handlers/emails/webhook.js";
+import type * as handlers_files_index from "../handlers/files/index.js";
 import type * as handlers_passwordReset_complete from "../handlers/passwordReset/complete.js";
 import type * as handlers_passwordReset_request from "../handlers/passwordReset/request.js";
 import type * as handlers_passwordReset_verify from "../handlers/passwordReset/verify.js";
@@ -137,6 +139,7 @@ declare const fullApi: ApiFromModules<{
   "functions/emails/mutations": typeof functions_emails_mutations;
   "functions/embeddings/actions": typeof functions_embeddings_actions;
   "functions/embeddings/mutations": typeof functions_embeddings_mutations;
+  "functions/files/queries": typeof functions_files_queries;
   "functions/firecrawlResults/mutations": typeof functions_firecrawlResults_mutations;
   "functions/firecrawlResults/queries": typeof functions_firecrawlResults_queries;
   "functions/passwordReset/actions": typeof functions_passwordReset_actions;
@@ -174,6 +177,7 @@ declare const fullApi: ApiFromModules<{
   "handlers/emailVerification/verifyCode": typeof handlers_emailVerification_verifyCode;
   "handlers/emails/inbound": typeof handlers_emails_inbound;
   "handlers/emails/webhook": typeof handlers_emails_webhook;
+  "handlers/files/index": typeof handlers_files_index;
   "handlers/passwordReset/complete": typeof handlers_passwordReset_complete;
   "handlers/passwordReset/request": typeof handlers_passwordReset_request;
   "handlers/passwordReset/verify": typeof handlers_passwordReset_verify;

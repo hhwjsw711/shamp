@@ -165,3 +165,43 @@ export const scheduleRepairInternal = internalMutation({
   },
 });
 
+/**
+ * Delete ticket (internal)
+ * Deletes ticket and associated files from storage
+ */
+export const deleteTicketInternal = internalMutation({
+  args: {
+    ticketId: v.id("tickets"),
+  },
+  handler: async (ctx, args) => {
+    // Get ticket to access file IDs
+    const ticket = await ctx.db.get(args.ticketId);
+    
+    if (!ticket) {
+      throw new Error("Ticket not found");
+    }
+
+    // Delete associated files from storage
+    if (ticket.photoId) {
+      try {
+        await ctx.storage.delete(ticket.photoId);
+      } catch (error) {
+        // Log error but don't fail ticket deletion if file deletion fails
+        console.error(`Failed to delete photo ${ticket.photoId}:`, error);
+      }
+    }
+
+    if (ticket.verificationPhotoId) {
+      try {
+        await ctx.storage.delete(ticket.verificationPhotoId);
+      } catch (error) {
+        // Log error but don't fail ticket deletion if file deletion fails
+        console.error(`Failed to delete verification photo ${ticket.verificationPhotoId}:`, error);
+      }
+    }
+
+    // Delete ticket from database
+    await ctx.db.delete(args.ticketId);
+  },
+});
+
