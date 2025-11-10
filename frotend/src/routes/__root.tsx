@@ -80,7 +80,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body style={{ backgroundColor: '#fafafa', margin: 0 }}>
         <AnimatePresence mode="wait">
-          <main key={location.pathname} className="flex flex-row h-screen overflow-hidden">
+          <main key={location.pathname} className="flex flex-row h-screen gap-0 overflow-hidden">
             {isAuthenticatedRoute ? (
               <SidebarProvider>
                 <AppSidebar />

@@ -66,17 +66,17 @@ function SidebarContentComponent() {
   }
 
   return (
-    <div 
+    <section 
       className={cn(
-        "flex flex-col p-4 gap-4 bg-background h-full",
+        "flex flex-col gap-4 bg-background h-full",
         state === "collapsed" && "cursor-ew-resize"
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleSidebarClick}
     >
-      <SidebarHeader className="w-full flex justify-between items-center p-0">
-        <div className="relative w-full flex justify-center items-center">
+      <SidebarHeader className="w-full flex justify-between items-center px-4 pt-4">
+        <section className="relative w-full flex justify-center items-center">
           {/* Favicon - shows when expanded or when collapsed and not hovering */}
           <img
             src="/shamp-favicon.png"
@@ -97,14 +97,14 @@ function SidebarContentComponent() {
               state === "collapsed" && !isHovered && "opacity-0 absolute"
             )}
           />
-        </div>
+        </section>
       </SidebarHeader>
 
       <SidebarContent className={cn(
-        "p-0",
+        "px-4",
         state === "collapsed" && "overflow-visible"
       )}>
-        <SidebarGroup>
+        <SidebarGroup className="p-0">
           <SidebarGroupContent className={cn(
             state === "collapsed" && "flex flex-col items-center gap-2"
           )}>
@@ -137,8 +137,8 @@ function SidebarContentComponent() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-0">
-        <SidebarGroup>
+      <SidebarFooter className="px-4 pb-4">
+        <SidebarGroup className="p-0">
           <SidebarGroupContent className={cn(state === "collapsed" && "flex justify-center")}>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -148,7 +148,7 @@ function SidebarContentComponent() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarFooter>
-    </div>
+    </section>
   )
 }
 
