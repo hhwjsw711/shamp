@@ -19,6 +19,7 @@ import type * as functions_agents_vendorConversationAgent from "../functions/age
 import type * as functions_agents_vendorDiscoveryAgent from "../functions/agents/vendorDiscoveryAgent.js";
 import type * as functions_agents_vendorRankingAgent from "../functions/agents/vendorRankingAgent.js";
 import type * as functions_agents_vendorResponseAgent from "../functions/agents/vendorResponseAgent.js";
+import type * as functions_analytics_queries from "../functions/analytics/queries.js";
 import type * as functions_auth_actions from "../functions/auth/actions.js";
 import type * as functions_auth_authHelpers from "../functions/auth/authHelpers.js";
 import type * as functions_auth_getEnv from "../functions/auth/getEnv.js";
@@ -57,6 +58,7 @@ import type * as functions_vendors_actions from "../functions/vendors/actions.js
 import type * as functions_vendors_mutations from "../functions/vendors/mutations.js";
 import type * as functions_vendors_queries from "../functions/vendors/queries.js";
 import type * as handlers_agents_index from "../handlers/agents/index.js";
+import type * as handlers_analytics_index from "../handlers/analytics/index.js";
 import type * as handlers_auth_google from "../handlers/auth/google.js";
 import type * as handlers_auth_login from "../handlers/auth/login.js";
 import type * as handlers_auth_logout from "../handlers/auth/logout.js";
@@ -120,6 +122,7 @@ declare const fullApi: ApiFromModules<{
   "functions/agents/vendorDiscoveryAgent": typeof functions_agents_vendorDiscoveryAgent;
   "functions/agents/vendorRankingAgent": typeof functions_agents_vendorRankingAgent;
   "functions/agents/vendorResponseAgent": typeof functions_agents_vendorResponseAgent;
+  "functions/analytics/queries": typeof functions_analytics_queries;
   "functions/auth/actions": typeof functions_auth_actions;
   "functions/auth/authHelpers": typeof functions_auth_authHelpers;
   "functions/auth/getEnv": typeof functions_auth_getEnv;
@@ -158,6 +161,7 @@ declare const fullApi: ApiFromModules<{
   "functions/vendors/mutations": typeof functions_vendors_mutations;
   "functions/vendors/queries": typeof functions_vendors_queries;
   "handlers/agents/index": typeof handlers_agents_index;
+  "handlers/analytics/index": typeof handlers_analytics_index;
   "handlers/auth/google": typeof handlers_auth_google;
   "handlers/auth/login": typeof handlers_auth_login;
   "handlers/auth/logout": typeof handlers_auth_logout;

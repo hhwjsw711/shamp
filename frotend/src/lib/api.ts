@@ -218,6 +218,38 @@ export const api = {
       method: 'POST',
       body: data,
     }),
+
+  // Analytics endpoints
+  analytics: {
+    getDashboardStats: () =>
+      request<{
+        success: boolean
+        data: {
+          totalTickets: number
+          ticketCountsByStatus: Record<string, number>
+          averageResponseTimeMs: number | null
+          averageResponseTimeHours: number | null
+          averageFixTimeMs: number | null
+          averageFixTimeHours: number | null
+          mostUsedVendor: {
+            _id: string
+            businessName: string
+            usageCount: number
+          } | null
+          newQuotesCount: number
+          pendingQuotesCount: number
+          selectedQuotesCount: number
+          rejectedQuotesCount: number
+          expiredQuotesCount: number
+          totalQuotesReceived: number
+          ticketsAwaitingSelection: number
+          averageQuotePrice: number | null
+          averageQuoteDeliveryTimeHours: number | null
+        }
+      }>('/api/analytics/dashboard', {
+        method: 'GET',
+      }),
+  },
 }
 
 

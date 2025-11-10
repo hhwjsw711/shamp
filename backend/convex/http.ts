@@ -66,6 +66,9 @@ import {
 import { handleInboundEmail } from "./handlers/emails/inbound";
 import { handleWebhook } from "./handlers/emails/webhook";
 
+// Import analytics handlers
+import { getDashboardStatsHandler } from "./handlers/analytics/index";
+
 const http = httpRouter();
 
 /**
@@ -475,6 +478,23 @@ http.route({
   path: "/api/emails/webhook",
   method: "POST",
   handler: handleWebhook,
+});
+
+/**
+ * Analytics Routes
+ */
+
+// Get dashboard statistics
+http.route({
+  path: "/api/analytics/dashboard",
+  method: "GET",
+  handler: getDashboardStatsHandler,
+});
+
+http.route({
+  path: "/api/analytics/dashboard",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
 });
 
 export default http;
