@@ -61,10 +61,10 @@ export const draftVendorEmail = action({
       throw new Error("Vendor not found");
     }
 
-    // Get photo URL
+    // Get first photo URL for email draft (use first photo if available)
     let imageUrl: string | null = null;
-    if (ticket.photoId) {
-      imageUrl = await ctx.storage.getUrl(ticket.photoId);
+    if (ticket.photoIds && ticket.photoIds.length > 0) {
+      imageUrl = await ctx.storage.getUrl(ticket.photoIds[0]);
     }
 
     // Create tools

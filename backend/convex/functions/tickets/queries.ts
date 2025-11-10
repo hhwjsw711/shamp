@@ -18,10 +18,11 @@ export const getByIdInternal = internalQuery({
       return null;
     }
 
-    // Get photo URL if photoId exists
-    let photoUrl: string | null = null;
-    if (ticket.photoId) {
-      photoUrl = await ctx.storage.getUrl(ticket.photoId);
+    // Get photo URLs for all photos
+    const photoUrls: Array<string | null> = [];
+    for (const photoId of ticket.photoIds) {
+      const url = await ctx.storage.getUrl(photoId);
+      photoUrls.push(url);
     }
 
     // Get verification photo URL if exists
@@ -32,7 +33,7 @@ export const getByIdInternal = internalQuery({
 
     return {
       ...ticket,
-      photoUrl,
+      photoUrls,
       verificationPhotoUrl,
     };
   },

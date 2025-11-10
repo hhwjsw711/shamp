@@ -60,11 +60,21 @@ export const sendVendorEmail = action({
     // Generate unique thread ID
     const threadId = `ticket-${args.ticketId}-${Date.now()}`;
 
-    // Get photo URL if available
-    let photoUrl: string | undefined;
-    if (ticket.photoId) {
-      photoUrl = await ctx.storage.getUrl(ticket.photoId) ?? undefined;
+    // Get photo URLs if available (include all photos in email)
+    const photoUrls: string[] = [];
+    if (ticket.photoIds && ticket.photoIds.length > 0) {
+      for (const photoId of ticket.photoIds) {
+        const url = await ctx.storage.getUrl(photoId);
+        if (url) {
+          photoUrls.push(url);
+        }
+      }
     }
+
+    // Build HTML with all photos
+    const photosHtml = photoUrls.length > 0
+      ? photoUrls.map((url, index) => `<br><img src="${url}" alt="Issue photo ${index + 1}">`).join("")
+      : "";
 
     // Send email via Resend
     const emailId = await resend.sendEmail(ctx, {
@@ -76,9 +86,7 @@ export const sendVendorEmail = action({
         process.env.RESEND_REPLY_TO_EMAIL || "replies@updates.shamp.io",
       ],
       subject: `[Ticket #${args.ticketId}] ${emailContent.subject}`,
-      html:
-        emailContent.body +
-        (photoUrl ? `<br><img src="${photoUrl}" alt="Issue photo">` : ""),
+      html: emailContent.body + photosHtml,
     });
 
     // Store email-to-ticket mapping for tracking email events
@@ -117,7 +125,7 @@ export const sendVendorEmail = action({
       (api as any).functions.tickets.mutations.updateStatusInternal,
       {
         ticketId: args.ticketId,
-        status: "Sent",
+        status: "processing",
       }
     );
 

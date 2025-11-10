@@ -62,9 +62,10 @@ export const sendOutreachEmails = action({
       throw new Error("No vendors found in discovery results");
     }
 
+    // Get first photo URL (use first photo if available)
     let photoUrl: string | undefined;
-    if (ticket.photoId) {
-      photoUrl = await ctx.storage.getUrl(ticket.photoId) ?? undefined;
+    if (ticket.photoIds && ticket.photoIds.length > 0) {
+      photoUrl = await ctx.storage.getUrl(ticket.photoIds[0]) ?? undefined;
     }
 
     const userData: Doc<"users"> | null = await ctx.runQuery(

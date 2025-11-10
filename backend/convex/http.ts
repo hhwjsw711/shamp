@@ -35,6 +35,7 @@ import {
   closeTicketHandler,
   scheduleRepairHandler,
   deleteTicketHandler,
+  deletePhotoFromTicketHandler,
 } from "./handlers/tickets/index";
 import { submitTicketWithPinHandler } from "./handlers/tickets/submitWithPin";
 
@@ -369,6 +370,19 @@ http.route({
 
 http.route({
   path: "/api/tickets/:id",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
+});
+
+// Delete photo from ticket
+http.route({
+  path: "/api/tickets/:id/photos/:photoId",
+  method: "DELETE",
+  handler: deletePhotoFromTicketHandler,
+});
+
+http.route({
+  path: "/api/tickets/:id/photos/:photoId",
   method: "OPTIONS",
   handler: corsPreflightHandler,
 });

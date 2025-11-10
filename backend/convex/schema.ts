@@ -82,9 +82,17 @@ export default defineSchema({
     predictedTags: v.array(v.string()),
     description: v.string(),
     location: v.optional(v.string()),
-    photoId: v.optional(v.id("_storage")), // Required for PIN submissions, optional for authenticated
+    photoIds: v.array(v.id("_storage")), // Required array of photo IDs (max 5)
     createdAt: v.number(),
-    status: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("processing"),
+      v.literal("vendors_available"),
+      v.literal("vendor_selected"),
+      v.literal("vendor_scheduled"),
+      v.literal("fixed"),
+      v.literal("closed")
+    ),
     firecrawlResultsId: v.optional(v.id("firecrawlResults")),
     selectedVendorId: v.optional(v.id("vendors")),
     selectedVendorQuoteId: v.optional(v.id("vendorQuotes")),

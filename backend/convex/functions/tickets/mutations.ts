@@ -16,10 +16,20 @@ export const createInternal = internalMutation({
     name: v.optional(v.string()), // Ticket creator name (optional, can get from user if authenticated)
     description: v.string(),
     location: v.optional(v.string()),
-    photoId: v.optional(v.id("_storage")),
+    photoIds: v.array(v.id("_storage")), // Required array of photo IDs (max 5)
     issueType: v.optional(v.string()),
     predictedTags: v.optional(v.array(v.string())),
-    status: v.optional(v.string()),
+    status: v.optional(
+      v.union(
+        v.literal("pending"),
+        v.literal("processing"),
+        v.literal("vendors_available"),
+        v.literal("vendor_selected"),
+        v.literal("vendor_scheduled"),
+        v.literal("fixed"),
+        v.literal("closed")
+      )
+    ),
     // PIN submission fields
     submittedViaPin: v.optional(v.boolean()),
     pinOwnerId: v.optional(v.id("users")),
@@ -27,15 +37,23 @@ export const createInternal = internalMutation({
     submittedByPhone: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<Id<"tickets">> => {
+    // Validate photoIds array length (max 5)
+    if (args.photoIds.length === 0) {
+      throw new Error("At least one photo is required");
+    }
+    if (args.photoIds.length > 5) {
+      throw new Error("Maximum 5 photos allowed");
+    }
+
     const ticketId = await ctx.db.insert("tickets", {
       createdBy: args.createdBy,
       name: args.name,
       description: args.description,
       location: args.location,
-      photoId: args.photoId,
+      photoIds: args.photoIds,
       issueType: args.issueType,
       predictedTags: args.predictedTags || [],
-      status: args.status || "New",
+      status: args.status || "pending",
       createdAt: Date.now(),
       submittedViaPin: args.submittedViaPin || false,
       pinOwnerId: args.pinOwnerId,
@@ -73,7 +91,17 @@ export const updateInternal = internalMutation({
         v.literal("scheduling")
       )
     ),
-    status: v.optional(v.string()),
+    status: v.optional(
+      v.union(
+        v.literal("pending"),
+        v.literal("processing"),
+        v.literal("vendors_available"),
+        v.literal("vendor_selected"),
+        v.literal("vendor_scheduled"),
+        v.literal("fixed"),
+        v.literal("closed")
+      )
+    ),
   },
   handler: async (ctx, args) => {
     const { ticketId, ...updates } = args;
@@ -98,7 +126,15 @@ export const updateInternal = internalMutation({
 export const updateStatusInternal = internalMutation({
   args: {
     ticketId: v.id("tickets"),
-    status: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("processing"),
+      v.literal("vendors_available"),
+      v.literal("vendor_selected"),
+      v.literal("vendor_scheduled"),
+      v.literal("fixed"),
+      v.literal("closed")
+    ),
   },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.ticketId, {
@@ -118,7 +154,7 @@ export const assignVendorInternal = internalMutation({
   handler: async (ctx, args) => {
     await ctx.db.patch(args.ticketId, {
       selectedVendorId: args.vendorId,
-      status: "Awaiting Vendor",
+      status: "vendor_selected",
     });
   },
 });
@@ -133,11 +169,11 @@ export const closeTicketInternal = internalMutation({
   },
   handler: async (ctx, args) => {
     const updates: {
-      status: string;
+      status: "closed";
       closedAt: number;
       verificationPhotoId?: Id<"_storage">;
     } = {
-      status: "Closed",
+      status: "closed",
       closedAt: Date.now(),
     };
 
@@ -160,7 +196,7 @@ export const scheduleRepairInternal = internalMutation({
   handler: async (ctx, args) => {
     await ctx.db.patch(args.ticketId, {
       scheduledDate: args.scheduledDate,
-      status: "Scheduled",
+      status: "vendor_scheduled",
     });
   },
 });
@@ -181,13 +217,13 @@ export const deleteTicketInternal = internalMutation({
       throw new Error("Ticket not found");
     }
 
-    // Delete associated files from storage
-    if (ticket.photoId) {
+    // Delete associated photos from storage
+    for (const photoId of ticket.photoIds) {
       try {
-        await ctx.storage.delete(ticket.photoId);
+        await ctx.storage.delete(photoId);
       } catch (error) {
         // Log error but don't fail ticket deletion if file deletion fails
-        console.error(`Failed to delete photo ${ticket.photoId}:`, error);
+        console.error(`Failed to delete photo ${photoId}:`, error);
       }
     }
 
@@ -202,6 +238,51 @@ export const deleteTicketInternal = internalMutation({
 
     // Delete ticket from database
     await ctx.db.delete(args.ticketId);
+  },
+});
+
+/**
+ * Delete photo from ticket (internal)
+ * Removes a single photo from ticket's photoIds array
+ */
+export const deletePhotoFromTicketInternal = internalMutation({
+  args: {
+    ticketId: v.id("tickets"),
+    photoId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    // Get ticket
+    const ticket = await ctx.db.get(args.ticketId);
+    
+    if (!ticket) {
+      throw new Error("Ticket not found");
+    }
+
+    // Check if photo exists in ticket
+    if (!ticket.photoIds.includes(args.photoId)) {
+      throw new Error("Photo not found in ticket");
+    }
+
+    // Ensure at least one photo remains
+    if (ticket.photoIds.length <= 1) {
+      throw new Error("Cannot delete the last photo. At least one photo is required.");
+    }
+
+    // Remove photo from array
+    const updatedPhotoIds = ticket.photoIds.filter((id) => id !== args.photoId);
+
+    // Update ticket
+    await ctx.db.patch(args.ticketId, {
+      photoIds: updatedPhotoIds,
+    });
+
+    // Delete file from storage
+    try {
+      await ctx.storage.delete(args.photoId);
+    } catch (error) {
+      // Log error but don't fail if file deletion fails
+      console.error(`Failed to delete photo ${args.photoId} from storage:`, error);
+    }
   },
 });
 

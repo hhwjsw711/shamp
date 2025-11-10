@@ -9,6 +9,7 @@
  * POST /api/tickets/:id/close - Close ticket
  * POST /api/tickets/:id/schedule - Schedule repair
  * DELETE /api/tickets/:id - Delete ticket
+ * DELETE /api/tickets/:id/photos/:photoId - Delete photo from ticket
  */
 
 /// <reference types="node" />
@@ -110,7 +111,7 @@ export const createTicketHandler = httpAction(async (ctx, request) => {
     const contentType = request.headers.get("content-type") || "";
     let description: string;
     let location: string | undefined;
-    let photoId: string | undefined;
+    let photoIds: string[] = [];
     let issueType: string | undefined;
     let predictedTags: string[] | undefined;
     let name: string | undefined;
@@ -119,14 +120,60 @@ export const createTicketHandler = httpAction(async (ctx, request) => {
     if (contentType.includes("multipart/form-data")) {
       const formData = await request.formData();
       
-      // Extract file if present
-      const file = formData.get("file");
-      if (file && file instanceof File) {
-        // Validate file type (images only)
-        const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+      // Extract all files (can be multiple files with same name "files" or "files[]")
+      const files: File[] = [];
+      const fileEntries = formData.getAll("files");
+      
+      for (const entry of fileEntries) {
+        if (entry instanceof File) {
+          files.push(entry);
+        }
+      }
+      
+      // Also check for single "file" field (backward compatibility)
+      const singleFile = formData.get("file");
+      if (singleFile && singleFile instanceof File) {
+        files.push(singleFile);
+      }
+
+      // Validate file count (max 5)
+      if (files.length === 0) {
+        return new Response(
+          JSON.stringify({ error: "At least one photo is required" }),
+          {
+            status: 400,
+            headers: {
+              "Content-Type": "application/json",
+              "Access-Control-Allow-Origin": allowedOrigin,
+              "Access-Control-Allow-Credentials": "true",
+            },
+          }
+        );
+      }
+
+      if (files.length > 5) {
+        return new Response(
+          JSON.stringify({ error: "Maximum 5 photos allowed" }),
+          {
+            status: 400,
+            headers: {
+              "Content-Type": "application/json",
+              "Access-Control-Allow-Origin": allowedOrigin,
+              "Access-Control-Allow-Credentials": "true",
+            },
+          }
+        );
+      }
+
+      // Validate and store each file
+      const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+      const { MAX_FILE_SIZE_BYTES } = await import("../../utils/constants");
+
+      for (const file of files) {
+        // Validate file type
         if (!validTypes.includes(file.type)) {
           return new Response(
-            JSON.stringify({ error: "Invalid file type. Only images are allowed." }),
+            JSON.stringify({ error: `Invalid file type: ${file.name}. Only images are allowed.` }),
             {
               status: 400,
               headers: {
@@ -139,11 +186,10 @@ export const createTicketHandler = httpAction(async (ctx, request) => {
         }
 
         // Validate file size
-        const { MAX_FILE_SIZE_BYTES } = await import("../../utils/constants");
         if (file.size > MAX_FILE_SIZE_BYTES) {
           return new Response(
             JSON.stringify({ 
-              error: `File size exceeds maximum allowed size of ${MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB` 
+              error: `File ${file.name} exceeds maximum allowed size of ${MAX_FILE_SIZE_BYTES / (1024 * 1024)}MB` 
             }),
             {
               status: 400,
@@ -157,7 +203,8 @@ export const createTicketHandler = httpAction(async (ctx, request) => {
         }
 
         // Store file
-        photoId = await ctx.storage.store(file);
+        const fileId = await ctx.storage.store(file);
+        photoIds.push(fileId);
       }
 
       // Extract other fields from form data
@@ -181,11 +228,18 @@ export const createTicketHandler = httpAction(async (ctx, request) => {
         }
       }
     } else {
-      // Handle JSON request (backward compatibility)
+      // Handle JSON request (accepts photoIds array or photoId for backward compatibility)
       const body = await request.json();
       description = body.description;
       location = body.location;
-      photoId = body.photoId;
+      
+      // Support both photoIds array and single photoId (backward compatibility)
+      if (body.photoIds && Array.isArray(body.photoIds)) {
+        photoIds = body.photoIds;
+      } else if (body.photoId) {
+        photoIds = [body.photoId];
+      }
+      
       issueType = body.issueType;
       predictedTags = body.predictedTags;
       name = body.name;
@@ -205,6 +259,20 @@ export const createTicketHandler = httpAction(async (ctx, request) => {
       );
     }
 
+    if (photoIds.length === 0) {
+      return new Response(
+        JSON.stringify({ error: "At least one photo is required" }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": allowedOrigin,
+            "Access-Control-Allow-Credentials": "true",
+          },
+        }
+      );
+    }
+
     const ticketId = await ctx.runMutation(
       (internal as any).functions.tickets.mutations.createInternal,
       {
@@ -212,7 +280,7 @@ export const createTicketHandler = httpAction(async (ctx, request) => {
         name: name || fullUser.name, // Use provided name or user's name
         description,
         location,
-        photoId: photoId ? (photoId as any) : undefined,
+        photoIds: photoIds as any[],
         issueType,
         predictedTags: predictedTags || [],
       }
@@ -1111,6 +1179,162 @@ export const deleteTicketHandler = httpAction(async (ctx, request) => {
     );
   } catch (error) {
     console.error("Delete ticket error:", error);
+    const errorMessage = getErrorMessage(error);
+    
+    // Get origin for CORS
+    const origin = request.headers.get("origin");
+    const frontendUrl = await ctx.runAction(
+      (api as any).functions.auth.getEnv.getEnvVar,
+      { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
+    ) || "http://localhost:3000";
+    
+    const allowedOrigin = origin || frontendUrl;
+
+    return new Response(
+      JSON.stringify({ error: errorMessage }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": allowedOrigin,
+          "Access-Control-Allow-Credentials": "true",
+        },
+      }
+    );
+  }
+});
+
+/**
+ * Delete photo from ticket handler
+ * DELETE /api/tickets/:id/photos/:photoId
+ * Deletes a single photo from ticket without deleting the ticket
+ */
+export const deletePhotoFromTicketHandler = httpAction(async (ctx, request) => {
+  try {
+    // Get origin from request header for CORS
+    const origin = request.headers.get("origin");
+    const frontendUrl = await ctx.runAction(
+      (api as any).functions.auth.getEnv.getEnvVar,
+      { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
+    ) || "http://localhost:3000";
+    
+    const allowedOrigin = origin || frontendUrl;
+
+    const user = await authenticateUser(ctx, request);
+    if (!user) {
+      return new Response(
+        JSON.stringify({ error: "Not authenticated" }),
+        {
+          status: 401,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": allowedOrigin,
+            "Access-Control-Allow-Credentials": "true",
+          },
+        }
+      );
+    }
+
+    // Extract ticket ID and photo ID from URL
+    const url = new URL(request.url);
+    const pathParts = url.pathname.split("/").filter(Boolean);
+    // Expected: /api/tickets/:ticketId/photos/:photoId
+    const ticketIdIndex = pathParts.indexOf("tickets");
+    const photoIdIndex = pathParts.indexOf("photos");
+    
+    if (ticketIdIndex === -1 || photoIdIndex === -1 || photoIdIndex !== ticketIdIndex + 2) {
+      return new Response(
+        JSON.stringify({ error: "Invalid URL format. Expected: /api/tickets/:ticketId/photos/:photoId" }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": allowedOrigin,
+            "Access-Control-Allow-Credentials": "true",
+          },
+        }
+      );
+    }
+
+    const ticketId = pathParts[ticketIdIndex + 1];
+    const photoId = pathParts[photoIdIndex + 1];
+
+    if (!ticketId || !photoId) {
+      return new Response(
+        JSON.stringify({ error: "Ticket ID and Photo ID are required" }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": allowedOrigin,
+            "Access-Control-Allow-Credentials": "true",
+          },
+        }
+      );
+    }
+
+    // Verify user owns the ticket
+    const ticket = await ctx.runQuery(
+      (internal as any).functions.tickets.queries.getByIdInternal,
+      { ticketId: ticketId as any }
+    );
+
+    if (!ticket) {
+      return new Response(
+        JSON.stringify({ error: "Ticket not found" }),
+        {
+          status: 404,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": allowedOrigin,
+            "Access-Control-Allow-Credentials": "true",
+          },
+        }
+      );
+    }
+
+    if (ticket.createdBy !== user.userId) {
+      return new Response(
+        JSON.stringify({ error: "Not authorized to delete photos from this ticket" }),
+        {
+          status: 403,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": allowedOrigin,
+            "Access-Control-Allow-Credentials": "true",
+          },
+        }
+      );
+    }
+
+    // Delete photo from ticket
+    await ctx.runMutation(
+      (internal as any).functions.tickets.mutations.deletePhotoFromTicketInternal,
+      { 
+        ticketId: ticketId as any,
+        photoId: photoId as any,
+      }
+    );
+
+    // Get updated ticket
+    const updatedTicket = await ctx.runQuery(
+      (internal as any).functions.tickets.queries.getByIdInternal,
+      { ticketId: ticketId as any }
+    );
+
+    return new Response(
+      JSON.stringify({ success: true, message: "Photo deleted successfully", ticket: updatedTicket }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": allowedOrigin,
+          "Access-Control-Allow-Credentials": "true",
+        },
+      }
+    );
+  } catch (error) {
+    console.error("Delete photo from ticket error:", error);
     const errorMessage = getErrorMessage(error);
     
     // Get origin for CORS

@@ -48,10 +48,10 @@ export const analyzeTicket = action({
       throw new Error("Not authorized to analyze this ticket");
     }
 
-    // Get photo URL
+    // Get first photo URL for analysis (use first photo if available)
     let imageUrl: string | null = null;
-    if (ticket.photoId) {
-      imageUrl = await ctx.storage.getUrl(ticket.photoId);
+    if (ticket.photoIds && ticket.photoIds.length > 0) {
+      imageUrl = await ctx.storage.getUrl(ticket.photoIds[0]);
     }
 
     // Create tools

@@ -14,7 +14,7 @@ import { getErrorMessage } from "../../utils/errors";
 export const submitTicketWithPinHandler = httpAction(async (ctx, request) => {
   try {
     const body = await request.json();
-    const { token, description, photoId, name, location, submittedByEmail, submittedByPhone } = body;
+    const { token, description, photoId, photoIds, name, location, submittedByEmail, submittedByPhone } = body;
 
     // Validate token
     if (!token || typeof token !== "string") {
@@ -81,9 +81,30 @@ export const submitTicketWithPinHandler = httpAction(async (ctx, request) => {
       );
     }
 
-    if (!photoId || typeof photoId !== "string") {
+    // Support both photoIds array and single photoId (backward compatibility)
+    let photoIdsArray: string[] = [];
+    if (photoIds && Array.isArray(photoIds)) {
+      photoIdsArray = photoIds;
+    } else if (photoId && typeof photoId === "string") {
+      photoIdsArray = [photoId];
+    }
+
+    if (photoIdsArray.length === 0) {
       return new Response(
-        JSON.stringify({ error: "Photo is required" }),
+        JSON.stringify({ error: "At least one photo is required" }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+          },
+        }
+      );
+    }
+
+    if (photoIdsArray.length > 5) {
+      return new Response(
+        JSON.stringify({ error: "Maximum 5 photos allowed" }),
         {
           status: 400,
           headers: {
@@ -120,9 +141,9 @@ export const submitTicketWithPinHandler = httpAction(async (ctx, request) => {
         createdBy: pinOwner._id, // PIN owner is the ticket creator
         name: name || undefined, // Optional name from submitter
         description: description.trim(),
-        photoId: photoId as any,
+        photoIds: photoIdsArray as any[],
         location: location || undefined,
-        status: "New",
+        status: "pending",
         submittedViaPin: true,
         pinOwnerId: pinOwner._id,
         submittedByEmail: submittedByEmail || undefined,
