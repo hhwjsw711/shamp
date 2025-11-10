@@ -34,3 +34,22 @@ export const getByTicketId = query({
   },
 });
 
+/**
+ * Get vendor outreach by ticket ID and vendor ID (internal)
+ */
+export const getByTicketIdAndVendorIdInternal = internalQuery({
+  args: {
+    ticketId: v.id("tickets"),
+    vendorId: v.id("vendors"),
+  },
+  handler: async (ctx, args) => {
+    const outreachRecords = await ctx.db
+      .query("vendorOutreach")
+      .withIndex("by_ticketId", (q) => q.eq("ticketId", args.ticketId))
+      .collect();
+
+    // Find the one matching the vendor ID
+    return outreachRecords.find((o) => o.vendorId === args.vendorId) || null;
+  },
+});
+

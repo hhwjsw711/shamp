@@ -16,6 +16,7 @@ const resend = new Resend((components as any).resend, {
 
 /**
  * Helper function to handle conversational response to vendor emails
+ * Now includes escalation detection and creation
  */
 async function handleConversationalResponse(
   ctx: Parameters<Parameters<typeof httpAction>[0]>[0],
@@ -29,6 +30,33 @@ async function handleConversationalResponse(
   }
 ): Promise<void> {
   try {
+    // Get ticket to find user
+    const ticket: Doc<"tickets"> | null = await ctx.runQuery(
+      (internal as any).functions.tickets.queries.getByIdInternal,
+      {
+        ticketId: params.ticketId,
+      }
+    );
+
+    if (!ticket) {
+      console.error("Ticket not found for conversational response");
+      return;
+    }
+
+    // Get vendor outreach to find outreach ID
+    const outreach: Doc<"vendorOutreach"> | null = await ctx.runQuery(
+      (internal as any).functions.vendorOutreach.queries.getByTicketIdAndVendorIdInternal,
+      {
+        ticketId: params.ticketId,
+        vendorId: params.vendorId,
+      }
+    );
+
+    if (!outreach) {
+      console.error("Vendor outreach not found");
+      return;
+    }
+
     const conversationResponse = await ctx.runAction(
       (api as any).functions.agents.vendorConversationAgent.generateVendorResponse,
       {
@@ -40,6 +68,36 @@ async function handleConversationalResponse(
       }
     );
 
+    // Check if escalation is needed
+    if (conversationResponse.shouldEscalate) {
+      // Create escalation
+      await ctx.runMutation(
+        (internal as any).functions.escalations.mutations.createInternal,
+        {
+          ticketId: params.ticketId,
+          vendorId: params.vendorId,
+          vendorOutreachId: outreach._id,
+          conversationId: params.conversation._id,
+          userId: ticket.createdBy,
+          vendorMessage: params.emailBody,
+          vendorEmail: params.vendorEmail,
+          intent: conversationResponse.intent,
+          confidenceScore: conversationResponse.confidenceScore,
+          reason:
+            conversationResponse.escalationReason ||
+            `Low confidence (${conversationResponse.confidenceScore.toFixed(2)}) or complex intent (${conversationResponse.intent})`,
+          agentSuggestedResponse: conversationResponse.responseBody,
+        }
+      );
+
+      // Don't auto-respond if escalated - user will review and respond
+      console.log(
+        `Escalation created for ticket ${params.ticketId}, vendor ${params.vendorId}`
+      );
+      return;
+    }
+
+    // Auto-respond if not escalated and should respond
     if (conversationResponse.shouldRespond && conversationResponse.responseBody) {
       // Get environment variables using action
       const fromEmail = await ctx.runAction(

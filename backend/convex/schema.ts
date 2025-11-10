@@ -290,5 +290,41 @@ export default defineSchema({
       dimensions: 1536,
       filterFields: ["ticketId", "vendorId", "status"],
     }),
+
+  // Escalations table for vendor emails that need user attention
+  escalations: defineTable({
+    ticketId: v.id("tickets"),
+    vendorId: v.id("vendors"),
+    vendorOutreachId: v.id("vendorOutreach"),
+    conversationId: v.id("conversations"),
+    userId: v.id("users"), // User who needs to review
+    vendorMessage: v.string(), // The vendor message that triggered escalation
+    vendorEmail: v.string(),
+    intent: v.union(
+      v.literal("question"),
+      v.literal("clarification"),
+      v.literal("quote_provided"),
+      v.literal("declining"),
+      v.literal("follow_up"),
+      v.literal("complex"),
+      v.literal("other")
+    ),
+    confidenceScore: v.number(), // Agent confidence score (0-1)
+    reason: v.string(), // Why this was escalated
+    status: v.union(
+      v.literal("pending"), // Awaiting user review
+      v.literal("reviewed"), // User has reviewed
+      v.literal("responded"), // User has responded
+      v.literal("resolved") // Escalation resolved
+    ),
+    agentSuggestedResponse: v.optional(v.string()), // Agent's suggested response (if any)
+    userResponse: v.optional(v.string()), // User's actual response
+    resolvedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_ticketId", ["ticketId"])
+    .index("by_userId", ["userId"])
+    .index("by_status", ["status"])
+    .index("by_userId_status", ["userId", "status"]),
 });
 

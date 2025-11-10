@@ -71,6 +71,9 @@ import { handleWebhook } from "./handlers/emails/webhook";
 // Import analytics handlers
 import { getDashboardStatsHandler } from "./handlers/analytics/index";
 
+// Import chat handlers
+import { chatHandler } from "./handlers/chat/index";
+
 // Import file handlers
 import {
   uploadFileHandler,
@@ -528,6 +531,23 @@ http.route({
 
 http.route({
   path: "/api/analytics/dashboard",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
+});
+
+/**
+ * Chat Routes
+ */
+
+// Chat with user chat agent
+http.route({
+  path: "/api/chat",
+  method: "POST",
+  handler: chatHandler,
+});
+
+http.route({
+  path: "/api/chat",
   method: "OPTIONS",
   handler: corsPreflightHandler,
 });

@@ -106,7 +106,7 @@ export const generateVendorResponse = action({
       })
       .join("\n\n");
 
-    // Use AI to generate contextual response
+    // Use AI to generate contextual response with confidence scoring
     const { object: responseData } = await generateObject({
       model: openai("gpt-4o"),
       schema: z.object({
@@ -130,9 +130,26 @@ export const generateVendorResponse = action({
             z.literal("quote_provided"),
             z.literal("declining"),
             z.literal("follow_up"),
+            z.literal("complex"),
             z.literal("other"),
           ])
           .describe("Intent of the vendor message"),
+        confidenceScore: z
+          .number()
+          .min(0)
+          .max(1)
+          .describe(
+            "Confidence score (0-1) in the agent's ability to handle this message appropriately. Lower scores indicate need for human review."
+          ),
+        shouldEscalate: z
+          .boolean()
+          .describe(
+            "Whether this message should be escalated to the user for review (true if confidence is low, message is complex, or requires human judgment)"
+          ),
+        escalationReason: z
+          .string()
+          .optional()
+          .describe("Reason for escalation if shouldEscalate is true"),
       }),
       prompt: getVendorConversationPrompt({
         ticketDescription: ticket.description,
