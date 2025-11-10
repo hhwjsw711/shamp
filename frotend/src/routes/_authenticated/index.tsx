@@ -6,8 +6,8 @@ export const Route = createFileRoute('/_authenticated/')({
 
 function App() {
   return (
-    <main>
+    <section className="flex flex-col gap-2 p-4">
       <h1>Hello World</h1>
-    </main>
+    </section>
   )
 }

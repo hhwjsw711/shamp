@@ -6,6 +6,7 @@ import { AnimatePresence } from 'motion/react'
 import appCss from '../styles.css?url'
 import { Toaster } from '@/components/ui/sonner'
 import { AppSidebar } from '@/components/layout/sidebar'
+import { PageHeader } from '@/components/layout/page-header'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
@@ -83,8 +84,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             {isAuthenticatedRoute ? (
               <SidebarProvider>
                 <AppSidebar />
-                <SidebarInset className="flex-1 p-4 overflow-hidden">
-                  <section className="bg-zinc-100 rounded-[22px] overflow-hidden h-full">
+                <SidebarInset className="flex-1 flex flex-col gap-2 p-4 overflow-hidden">
+                  <section className="md:hidden">
+                    <PageHeader />
+                  </section>
+                  <section className="bg-zinc-100 rounded-[22px] overflow-hidden flex-1 min-h-0 flex flex-col gap-2">
+                    <section className="hidden md:block">
+                      <PageHeader />
+                    </section>
                     {children}
                   </section>
                 </SidebarInset>
