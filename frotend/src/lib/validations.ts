@@ -57,11 +57,7 @@ export const passwordResetVerifySchema = z.object({
 // Password reset complete schema
 export const passwordResetCompleteSchema = z
   .object({
-    email: emailSchema,
-    code: z
-      .string()
-      .length(6, 'Code must be 6 digits')
-      .regex(/^\d+$/, 'Code must contain only digits'),
+    userId: z.string().min(1, 'User ID is required'), // User ID from verification step
     newPassword: passwordSchema,
     confirmPassword: z.string().min(1, 'Please confirm your password'),
   })

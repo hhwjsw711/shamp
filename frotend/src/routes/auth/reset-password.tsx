@@ -27,7 +27,7 @@ export const Route = createFileRoute('/auth/reset-password')({
   validateSearch: (search: Record<string, unknown>) => {
     return {
       email: (search.email as string) || '',
-      code: (search.code as string) || '',
+      userId: (search.userId as string) || '',
     }
   },
 })
@@ -39,34 +39,30 @@ function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const { email, code } = Route.useSearch()
+  const { email, userId } = Route.useSearch()
 
   const form = useForm<PasswordResetCompleteInput>({
     resolver: zodResolver(passwordResetCompleteSchema),
     defaultValues: {
-      email: email || '',
-      code: code || '',
+      userId: userId || '',
       newPassword: '',
       confirmPassword: '',
     },
   })
 
-  // Update form email and code when search params change
+  // Update form userId when search params change
   useEffect(() => {
-    if (email) {
-      form.setValue('email', email)
+    if (userId) {
+      form.setValue('userId', userId)
     }
-    if (code) {
-      form.setValue('code', code)
-    }
-  }, [email, code, form])
+  }, [userId, form])
 
-  // Redirect if no email or code provided
+  // Redirect if no email or userId provided
   useEffect(() => {
-    if (!email || !code) {
+    if (!email || !userId) {
       navigate({ to: '/auth/request-reset-password' })
     }
-  }, [email, code, navigate])
+  }, [email, userId, navigate])
 
   // Clear error when form fields change
   const handleFieldChange = () => {
@@ -86,8 +82,8 @@ function ResetPasswordPage() {
   }, [error])
 
   const onSubmit = async (data: PasswordResetCompleteInput) => {
-    if (!code || code.length !== 6) {
-      setError('Invalid reset code. Please start over.')
+    if (!userId) {
+      setError('Invalid user ID. Please start over.')
       navigate({ to: '/auth/request-reset-password' })
       return
     }
@@ -97,7 +93,7 @@ function ResetPasswordPage() {
 
     const result = await completePasswordReset({
       ...data,
-      code,
+      userId,
     })
 
     if (result.success) {

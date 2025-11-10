@@ -70,7 +70,7 @@ function ResetPasswordCodePage() {
       toast.success('Reset code verified successfully!')
       navigate({
         to: '/auth/reset-password',
-        search: { email, code },
+        search: { email, userId: result.userId },
       })
     } else {
       setError(result.error || 'Failed to verify reset code')

@@ -110,7 +110,7 @@ export const passwordResetVerifySchema = z.object({
  * Password reset complete schema
  */
 export const passwordResetCompleteSchema = z.object({
-  code: sixDigitCodeSchema,
+  userId: z.string(), // User ID from verification step (code is deleted after verification)
   newPassword: passwordSchema,
 });
 

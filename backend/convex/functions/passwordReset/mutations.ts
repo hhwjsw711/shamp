@@ -106,3 +106,14 @@ export const markCodeAsUsedInternal = mutation({
   },
 });
 
+/**
+ * Internal mutation to delete reset code (no auth required)
+ * @param codeId - Reset code ID
+ */
+export const deleteResetCodeInternal = mutation({
+  args: { codeId: v.id("passwordResetCodes") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.codeId);
+  },
+});
+

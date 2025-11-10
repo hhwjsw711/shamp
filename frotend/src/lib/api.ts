@@ -193,13 +193,13 @@ export const api = {
       }),
 
     verify: (data: { code: string }) =>
-      request<{ success: boolean; message: string }>('/api/auth/password-reset/verify', {
+      request<{ success: boolean; message: string; userId: string }>('/api/auth/password-reset/verify', {
         method: 'POST',
         body: data,
       }),
 
     complete: (data: {
-      code: string
+      userId: string
       newPassword: string
     }) =>
       request<{ success: boolean; message: string }>('/api/auth/password-reset/complete', {

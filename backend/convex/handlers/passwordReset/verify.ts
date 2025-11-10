@@ -87,11 +87,21 @@ export const verifyPasswordResetCodeHandler = httpAction(async (ctx, request) =>
       );
     }
 
-    // Return success - code is valid
+    // Store userId before deleting the code
+    const userId = resetCode.userId;
+
+    // Delete the reset code after successful verification
+    await ctx.runMutation(
+      (internal as any).functions.passwordReset.mutations.deleteResetCodeInternal,
+      { codeId: resetCode._id }
+    );
+
+    // Return success - code is valid, include userId for password reset completion
     return new Response(
       JSON.stringify({
         success: true,
         message: "Reset code verified successfully",
+        userId: userId,
       }),
       {
         status: 200,

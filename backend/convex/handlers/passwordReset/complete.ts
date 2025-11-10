@@ -10,7 +10,6 @@ import { internal, api } from "../../_generated/api";
 import { validate, passwordResetCompleteSchema } from "../../utils/validation";
 import { extractIpAddress, checkRateLimit } from "../../utils/security";
 import { getErrorMessage } from "../../utils/errors";
-import { isCodeExpired } from "../../utils/codeGeneration";
 
 /**
  * Complete password reset handler
@@ -35,47 +34,17 @@ export const completePasswordResetHandler = httpAction(async (ctx, request) => {
 
     // Parse and validate request body
     const body = await request.json();
-    const { code, newPassword } = validate(passwordResetCompleteSchema, body);
+    const { userId, newPassword } = validate(passwordResetCompleteSchema, body);
 
-    // Get reset code
-    const resetCode = await ctx.runQuery(
-      (internal as any).functions.passwordReset.queries.getResetCodeByCodeInternal,
-      { code }
+    // Verify user exists
+    const user = await ctx.runQuery(
+      (internal as any).functions.auth.queries.getUserByIdInternal,
+      { userId }
     );
 
-    if (!resetCode) {
+    if (!user) {
       return new Response(
-        JSON.stringify({ error: "Invalid or expired reset code" }),
-        {
-          status: 400,
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": allowedOrigin,
-            "Access-Control-Allow-Credentials": "true",
-          },
-        }
-      );
-    }
-
-    // Check if already used
-    if (resetCode.used) {
-      return new Response(
-        JSON.stringify({ error: "This reset code has already been used" }),
-        {
-          status: 400,
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": allowedOrigin,
-            "Access-Control-Allow-Credentials": "true",
-          },
-        }
-      );
-    }
-
-    // Check if expired
-    if (isCodeExpired(resetCode.expiresAt)) {
-      return new Response(
-        JSON.stringify({ error: "Reset code has expired. Please request a new one." }),
+        JSON.stringify({ error: "Invalid user" }),
         {
           status: 400,
           headers: {
@@ -97,21 +66,15 @@ export const completePasswordResetHandler = httpAction(async (ctx, request) => {
     await ctx.runMutation(
       (internal as any).functions.auth.mutations.updatePasswordInternal,
       {
-        userId: resetCode.userId,
+        userId: userId,
         hashedPassword,
       }
-    );
-
-    // Mark reset code as used
-    await ctx.runMutation(
-      (internal as any).functions.passwordReset.mutations.markCodeAsUsedInternal,
-      { codeId: resetCode._id }
     );
 
     // Delete all sessions for this user (force re-login with new password)
     await ctx.runMutation(
       (internal as any).functions.sessions.mutations.deleteSessionsByUserId,
-      { userId: resetCode.userId }
+      { userId: userId }
     );
 
     return new Response(
