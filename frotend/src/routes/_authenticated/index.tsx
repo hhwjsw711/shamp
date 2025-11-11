@@ -42,11 +42,7 @@ function App() {
         setIsLoading(true)
         setError(null)
         const response = await api.analytics.getDashboardStats()
-        if (response.success && response.data) {
-          setStats(response.data)
-        } else {
-          setError('Failed to load dashboard statistics')
-        }
+        setStats(response.data)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load dashboard statistics')
       } finally {

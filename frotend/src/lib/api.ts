@@ -250,6 +250,33 @@ export const api = {
         method: 'GET',
       }),
   },
+
+  // Ticket endpoints
+  tickets: {
+    create: async (data: {
+      description: string
+      photoIds: Array<string>
+      location?: string
+      name?: string
+    }) => {
+      // Send as JSON with photoIds array (files are already uploaded)
+      return request<{
+        success: boolean
+        ticket: {
+          _id: string
+          [key: string]: unknown
+        }
+      }>('/api/tickets', {
+        method: 'POST',
+        body: {
+          description: data.description,
+          photoIds: data.photoIds,
+          location: data.location,
+          name: data.name,
+        },
+      })
+    },
+  },
 }
 
 

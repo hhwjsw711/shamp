@@ -16,6 +16,10 @@ const menuItems = [
     href: '/',
   },
   {
+    title: 'Create New Ticket',
+    href: '/tickets/create',
+  },
+  {
     title: 'Tickets',
     href: '/tickets',
   },
@@ -32,11 +36,11 @@ const menuItems = [
 export function PageHeader() {
   const location = useLocation()
 
-  // Find the active page name
+  // Find the active page name - check exact matches first, then prefix matches
   const activePage = menuItems.find(
-    (item) =>
-      location.pathname === item.href ||
-      (item.href !== '/' && location.pathname.startsWith(item.href))
+    (item) => location.pathname === item.href
+  ) || menuItems.find(
+    (item) => item.href !== '/' && location.pathname.startsWith(item.href)
   )
 
   const pageName = activePage?.title || 'Home'

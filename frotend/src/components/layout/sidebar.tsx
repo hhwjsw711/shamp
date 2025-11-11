@@ -122,7 +122,7 @@ function SidebarContentComponent() {
                     variant="default-glass"
                     size="icon"
                     className="w-10 h-10 min-w-10 min-h-10 rounded-full flex items-center justify-center p-0"
-                    onClick={() => navigate({ to: '/' })}
+                    onClick={() => navigate({ to: '/tickets/create' })}
                   >
                     <PlusIcon className="size-5 shrink-0" />
                   </Button>
@@ -136,7 +136,7 @@ function SidebarContentComponent() {
                 variant="default-glass"
                 size="lg"
                 className="w-full justify-start gap-2"
-                onClick={() => navigate({ to: '/' })}
+                onClick={() => navigate({ to: '/tickets/create' })}
               >
                 <PlusIcon className="size-5 shrink-0" />
                 <span>Create New Ticket</span>
@@ -157,7 +157,7 @@ function SidebarContentComponent() {
               {menuItems.map((item) => {
                 const Icon = item.icon
                 const isActive = location.pathname === item.href || 
-                  (item.href !== '/' && location.pathname.startsWith(item.href))
+                  (item.href !== '/' && location.pathname.startsWith(item.href) && location.pathname !== '/tickets/create')
                 
                 return (
                   <SidebarMenuItem key={item.href}>

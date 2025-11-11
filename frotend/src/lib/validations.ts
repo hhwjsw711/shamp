@@ -85,9 +85,9 @@ export const onboardingSchema = z.object({
 // Ticket creation schema
 export const createTicketSchema = z.object({
   description: z.string().min(1, 'Description is required'),
-  photoId: z.string().optional(),
+  photoIds: z.array(z.string()).min(1, 'At least one photo is required').max(5, 'Maximum 5 photos allowed'),
   location: z.string().optional(),
-  issueType: z.string().optional(),
+  name: z.string().optional(),
 })
 
 // Vendor creation schema

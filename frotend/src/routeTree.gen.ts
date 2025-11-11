@@ -17,6 +17,7 @@ import { Route as AuthResetPasswordRouteImport } from './routes/auth/reset-passw
 import { Route as AuthRequestResetPasswordRouteImport } from './routes/auth/request-reset-password'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthCreateAccountRouteImport } from './routes/auth/create-account'
+import { Route as AuthenticatedTicketsCreateRouteImport } from './routes/_authenticated/tickets/create'
 import { Route as AuthenticatedAuthOnboardingRouteImport } from './routes/_authenticated/auth/onboarding'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
@@ -59,6 +60,12 @@ const AuthCreateAccountRoute = AuthCreateAccountRouteImport.update({
   path: '/auth/create-account',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedTicketsCreateRoute =
+  AuthenticatedTicketsCreateRouteImport.update({
+    id: '/tickets/create',
+    path: '/tickets/create',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAuthOnboardingRoute =
   AuthenticatedAuthOnboardingRouteImport.update({
     id: '/auth/onboarding',
@@ -75,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/auth/verify-email': typeof AuthVerifyEmailRoute
   '/': typeof AuthenticatedIndexRoute
   '/auth/onboarding': typeof AuthenticatedAuthOnboardingRoute
+  '/tickets/create': typeof AuthenticatedTicketsCreateRoute
 }
 export interface FileRoutesByTo {
   '/auth/create-account': typeof AuthCreateAccountRoute
@@ -85,6 +93,7 @@ export interface FileRoutesByTo {
   '/auth/verify-email': typeof AuthVerifyEmailRoute
   '/': typeof AuthenticatedIndexRoute
   '/auth/onboarding': typeof AuthenticatedAuthOnboardingRoute
+  '/tickets/create': typeof AuthenticatedTicketsCreateRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -97,6 +106,7 @@ export interface FileRoutesById {
   '/auth/verify-email': typeof AuthVerifyEmailRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/auth/onboarding': typeof AuthenticatedAuthOnboardingRoute
+  '/_authenticated/tickets/create': typeof AuthenticatedTicketsCreateRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/auth/verify-email'
     | '/'
     | '/auth/onboarding'
+    | '/tickets/create'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth/create-account'
@@ -119,6 +130,7 @@ export interface FileRouteTypes {
     | '/auth/verify-email'
     | '/'
     | '/auth/onboarding'
+    | '/tickets/create'
   id:
     | '__root__'
     | '/_authenticated'
@@ -130,6 +142,7 @@ export interface FileRouteTypes {
     | '/auth/verify-email'
     | '/_authenticated/'
     | '/_authenticated/auth/onboarding'
+    | '/_authenticated/tickets/create'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -200,6 +213,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCreateAccountRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/tickets/create': {
+      id: '/_authenticated/tickets/create'
+      path: '/tickets/create'
+      fullPath: '/tickets/create'
+      preLoaderRoute: typeof AuthenticatedTicketsCreateRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/auth/onboarding': {
       id: '/_authenticated/auth/onboarding'
       path: '/auth/onboarding'
@@ -213,11 +233,13 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAuthOnboardingRoute: typeof AuthenticatedAuthOnboardingRoute
+  AuthenticatedTicketsCreateRoute: typeof AuthenticatedTicketsCreateRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAuthOnboardingRoute: AuthenticatedAuthOnboardingRoute,
+  AuthenticatedTicketsCreateRoute: AuthenticatedTicketsCreateRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
