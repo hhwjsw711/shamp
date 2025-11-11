@@ -291,12 +291,18 @@ function CreateTicketPage() {
                     <FormDescription>
                       How urgent is this issue? This helps prioritize your request. Leave unselected if unsure.
                     </FormDescription>
-                    <FormControl>
-                      <RadioGroup
-                        value={field.value || ''}
-                        onValueChange={(value) => field.onChange(value || undefined)}
-                        className="flex flex-col gap-3"
-                      >
+                      <FormControl>
+                        <RadioGroup
+                          value={field.value || ''}
+                          onValueChange={(value) => field.onChange(value || undefined)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              handleSubmit()
+                            }
+                          }}
+                          className="flex flex-col gap-3"
+                        >
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="emergency" id="urgency-emergency" />
                           <Label htmlFor="urgency-emergency" className="font-normal cursor-pointer">
@@ -339,7 +345,13 @@ function CreateTicketPage() {
                 </Alert>
               )}
 
-
+              {/* Hidden submit button to enable Enter key submission */}
+              <button
+                type="submit"
+                className="sr-only"
+                aria-hidden="true"
+                tabIndex={-1}
+              />
             </form>
           </Form>
         </CardContent>

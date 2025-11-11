@@ -408,6 +408,12 @@ function EditTicketPage() {
                         <RadioGroup
                           value={field.value || ''}
                           onValueChange={(value) => field.onChange(value || undefined)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              handleSubmit()
+                            }
+                          }}
                           className="flex flex-col gap-3"
                         >
                           <div className="flex items-center space-x-2">

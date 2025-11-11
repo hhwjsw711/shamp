@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ArrowUpDown, Search, X } from 'lucide-react'
+import { ArrowUpDown, ClipboardList, Search, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty'
 
 interface TicketStatusColumnProps {
   title: string
@@ -173,9 +180,21 @@ export function TicketStatusColumn({
       {/* Column Content - Scrollable */}
       <section className="flex-1 overflow-y-auto p-2 flex flex-col gap-2 min-h-0">
         {count === 0 ? (
-          <section className="text-center text-muted-foreground text-sm py-8">
-            {searchQuery ? `No tickets match "${searchQuery}"` : 'No tickets'}
-          </section>
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <ClipboardList />
+              </EmptyMedia>
+              <EmptyTitle>
+                {searchQuery ? 'No matches found' : 'No tickets'}
+              </EmptyTitle>
+              <EmptyDescription>
+                {searchQuery 
+                  ? `No tickets match "${searchQuery}"` 
+                  : 'No tickets in this column yet'}
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         ) : (
           children
         )}
