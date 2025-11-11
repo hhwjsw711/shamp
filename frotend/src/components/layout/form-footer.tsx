@@ -37,6 +37,7 @@ export function FormFooter({
         <div className="w-full max-w-[500px] flex items-center justify-start gap-4">
           <Button
             type="button"
+            variant="default-glass"
             onClick={onSubmit}
             disabled={isSubmitting}
           >

@@ -55,6 +55,9 @@ function SidebarContentComponent() {
   const navigate = useNavigate()
   const { state, setOpen } = useSidebar()
   const [isHovered, setIsHovered] = React.useState(false)
+  
+  // Hide Create New Ticket button when on the create ticket page
+  const isOnCreateTicketPage = location.pathname === '/tickets/create'
 
   const handleSidebarClick = (e: React.MouseEvent) => {
     // Only expand if sidebar is collapsed and not clicking on interactive elements
@@ -110,40 +113,42 @@ function SidebarContentComponent() {
         "px-4 gap-4",
         state === "collapsed" && "overflow-visible flex flex-col items-center"
       )}>
-        {/* Create New Ticket Button Group */}
-        <SidebarGroup className="p-0">
-          <SidebarGroupContent className={cn(
-            state === "collapsed" && "flex justify-center"
-          )}>
-            {state === "collapsed" ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="default-glass"
-                    size="icon"
-                    className="w-10 h-10 min-w-10 min-h-10 rounded-full flex items-center justify-center p-0"
-                    onClick={() => navigate({ to: '/tickets/create' })}
-                  >
-                    <PlusIcon className="size-5 shrink-0" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  <p>Create New Ticket</p>
-                </TooltipContent>
-              </Tooltip>
-            ) : (
-              <Button
-                variant="default-glass"
-                size="lg"
-                className="w-full justify-start gap-2"
-                onClick={() => navigate({ to: '/tickets/create' })}
-              >
-                <PlusIcon className="size-5 shrink-0" />
-                <span>Create New Ticket</span>
-              </Button>
-            )}
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* Create New Ticket Button Group - Hide when on create ticket page */}
+        {!isOnCreateTicketPage && (
+          <SidebarGroup className="p-0">
+            <SidebarGroupContent className={cn(
+              state === "collapsed" && "flex justify-center"
+            )}>
+              {state === "collapsed" ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="default-glass"
+                      size="icon"
+                      className="w-10 h-10 min-w-10 min-h-10 rounded-full flex items-center justify-center p-0"
+                      onClick={() => navigate({ to: '/tickets/create' })}
+                    >
+                      <PlusIcon className="size-5 shrink-0" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    <p>Create New Ticket</p>
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                <Button
+                  variant="default-glass"
+                  size="lg"
+                  className="w-full justify-start gap-2"
+                  onClick={() => navigate({ to: '/tickets/create' })}
+                >
+                  <PlusIcon className="size-5 shrink-0" />
+                  <span>Create New Ticket</span>
+                </Button>
+              )}
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {/* Menu Items Group */}
         <SidebarGroup className="p-0">
