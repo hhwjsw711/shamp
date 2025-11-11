@@ -5,6 +5,7 @@
 import { v } from "convex/values";
 import { internalQuery, query } from "../../_generated/server";
 import type { Doc } from "../../_generated/dataModel";
+import { validateUserId } from "../../utils/queryAuth";
 
 /**
  * Get vendor quote by ID (internal)
@@ -31,20 +32,39 @@ export const getByTicketIdInternal = internalQuery({
       .withIndex("by_ticketId", (q) => q.eq("ticketId", args.ticketId))
       .collect();
 
+    // Sort by createdAt descending (most recent first)
+    quotes.sort((a, b) => b.createdAt - a.createdAt);
+
     return quotes;
   },
 });
 
 /**
- * Get all vendor quotes for a ticket (public query with pagination)
+ * Get all vendor quotes for a ticket (public query with authorization and pagination)
+ * SECURITY: Validates that the ticket belongs to the requesting user
  */
 export const getByTicketId = query({
   args: {
     ticketId: v.id("tickets"),
+    userId: v.id("users"), // Required for authorization
     limit: v.optional(v.number()),
     cursor: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Validate userId exists
+    await validateUserId(ctx, args.userId);
+    
+    // Verify ticket exists and belongs to user
+    const ticket = await ctx.db.get(args.ticketId);
+    if (!ticket) {
+      throw new Error("Ticket not found");
+    }
+    
+    // SECURITY: Ensure ticket belongs to the requesting user
+    if (ticket.createdBy !== args.userId) {
+      throw new Error("Unauthorized: Ticket does not belong to user");
+    }
+    
     const limit = args.limit || 50;
     let quotes = await ctx.db
       .query("vendorQuotes")
@@ -91,6 +111,9 @@ export const getByVendorIdInternal = internalQuery({
       .withIndex("by_vendorId", (q) => q.eq("vendorId", args.vendorId))
       .collect();
 
+    // Sort by createdAt descending (most recent first)
+    quotes.sort((a, b) => b.createdAt - a.createdAt);
+
     return quotes;
   },
 });
@@ -113,6 +136,9 @@ export const getByStatusInternal = internalQuery({
       .query("vendorQuotes")
       .withIndex("by_status", (q) => q.eq("status", args.status))
       .collect();
+
+    // Sort by createdAt descending (most recent first)
+    quotes.sort((a, b) => b.createdAt - a.createdAt);
 
     return quotes;
   },
@@ -241,4 +267,3 @@ export const getAllInternal = internalQuery({
     };
   },
 });
-

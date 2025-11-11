@@ -223,10 +223,17 @@ export const handleInboundEmail = httpAction(async (ctx, request) => {
     );
 
     if (vendor) {
+      // Use the already-fetched ticket (fetched earlier in the function)
+      if (!ticket) {
+        console.error("Ticket not found for vendor outreach query");
+        return new Response("OK", { status: 200 });
+      }
+      
       const outreachRecords: Array<Doc<"vendorOutreach">> = await ctx.runQuery(
         (api as any).functions.vendorOutreach.queries.getByTicketId,
         {
           ticketId: ticketId as Id<"tickets">,
+          userId: ticket.createdBy, // Pass userId for authorization
         }
       );
 

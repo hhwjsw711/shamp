@@ -89,6 +89,9 @@ export const list = query({
       .withIndex("by_createdBy", (q) => q.eq("createdBy", args.userId))
       .collect();
     
+    // Sort by createdAt descending (most recent first)
+    tickets.sort((a, b) => b.createdAt - a.createdAt);
+    
     // Get photo URLs for each ticket
     const ticketsWithUrls = await Promise.all(
       tickets.map(async (ticket) => {
@@ -139,6 +142,9 @@ export const listByStatus = query({
       .filter((q) => q.eq(q.field("status"), args.status))
       .collect();
     
+    // Sort by createdAt descending (most recent first)
+    tickets.sort((a, b) => b.createdAt - a.createdAt);
+    
     // Get photo URLs
     const ticketsWithUrls = await Promise.all(
       tickets.map(async (ticket) => {
@@ -183,6 +189,9 @@ export const listByUrgency = query({
       .withIndex("by_createdBy", (q) => q.eq("createdBy", args.userId))
       .filter((q) => q.eq(q.field("urgency"), args.urgency))
       .collect();
+    
+    // Sort by createdAt descending (most recent first)
+    tickets.sort((a, b) => b.createdAt - a.createdAt);
     
     // Get photo URLs
     const ticketsWithUrls = await Promise.all(
@@ -245,10 +254,15 @@ export const getByIdInternal = internalQuery({
 export const listByCreatorInternal = internalQuery({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const tickets = await ctx.db
       .query("tickets")
       .withIndex("by_createdBy", (q) => q.eq("createdBy", args.userId))
       .collect();
+    
+    // Sort by createdAt descending (most recent first)
+    tickets.sort((a, b) => b.createdAt - a.createdAt);
+    
+    return tickets;
   },
 });
 
@@ -269,10 +283,15 @@ export const listByStatusInternal = internalQuery({
     ),
   },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const tickets = await ctx.db
       .query("tickets")
       .withIndex("by_status", (q) => q.eq("status", args.status))
       .collect();
+    
+    // Sort by createdAt descending (most recent first)
+    tickets.sort((a, b) => b.createdAt - a.createdAt);
+    
+    return tickets;
   },
 });
 
@@ -282,9 +301,14 @@ export const listByStatusInternal = internalQuery({
 export const listByVendorInternal = internalQuery({
   args: { vendorId: v.id("vendors") },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const tickets = await ctx.db
       .query("tickets")
       .withIndex("by_selectedVendorId", (q) => q.eq("selectedVendorId", args.vendorId))
       .collect();
+    
+    // Sort by createdAt descending (most recent first)
+    tickets.sort((a, b) => b.createdAt - a.createdAt);
+    
+    return tickets;
   },
 });
