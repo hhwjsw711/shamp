@@ -62,6 +62,29 @@ function formatDate(timestamp: number) {
 function TicketsPage() {
   const { user, isAuthenticated } = useAuth()
   const [selectedStatus, setSelectedStatus] = useState<TicketStatus | 'all'>('all')
+  
+  // Search and sort state per status
+  const [searchQueries, setSearchQueries] = useState<Record<TicketStatus, string>>({
+    pending: '',
+    analyzed: '',
+    processing: '',
+    vendors_available: '',
+    vendor_selected: '',
+    vendor_scheduled: '',
+    fixed: '',
+    closed: '',
+  })
+  
+  const [sortBy, setSortBy] = useState<Record<TicketStatus, 'date' | 'urgency'>>({
+    pending: 'date',
+    analyzed: 'date',
+    processing: 'date',
+    vendors_available: 'date',
+    vendor_selected: 'date',
+    vendor_scheduled: 'date',
+    fixed: 'date',
+    closed: 'date',
+  })
 
   // Use Convex query for real-time ticket updates
   // Only query if user is authenticated and has an ID
@@ -80,9 +103,61 @@ function TicketsPage() {
   const hasError = ticketsResult === null
   const tickets = ticketsResult as Array<Ticket> | undefined
 
+  const handleSearchChange = (status: TicketStatus, query: string) => {
+    setSearchQueries((prev) => ({ ...prev, [status]: query }))
+  }
+
+  const handleSortChange = (status: TicketStatus, sort: 'date' | 'urgency') => {
+    setSortBy((prev) => ({ ...prev, [status]: sort }))
+  }
+
   const getTicketsByStatus = (status: TicketStatus) => {
     if (!tickets) return []
-    return tickets.filter((ticket: Ticket) => ticket.status === status)
+    
+    let statusTickets = tickets.filter((ticket: Ticket) => ticket.status === status)
+    
+    // Apply search filter (text matching on description, problemDescription, etc.)
+    const searchQuery = searchQueries[status]
+    if (searchQuery.trim()) {
+      const queryLower = searchQuery.toLowerCase()
+      statusTickets = statusTickets.filter((ticket) => {
+        const searchText = [
+          ticket.description,
+          ticket.problemDescription,
+          ticket.issueType,
+          ticket.location,
+          ...(ticket.predictedTags || []),
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+        return searchText.includes(queryLower)
+      })
+    }
+    
+    // Apply sorting
+    if (sortBy[status] === 'urgency') {
+      const urgencyOrder: Record<string, number> = {
+        emergency: 0,
+        urgent: 1,
+        normal: 2,
+        low: 3,
+      }
+      statusTickets.sort((a, b) => {
+        const aOrder = a.urgency ? urgencyOrder[a.urgency] ?? 4 : 4
+        const bOrder = b.urgency ? urgencyOrder[b.urgency] ?? 4 : 4
+        if (aOrder !== bOrder) {
+          return aOrder - bOrder
+        }
+        // If same urgency, sort by date descending
+        return b.createdAt - a.createdAt
+      })
+    } else {
+      // Sort by date descending (most recent first)
+      statusTickets.sort((a, b) => b.createdAt - a.createdAt)
+    }
+    
+    return statusTickets
   }
 
   // Show loading state
@@ -149,6 +224,10 @@ function TicketsPage() {
                 title={status.label}
                 count={statusTickets.length}
                 isSelected={selectedStatus === 'all' || isSelected}
+                searchQuery={searchQueries[status.value]}
+                onSearchChange={(query) => handleSearchChange(status.value, query)}
+                sortBy={sortBy[status.value]}
+                onSortChange={(sort) => handleSortChange(status.value, sort)}
               >
                 {statusTickets.map((ticket) => (
                   <TicketCard

@@ -56,6 +56,7 @@ import type * as functions_pinSessions_mutations from "../functions/pinSessions/
 import type * as functions_pinSessions_queries from "../functions/pinSessions/queries.js";
 import type * as functions_sessions_mutations from "../functions/sessions/mutations.js";
 import type * as functions_sessions_queries from "../functions/sessions/queries.js";
+import type * as functions_tickets_actions from "../functions/tickets/actions.js";
 import type * as functions_tickets_mutations from "../functions/tickets/mutations.js";
 import type * as functions_tickets_queries from "../functions/tickets/queries.js";
 import type * as functions_vendorOutreach_actions from "../functions/vendorOutreach/actions.js";
@@ -179,6 +180,7 @@ declare const fullApi: ApiFromModules<{
   "functions/pinSessions/queries": typeof functions_pinSessions_queries;
   "functions/sessions/mutations": typeof functions_sessions_mutations;
   "functions/sessions/queries": typeof functions_sessions_queries;
+  "functions/tickets/actions": typeof functions_tickets_actions;
   "functions/tickets/mutations": typeof functions_tickets_mutations;
   "functions/tickets/queries": typeof functions_tickets_queries;
   "functions/vendorOutreach/actions": typeof functions_vendorOutreach_actions;

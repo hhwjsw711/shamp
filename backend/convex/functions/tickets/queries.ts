@@ -166,34 +166,79 @@ export const listByStatus = query({
 });
 
 /**
- * List tickets by urgency (public query with authorization)
- * SECURITY: Filters by both userId and urgency
+ * Search tickets by status with semantic search and sorting (public query)
+ * SECURITY: Filters by userId and status - users can only see their own tickets
+ * Note: For semantic search, use the searchByStatus action instead
  */
-export const listByUrgency = query({
-  args: { 
-    userId: v.id("users"), // Required for authorization
-    urgency: v.union(
-      v.literal("emergency"),
-      v.literal("urgent"),
-      v.literal("normal"),
-      v.literal("low")
+export const searchByStatus = query({
+  args: {
+    userId: v.id("users"),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("analyzed"),
+      v.literal("processing"),
+      v.literal("vendors_available"),
+      v.literal("vendor_selected"),
+      v.literal("vendor_scheduled"),
+      v.literal("fixed"),
+      v.literal("closed")
     ),
+    query: v.optional(v.string()), // Text search query (not semantic - for simple filtering)
+    sortBy: v.optional(v.union(v.literal("date"), v.literal("urgency"))), // Sort by date or urgency
   },
   handler: async (ctx, args) => {
     // Validate userId exists
     await validateUserId(ctx, args.userId);
     
-    // SECURITY: Filter by userId first, then by urgency
-    const tickets = await ctx.db
+    // Get tickets filtered by status
+    let tickets = await ctx.db
       .query("tickets")
       .withIndex("by_createdBy", (q) => q.eq("createdBy", args.userId))
-      .filter((q) => q.eq(q.field("urgency"), args.urgency))
+      .filter((q) => q.eq(q.field("status"), args.status))
       .collect();
     
-    // Sort by createdAt descending (most recent first)
-    tickets.sort((a, b) => b.createdAt - a.createdAt);
+    // Apply text search filter if query provided (simple text matching, not semantic)
+    if (args.query && args.query.trim().length > 0) {
+      const queryLower = args.query.toLowerCase();
+      tickets = tickets.filter((ticket) => {
+        const searchText = [
+          ticket.description,
+          ticket.problemDescription,
+          ticket.issueType,
+          ticket.location,
+          ...(ticket.predictedTags || []),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return searchText.includes(queryLower);
+      });
+    }
     
-    // Get photo URLs
+    // Sort tickets
+    if (args.sortBy === "urgency") {
+      // Sort by urgency: emergency > urgent > normal > low > undefined
+      const urgencyOrder: Record<string, number> = {
+        emergency: 0,
+        urgent: 1,
+        normal: 2,
+        low: 3,
+      };
+      tickets.sort((a, b) => {
+        const aOrder = a.urgency ? urgencyOrder[a.urgency] ?? 4 : 4;
+        const bOrder = b.urgency ? urgencyOrder[b.urgency] ?? 4 : 4;
+        if (aOrder !== bOrder) {
+          return aOrder - bOrder;
+        }
+        // If same urgency, sort by date descending
+        return b.createdAt - a.createdAt;
+      });
+    } else {
+      // Sort by date descending (most recent first)
+      tickets.sort((a, b) => b.createdAt - a.createdAt);
+    }
+    
+    // Get photo URLs for each ticket
     const ticketsWithUrls = await Promise.all(
       tickets.map(async (ticket) => {
         const photoUrls: Array<string | null> = [];
