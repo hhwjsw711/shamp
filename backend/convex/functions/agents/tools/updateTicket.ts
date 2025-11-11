@@ -11,7 +11,6 @@ import type { ActionCtx } from "../../../_generated/server";
 import type { Doc } from "../../../_generated/dataModel";
 
 const updateTicketSchema = z.object({
-  ticketId: z.string().describe("Ticket ID to update"),
   issueType: z.string().optional().describe("Issue type"),
   predictedTags: z.array(z.string()).optional().describe("Predicted tags"),
   problemDescription: z.string().optional().describe("Detailed problem description in simple, plain language"),
@@ -21,18 +20,18 @@ const updateTicketSchema = z.object({
 
 type UpdateTicketParams = z.infer<typeof updateTicketSchema>;
 
-export function createUpdateTicketTool(ctx: ActionCtx) {
+export function createUpdateTicketTool(ctx: ActionCtx, ticketId: string) {
   return tool({
     description: "Update ticket fields in the database",
     inputSchema: updateTicketSchema,
     execute: async ({
-      ticketId,
       issueType,
       predictedTags,
       problemDescription,
       urgency,
       status,
-    }: UpdateTicketParams) => {
+    }: Omit<UpdateTicketParams, "ticketId">) => {
+      // Use the ticket ID passed to the tool creation function
       await ctx.runMutation(
         (internal as any).functions.tickets.mutations.updateInternal,
         {

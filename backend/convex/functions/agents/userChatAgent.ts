@@ -92,7 +92,27 @@ export const chatWithUser = action({
 
     return {
       text: result.text,
-      steps: result.steps,
+      steps: result.steps.map((step: any) => {
+        // Extract only serializable data from steps
+        const toolCalls = step.content
+          ?.filter((c: any) => c.type === "tool-call")
+          .map((tc: any) => ({
+            toolName: tc.toolName,
+            input: tc.input,
+          })) || [];
+        
+        const toolResults = step.content
+          ?.filter((c: any) => c.type === "tool-result")
+          .map((tr: any) => ({
+            toolName: tr.toolName,
+            output: tr.output,
+          })) || [];
+
+        return {
+          toolCalls,
+          toolResults,
+        };
+      }),
     };
   },
 });

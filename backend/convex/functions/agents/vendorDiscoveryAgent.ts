@@ -154,7 +154,7 @@ export const discoverVendors = action({
 
     // No existing vendors found, proceed with web search
     const searchVendors = createSearchVendorsTool();
-    const updateTicket = createUpdateTicketTool(ctx);
+    const updateTicket = createUpdateTicketTool(ctx, args.ticketId);
 
     // Create agent
     const agent = new Agent({

@@ -69,7 +69,7 @@ export const draftVendorEmail = action({
 
     // Create tools
     const draftEmail = createDraftEmailTool();
-    const updateTicket = createUpdateTicketTool(ctx);
+    const updateTicket = createUpdateTicketTool(ctx, args.ticketId);
 
     // Create agent
     const agent = new Agent({
