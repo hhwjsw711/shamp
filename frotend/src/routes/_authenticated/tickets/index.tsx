@@ -3,10 +3,11 @@ import { useEffect, useState } from 'react'
 import { TriangleAlert } from 'lucide-react'
 import { api } from '@/lib/api'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { TicketStatusColumn } from '@/components/layout/ticket-status-column'
+import { TicketCard } from '@/components/layout/ticket-card'
 
 export const Route = createFileRoute('/_authenticated/tickets/')({
   component: TicketsPage,
@@ -48,20 +49,7 @@ const TICKET_STATUSES: Array<{ value: TicketStatus; label: string }> = [
   { value: 'closed', label: 'Closed' },
 ]
 
-function getUrgencyColor(urgency?: string) {
-  switch (urgency) {
-    case 'emergency':
-      return 'destructive'
-    case 'urgent':
-      return 'destructive'
-    case 'normal':
-      return 'default'
-    case 'low':
-      return 'secondary'
-    default:
-      return 'outline'
-  }
-}
+
 
 function formatDate(timestamp: number) {
   return new Date(timestamp).toLocaleDateString('en-US', {
@@ -149,35 +137,28 @@ function TicketsPage() {
             const isSelected = selectedStatus === status.value
 
             return (
-              <div
+              <TicketStatusColumn
                 key={status.value}
-                className={`flex flex-col w-80 shrink-0 bg-muted/50 rounded-lg border ${
-                  selectedStatus !== 'all' && !isSelected ? 'hidden md:flex' : 'flex'
-                }`}
+                title={status.label}
+                count={statusTickets.length}
+                isSelected={selectedStatus === 'all' || isSelected}
               >
-                {/* Column Header */}
-                <header className="p-4 border-b shrink-0">
-                  <div className="flex items-center justify-between">
-                    <h2 className="font-semibold text-sm">{status.label}</h2>
-                    <Badge variant="secondary" className="ml-2">
-                      {statusTickets.length}
-                    </Badge>
-                  </div>
-                </header>
-
-                {/* Column Content - Scrollable */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
-                  {statusTickets.length === 0 ? (
-                    <div className="text-center text-muted-foreground text-sm py-8">
-                      No tickets
-                    </div>
-                  ) : (
-                    statusTickets.map((ticket) => (
-                      <TicketCard key={ticket._id} ticket={ticket} />
-                    ))
-                  )}
-                </div>
-              </div>
+                {statusTickets.map((ticket) => (
+                  <TicketCard
+                    key={ticket._id}
+                    title={ticket.description}
+                    urgency={ticket.urgency}
+                    location={ticket.location}
+                    date={formatDate(ticket.createdAt)}
+                    photoCount={ticket.photoIds.length}
+                    issueType={ticket.issueType}
+                    onClick={() => {
+                      // TODO: Navigate to ticket detail page
+                      console.log('Clicked ticket:', ticket._id)
+                    }}
+                  />
+                ))}
+              </TicketStatusColumn>
             )
           })}
         </div>
@@ -186,41 +167,4 @@ function TicketsPage() {
   )
 }
 
-function TicketCard({ ticket }: { ticket: Ticket }) {
-  return (
-    <Card className="cursor-pointer hover:shadow-md transition-shadow">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-sm font-medium line-clamp-2">
-            {ticket.description}
-          </CardTitle>
-          {ticket.urgency && (
-            <Badge variant={getUrgencyColor(ticket.urgency) as any} className="shrink-0">
-              {ticket.urgency}
-            </Badge>
-          )}
-        </div>
-        {ticket.location && (
-          <CardDescription className="text-xs mt-1">{ticket.location}</CardDescription>
-        )}
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>{formatDate(ticket.createdAt)}</span>
-          {ticket.photoIds.length > 0 && (
-            <span className="flex items-center gap-1">
-              📷 {ticket.photoIds.length}
-            </span>
-          )}
-        </div>
-        {ticket.issueType && (
-          <div className="mt-2">
-            <Badge variant="outline" className="text-xs">
-              {ticket.issueType}
-            </Badge>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
+
