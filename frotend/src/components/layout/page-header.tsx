@@ -47,17 +47,23 @@ export function PageHeader() {
 
   // Generate breadcrumb items based on pathname
   const pathSegments = location.pathname.split('/').filter(Boolean)
-  const breadcrumbItems = [
-    { label: 'Home', href: '/' },
-    ...pathSegments.map((segment, index) => {
-      const href = '/' + pathSegments.slice(0, index + 1).join('/')
-      const menuItem = menuItems.find((item) => item.href === href)
-      return {
-        label: menuItem?.title || segment.charAt(0).toUpperCase() + segment.slice(1),
-        href,
-      }
-    }),
-  ]
+  
+  // Special case: Tickets page should only show "Tickets", not "Home > Tickets"
+  const isTicketsPage = location.pathname === '/tickets'
+  
+  const breadcrumbItems = isTicketsPage
+    ? [{ label: 'Tickets', href: '/tickets' }]
+    : [
+        { label: 'Home', href: '/' },
+        ...pathSegments.map((segment, index) => {
+          const href = '/' + pathSegments.slice(0, index + 1).join('/')
+          const menuItem = menuItems.find((item) => item.href === href)
+          return {
+            label: menuItem?.title || segment.charAt(0).toUpperCase() + segment.slice(1),
+            href,
+          }
+        }),
+      ]
 
   return (
     <header className="bg-zinc-100 rounded-[22px] px-4 py-2">

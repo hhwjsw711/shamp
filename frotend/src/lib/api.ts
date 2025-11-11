@@ -98,17 +98,35 @@ async function request<T>(
 
   const response = await fetch(fullUrl, config)
 
+  // Read response text once (can only be read once)
+  const responseText = await response.text()
+
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({
-      error: response.statusText,
-    }))
+    // Try to parse error response
+    let errorData: { error?: string; message?: string } = { error: response.statusText }
+    if (responseText) {
+      try {
+        errorData = JSON.parse(responseText)
+      } catch {
+        // If parsing fails, use status text
+      }
+    }
     // Backend returns { error: "message" } format
     const errorMessage = errorData.error || errorData.message || 'An error occurred'
     
     throw new Error(errorMessage)
   }
 
-  return response.json()
+  // Parse successful JSON response
+  if (!responseText) {
+    throw new Error('Empty response body')
+  }
+  
+  try {
+    return JSON.parse(responseText) as T
+  } catch (error) {
+    throw new Error(`Failed to parse response: ${error instanceof Error ? error.message : 'Invalid JSON'}`)
+  }
 }
 
 export const api = {
@@ -274,6 +292,42 @@ export const api = {
           location: data.location,
           name: data.name,
         },
+      })
+    },
+    list: async (params?: {
+      status?: string
+      vendorId?: string
+      location?: string
+      tag?: string
+    }) => {
+      const queryParams = new URLSearchParams()
+      if (params?.status) queryParams.append('status', params.status)
+      if (params?.vendorId) queryParams.append('vendorId', params.vendorId)
+      if (params?.location) queryParams.append('location', params.location)
+      if (params?.tag) queryParams.append('tag', params.tag)
+
+      const queryString = queryParams.toString()
+      const endpoint = `/api/tickets${queryString ? `?${queryString}` : ''}`
+
+      return request<{
+        success: boolean
+        tickets: Array<{
+          _id: string
+          createdBy: string
+          name?: string
+          description: string
+          location?: string
+          status: string
+          urgency?: string
+          issueType?: string
+          predictedTags?: Array<string>
+          problemDescription?: string
+          photoIds: Array<string>
+          createdAt: number
+          [key: string]: unknown
+        }>
+      }>(endpoint, {
+        method: 'GET',
       })
     },
   },

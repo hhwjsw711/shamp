@@ -17,6 +17,7 @@ import { Route as AuthResetPasswordRouteImport } from './routes/auth/reset-passw
 import { Route as AuthRequestResetPasswordRouteImport } from './routes/auth/request-reset-password'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthCreateAccountRouteImport } from './routes/auth/create-account'
+import { Route as AuthenticatedTicketsIndexRouteImport } from './routes/_authenticated/tickets/index'
 import { Route as AuthenticatedTicketsCreateRouteImport } from './routes/_authenticated/tickets/create'
 import { Route as AuthenticatedAuthOnboardingRouteImport } from './routes/_authenticated/auth/onboarding'
 
@@ -60,6 +61,12 @@ const AuthCreateAccountRoute = AuthCreateAccountRouteImport.update({
   path: '/auth/create-account',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedTicketsIndexRoute =
+  AuthenticatedTicketsIndexRouteImport.update({
+    id: '/tickets/',
+    path: '/tickets/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedTicketsCreateRoute =
   AuthenticatedTicketsCreateRouteImport.update({
     id: '/tickets/create',
@@ -83,6 +90,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth/onboarding': typeof AuthenticatedAuthOnboardingRoute
   '/tickets/create': typeof AuthenticatedTicketsCreateRoute
+  '/tickets': typeof AuthenticatedTicketsIndexRoute
 }
 export interface FileRoutesByTo {
   '/auth/create-account': typeof AuthCreateAccountRoute
@@ -94,6 +102,7 @@ export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
   '/auth/onboarding': typeof AuthenticatedAuthOnboardingRoute
   '/tickets/create': typeof AuthenticatedTicketsCreateRoute
+  '/tickets': typeof AuthenticatedTicketsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -107,6 +116,7 @@ export interface FileRoutesById {
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/auth/onboarding': typeof AuthenticatedAuthOnboardingRoute
   '/_authenticated/tickets/create': typeof AuthenticatedTicketsCreateRoute
+  '/_authenticated/tickets/': typeof AuthenticatedTicketsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -120,6 +130,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth/onboarding'
     | '/tickets/create'
+    | '/tickets'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth/create-account'
@@ -131,6 +142,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth/onboarding'
     | '/tickets/create'
+    | '/tickets'
   id:
     | '__root__'
     | '/_authenticated'
@@ -143,6 +155,7 @@ export interface FileRouteTypes {
     | '/_authenticated/'
     | '/_authenticated/auth/onboarding'
     | '/_authenticated/tickets/create'
+    | '/_authenticated/tickets/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -213,6 +226,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCreateAccountRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/tickets/': {
+      id: '/_authenticated/tickets/'
+      path: '/tickets'
+      fullPath: '/tickets'
+      preLoaderRoute: typeof AuthenticatedTicketsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/tickets/create': {
       id: '/_authenticated/tickets/create'
       path: '/tickets/create'
@@ -234,12 +254,14 @@ interface AuthenticatedRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAuthOnboardingRoute: typeof AuthenticatedAuthOnboardingRoute
   AuthenticatedTicketsCreateRoute: typeof AuthenticatedTicketsCreateRoute
+  AuthenticatedTicketsIndexRoute: typeof AuthenticatedTicketsIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAuthOnboardingRoute: AuthenticatedAuthOnboardingRoute,
   AuthenticatedTicketsCreateRoute: AuthenticatedTicketsCreateRoute,
+  AuthenticatedTicketsIndexRoute: AuthenticatedTicketsIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
