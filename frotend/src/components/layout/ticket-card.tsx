@@ -1,5 +1,8 @@
+import { useState } from 'react'
+import { Calendar, MapPin, Tag, X } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 
 interface TicketCardProps {
   title: string
@@ -12,21 +15,6 @@ interface TicketCardProps {
   issueType?: string
   onClick?: () => void
   className?: string
-}
-
-function getUrgencyColor(urgency?: string) {
-  switch (urgency) {
-    case 'emergency':
-      return 'destructive' // red
-    case 'urgent':
-      return 'destructive' // orange - we'll use custom styling
-    case 'normal':
-      return 'default' // blue - we'll use custom styling  
-    case 'low':
-      return 'secondary' // gray
-    default:
-      return 'outline'
-  }
 }
 
 function getUrgencyStyles(urgency?: string) {
@@ -56,6 +44,8 @@ export function TicketCard({
   onClick,
   className = ''
 }: TicketCardProps) {
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  
   // Use problemDescription if available, otherwise fall back to description
   const displayText = problemDescription || description || ''
   
@@ -72,12 +62,16 @@ export function TicketCard({
         <section className="w-full px-6 pt-6">
           <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-3">
             {validPhotoUrls.map((url, index) => (
-              <div key={index} className="relative flex-none w-16 h-16 overflow-hidden rounded-lg">
+              <div key={index} className="relative flex-none w-16 h-16 overflow-hidden rounded-lg cursor-pointer hover:opacity-80 transition-opacity">
                 <img
                   src={url}
                   alt={`Ticket photo ${index + 1}`}
                   className="h-full w-full object-cover"
                   loading="lazy"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setSelectedImage(url)
+                  }}
                 />
               </div>
             ))}
@@ -106,30 +100,59 @@ export function TicketCard({
           </CardDescription>
         )}
 
-        {/* Location, Date and Issue Type Section */}
-        <section className="flex items-center justify-between gap-2 text-xs">
-          {/* Left: Location */}
-          <div className="flex-none">
-            {location && (
+        {/* Date and Location Section */}
+        <section className="flex items-center gap-4 text-xs">
+          {/* Location */}
+          {location && (
+            <div className="flex items-center gap-1">
+              <MapPin className="size-3 text-muted-foreground" />
               <span className="text-muted-foreground">{location}</span>
-            )}
-          </div>
+            </div>
+          )}
           
-          {/* Center: Date */}
-          <div className="flex-1 text-center">
+          {/* Date */}
+          <div className="flex items-center gap-1">
+            <Calendar className="size-3 text-muted-foreground" />
             <span className="text-muted-foreground">{date}</span>
           </div>
-          
-          {/* Right: Issue Type */}
-          <div className="flex-none">
-            {issueType && (
-              <Badge variant="outline" className="text-xs">
-                {issueType}
-              </Badge>
-            )}
-          </div>
         </section>
+
+        {/* Issue Type Section */}
+        {issueType && (
+          <section className="flex justify-start">
+            <Badge variant="outline" className="text-xs flex items-center gap-1">
+              <Tag className="size-3" />
+              {issueType}
+            </Badge>
+          </section>
+        )}
       </CardContent>
+
+      {/* Image Preview Modal */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm transition-all duration-300 p-4"
+          onClick={() => setSelectedImage(null)}
+        >
+          <div className="relative max-h-full max-w-full">
+            <img
+              src={selectedImage}
+              alt="Preview"
+              className="max-h-full max-w-full rounded-lg object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <Button
+              type="button"
+              onClick={() => setSelectedImage(null)}
+              variant="secondary"
+              size="icon"
+              className="absolute end-2 top-2 size-7 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </Card>
   )
 }
