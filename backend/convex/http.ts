@@ -324,6 +324,12 @@ http.route({
   handler: createTicketHandler,
 });
 
+http.route({
+  path: "/api/tickets",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
+});
+
 // List tickets
 http.route({
   path: "/api/tickets",
@@ -352,11 +358,23 @@ http.route({
   handler: updateTicketStatusHandler,
 });
 
+http.route({
+  path: "/api/tickets/:id/status",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
+});
+
 // Assign vendor to ticket
 http.route({
   path: "/api/tickets/:id/assign-vendor",
   method: "POST",
   handler: assignVendorHandler,
+});
+
+http.route({
+  path: "/api/tickets/:id/assign-vendor",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
 });
 
 // Close ticket
@@ -366,11 +384,23 @@ http.route({
   handler: closeTicketHandler,
 });
 
+http.route({
+  path: "/api/tickets/:id/close",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
+});
+
 // Schedule repair
 http.route({
   path: "/api/tickets/:id/schedule",
   method: "POST",
   handler: scheduleRepairHandler,
+});
+
+http.route({
+  path: "/api/tickets/:id/schedule",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
 });
 
 // Delete ticket
@@ -404,6 +434,12 @@ http.route({
   path: "/api/tickets/submit-with-pin",
   method: "POST",
   handler: submitTicketWithPinHandler,
+});
+
+http.route({
+  path: "/api/tickets/submit-with-pin",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
 });
 
 // Update vendor status
