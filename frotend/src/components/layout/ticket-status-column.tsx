@@ -54,7 +54,7 @@ export function TicketStatusColumn({
 
   return (
     <section
-      className={`flex flex-col w-80 shrink-0 bg-background rounded-3xl ${
+      className={`flex flex-col w-full md:w-80 shrink-0 bg-background rounded-3xl ${
         !isSelected ? 'hidden md:flex' : 'flex'
       } ${className}`}
     >

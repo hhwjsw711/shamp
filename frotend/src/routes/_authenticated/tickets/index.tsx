@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from 'convex/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { TriangleAlert } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Spinner } from '@/components/ui/spinner'
@@ -62,6 +62,7 @@ function formatDate(timestamp: number) {
 function TicketsPage() {
   const { user, isAuthenticated } = useAuth()
   const [selectedStatus, setSelectedStatus] = useState<TicketStatus | 'all'>('all')
+  const [isMobile, setIsMobile] = useState(false)
   
   // Search and sort state per status
   const [searchQueries, setSearchQueries] = useState<Record<TicketStatus, string>>({
@@ -102,6 +103,46 @@ function TicketsPage() {
   const isLoading = ticketsResult === undefined && isAuthenticated
   const hasError = ticketsResult === null
   const tickets = ticketsResult as Array<Ticket> | undefined
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768) // md breakpoint
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Reset selectedStatus to 'all' when switching from mobile to desktop
+  useEffect(() => {
+    if (!isMobile && selectedStatus !== 'all') {
+      setSelectedStatus('all')
+    }
+  }, [isMobile, selectedStatus])
+
+  // Set initial selected status to highest count on mobile only
+  useEffect(() => {
+    // Only run on mobile, when tickets are loaded, and selectedStatus is still 'all'
+    if (!tickets || tickets.length === 0 || !isMobile || selectedStatus !== 'all') return
+    
+    // Calculate raw counts for each status (without search/sort filters)
+    const statusCounts = TICKET_STATUSES.map((status) => ({
+      status: status.value,
+      count: tickets.filter((ticket) => ticket.status === status.value).length,
+    }))
+    
+    // Find status with highest count
+    const highestCountStatus = statusCounts.reduce((prev, current) =>
+      current.count > prev.count ? current : prev
+    )
+    
+    // Only set if there are tickets in that status
+    if (highestCountStatus.count > 0) {
+      setSelectedStatus(highestCountStatus.status)
+    }
+  }, [tickets, isMobile, selectedStatus])
 
   const handleSearchChange = (status: TicketStatus, query: string) => {
     setSearchQueries((prev) => ({ ...prev, [status]: query }))
@@ -200,30 +241,37 @@ function TicketsPage() {
           value={selectedStatus}
           onValueChange={(value) => setSelectedStatus(value as TicketStatus | 'all')}
         >
-          <TabsList className="w-full justify-start overflow-x-auto">
-            <TabsTrigger value="all">All</TabsTrigger>
-            {TICKET_STATUSES.map((status) => (
-              <TabsTrigger key={status.value} value={status.value}>
-                {status.label}
-              </TabsTrigger>
-            ))}
+          <TabsList className="w-full justify-start overflow-x-auto scrollbar-hide">
+            {TICKET_STATUSES.map((status) => {
+              const count = getTicketsByStatus(status.value).length
+              return (
+                <TabsTrigger key={status.value} value={status.value} className="shrink-0">
+                  {status.label} ({count})
+                </TabsTrigger>
+              )
+            })}
           </TabsList>
         </Tabs>
       </section>
 
       {/* Kanban Board Section */}
       <section className="flex-1 overflow-x-auto overflow-y-hidden min-h-0">
-        <div className="flex flex-row gap-4 h-full p-4 min-w-max">
+        <section className="flex flex-row gap-4 h-full p-4 w-full md:min-w-max md:w-auto">
           {TICKET_STATUSES.map((status) => {
             const statusTickets = getTicketsByStatus(status.value)
             const isSelected = selectedStatus === status.value
+            // On mobile: only show selected column
+            // On desktop: always show all columns (selectedStatus should be 'all' on desktop)
+            const shouldShow = isMobile 
+              ? isSelected 
+              : true // Desktop always shows all columns
 
             return (
               <TicketStatusColumn
                 key={status.value}
                 title={status.label}
                 count={statusTickets.length}
-                isSelected={selectedStatus === 'all' || isSelected}
+                isSelected={shouldShow}
                 searchQuery={searchQueries[status.value]}
                 onSearchChange={(query) => handleSearchChange(status.value, query)}
                 sortBy={sortBy[status.value]}
@@ -257,7 +305,7 @@ function TicketsPage() {
               </TicketStatusColumn>
             )
           })}
-        </div>
+        </section>
       </section>
     </main>
   )
