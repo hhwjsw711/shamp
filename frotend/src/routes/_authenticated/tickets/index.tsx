@@ -233,10 +233,12 @@ function TicketsPage() {
                   <TicketCard
                     key={ticket._id}
                     title={ticket.description}
+                    description={ticket.description}
+                    problemDescription={ticket.problemDescription}
+                    photoUrls={ticket.photoUrls}
                     urgency={ticket.urgency}
                     location={ticket.location}
                     date={formatDate(ticket.createdAt)}
-                    photoCount={ticket.photoIds.length}
                     issueType={ticket.issueType}
                     onClick={() => {
                       // TODO: Navigate to ticket detail page

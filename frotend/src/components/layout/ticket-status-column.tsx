@@ -119,10 +119,10 @@ export function TicketStatusColumn({
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.2, delay: 0.1 }}
               >
-                <h2 className="font-semibold text-sm">{title}</h2>
+          <h2 className="font-semibold text-sm">{title}</h2>
                 <Badge variant="secondary">
-                  {count}
-                </Badge>
+            {count}
+          </Badge>
               </motion.div>
               <motion.div 
                 className="flex items-center gap-2"
