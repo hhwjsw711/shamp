@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ImageIcon, TriangleAlert, Upload, XIcon, ZoomInIcon } from 'lucide-react';
 import type {
   FileMetadata,
@@ -26,12 +26,14 @@ interface GalleryUploadProps {
 export default function GalleryUpload({
   maxFiles = 10,
   maxSize = 5 * 1024 * 1024, // 5MB
-  accept = 'image/*',
+  accept = 'image/jpeg,image/jpg,image/png,image/gif,image/webp',
   multiple = true,
   className,
   onFilesChange,
 }: GalleryUploadProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [localErrors, setLocalErrors] = useState<Array<string>>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [
     { files, isDragging, errors },
@@ -43,7 +45,7 @@ export default function GalleryUpload({
       handleDragOver,
       handleDrop,
       openFileDialog,
-      getInputProps,
+      addFiles,
     },
   ] = useFileUpload({
     maxFiles,
@@ -53,23 +55,16 @@ export default function GalleryUpload({
     onFilesChange,
   });
 
-  // Get input props from the hook and extract ref properly
-  const inputProps = getInputProps({
-    className: 'sr-only',
-    id: 'file-upload-input',
-  });
-  
-  // Extract ref from inputProps and handle it separately
-  const { ref, ...restInputProps } = inputProps;
-
-  // Apply ref callback if it exists, otherwise use our ref
-  const handleRef = (node: HTMLInputElement | null) => {
-    if (typeof ref === 'function') {
-      ref(node);
-    } else if (ref && 'current' in ref) {
-      (ref as React.MutableRefObject<HTMLInputElement | null>).current = node;
+  // Auto-dismiss errors after 5 seconds
+  useEffect(() => {
+    if (errors.length > 0) {
+      setLocalErrors(errors);
+      const timer = setTimeout(() => {
+        setLocalErrors([]);
+      }, 5000);
+      return () => clearTimeout(timer);
     }
-  };
+  }, [errors]);
 
   const isImage = (file: File | FileMetadata) => {
     const type = file instanceof File ? file.type : file.type;
@@ -89,9 +84,40 @@ export default function GalleryUpload({
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       >
-        <input 
-          {...restInputProps}
-          ref={handleRef}
+        <input
+          type="file"
+          accept={accept}
+          multiple={multiple}
+          onChange={(e) => {
+            if (e.target.files && e.target.files.length > 0) {
+              const selectedFiles = Array.from(e.target.files);
+              const availableSlots = maxFiles - files.length;
+              
+              if (selectedFiles.length > availableSlots) {
+                // Only take the first files that fit within the limit
+                const filesToAdd = selectedFiles.slice(0, availableSlots);
+                addFiles(filesToAdd);
+                
+                // Show error for the excess files
+                const excessCount = selectedFiles.length - availableSlots;
+                const errorMessage = `You can only upload ${maxFiles} files total. ${excessCount} file${excessCount > 1 ? 's' : ''} were not added.`;
+                setLocalErrors([errorMessage]);
+                
+                // Auto-dismiss error after 5 seconds
+                setTimeout(() => {
+                  setLocalErrors([]);
+                }, 5000);
+              } else {
+                addFiles(selectedFiles);
+              }
+            }
+            
+            // Reset input value
+            e.target.value = '';
+          }}
+          ref={fileInputRef}
+          className="sr-only"
+          id="file-upload-input"
         />
 
         <div className="flex flex-col items-center gap-4">
@@ -108,21 +134,26 @@ export default function GalleryUpload({
             <h3 className="text-lg font-semibold">Upload images to gallery</h3>
             <p className="text-sm text-muted-foreground">Drag and drop images here or click to browse</p>
             <p className="text-xs text-muted-foreground">
-              PNG, JPG, GIF up to {formatBytes(maxSize)} each (max {maxFiles} files)
+              PNG, JPG, GIF, WEBP up to {formatBytes(maxSize)} each (max {maxFiles} files)
             </p>
           </div>
 
-          <Button 
-            type="button" 
-            variant="secondary" 
-            onClick={() => {
-              // Use the hook's openFileDialog which uses the internal ref
-              openFileDialog();
-            }}
-          >
-            <Upload className="h-4 w-4" />
-            Select images
-          </Button>
+          {files.length < maxFiles && (
+            <Button 
+              type="button" 
+              variant="secondary" 
+              onClick={() => {
+                if (fileInputRef.current) {
+                  fileInputRef.current.click();
+                } else {
+                  openFileDialog();
+                }
+              }}
+            >
+              <Upload className="h-4 w-4" />
+              Select images
+            </Button>
+          )}
         </div>
       </div>
 
@@ -192,12 +223,12 @@ export default function GalleryUpload({
       )}
 
       {/* Error Messages */}
-      {errors.length > 0 && (
+      {localErrors.length > 0 && (
         <Alert variant="destructive" className="mt-5">
           <TriangleAlert className="size-4" />
           <AlertTitle>File upload error(s)</AlertTitle>
           <AlertDescription>
-            {errors.map((error, index) => (
+            {localErrors.map((error, index) => (
               <p key={index} className="last:mb-0">
                 {error}
               </p>

@@ -222,7 +222,7 @@ function CreateTicketPage() {
                       <GalleryUpload
                         maxFiles={5}
                         maxSize={10 * 1024 * 1024} // 10MB
-                        accept="image/*"
+                        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
                         multiple={true}
                         onFilesChange={handleFilesChange}
                         className="max-w-none"

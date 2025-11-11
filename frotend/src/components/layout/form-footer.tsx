@@ -1,4 +1,3 @@
-import * as React from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
