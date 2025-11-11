@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery } from 'convex/react'
 import { useEffect, useState } from 'react'
 import { TriangleAlert } from 'lucide-react'
@@ -60,6 +60,7 @@ function formatDate(timestamp: number) {
 }
 
 function TicketsPage() {
+  const navigate = useNavigate()
   const { user, isAuthenticated } = useAuth()
   const [selectedStatus, setSelectedStatus] = useState<TicketStatus | 'all'>('all')
   const [isMobile, setIsMobile] = useState(false)
@@ -293,8 +294,7 @@ function TicketsPage() {
                       console.log('Clicked ticket:', ticket._id)
                     }}
                     onEdit={() => {
-                      console.log('Edit ticket:', ticket._id)
-                      // TODO: Navigate to edit ticket page or open edit modal
+                      navigate({ to: `/tickets/${ticket._id}/edit` })
                     }}
                     onDelete={() => {
                       console.log('Delete ticket:', ticket._id)

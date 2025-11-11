@@ -56,8 +56,10 @@ function SidebarContentComponent() {
   const { state, setOpen } = useSidebar()
   const [isHovered, setIsHovered] = React.useState(false)
   
-  // Hide Create New Ticket button when on the create ticket page
+  // Hide Create New Ticket button when on the create or edit ticket page
   const isOnCreateTicketPage = location.pathname === '/tickets/create'
+  const isOnEditTicketPage = location.pathname.match(/^\/tickets\/[^/]+\/edit$/)
+  const shouldHideCreateButton = isOnCreateTicketPage || isOnEditTicketPage
 
   const handleSidebarClick = (e: React.MouseEvent) => {
     // Only expand if sidebar is collapsed and not clicking on interactive elements
@@ -113,8 +115,8 @@ function SidebarContentComponent() {
         "px-4 gap-4",
         state === "collapsed" && "overflow-visible flex flex-col items-center"
       )}>
-        {/* Create New Ticket Button Group - Hide when on create ticket page */}
-        {!isOnCreateTicketPage && (
+        {/* Create New Ticket Button Group - Hide when on create or edit ticket page */}
+        {!shouldHideCreateButton && (
           <SidebarGroup className="p-0">
             <SidebarGroupContent className={cn(
               state === "collapsed" && "flex justify-center"

@@ -24,6 +24,10 @@ const menuItems = [
     href: '/tickets',
   },
   {
+    title: 'Edit Ticket',
+    href: '/tickets/$ticketId/edit',
+  },
+  {
     title: 'Vendors',
     href: '/vendors',
   },
@@ -36,11 +40,17 @@ const menuItems = [
 export function PageHeader() {
   const location = useLocation()
 
+  // Check if we're on the edit ticket page
+  const isEditTicketPage = location.pathname.match(/^\/tickets\/[^/]+\/edit$/)
+
   // Find the active page name - check exact matches first, then prefix matches
   const activePage = menuItems.find(
     (item) => location.pathname === item.href
-  ) || menuItems.find(
-    (item) => item.href !== '/' && location.pathname.startsWith(item.href)
+  ) || (isEditTicketPage 
+    ? menuItems.find((item) => item.href === '/tickets/$ticketId/edit')
+    : menuItems.find(
+        (item) => item.href !== '/' && location.pathname.startsWith(item.href)
+      )
   )
 
   const pageName = activePage?.title || 'Home'
@@ -58,8 +68,17 @@ export function PageHeader() {
         ...pathSegments.map((segment, index) => {
           const href = '/' + pathSegments.slice(0, index + 1).join('/')
           const menuItem = menuItems.find((item) => item.href === href)
+          
+          // Replace ticketId segment with "Ticket" for edit page
+          // The ticketId is at index 1 (after 'tickets')
+          let label = menuItem?.title || segment.charAt(0).toUpperCase() + segment.slice(1)
+          if (isEditTicketPage && index === 1 && !menuItem) {
+            // If it's the edit page and this segment doesn't match a menu item, it's likely the ticketId
+            label = 'Ticket'
+          }
+          
           return {
-            label: menuItem?.title || segment.charAt(0).toUpperCase() + segment.slice(1),
+            label,
             href,
           }
         }),

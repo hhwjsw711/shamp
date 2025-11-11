@@ -337,6 +337,13 @@ http.route({
   handler: listTicketsHandler,
 });
 
+// OPTIONS handler for /api/tickets/:id (must be before GET/PATCH/DELETE)
+http.route({
+  path: "/api/tickets/:id",
+  method: "OPTIONS",
+  handler: corsPreflightHandler,
+});
+
 // Get ticket by ID
 http.route({
   path: "/api/tickets/:id",
@@ -408,12 +415,6 @@ http.route({
   path: "/api/tickets/:id",
   method: "DELETE",
   handler: deleteTicketHandler,
-});
-
-http.route({
-  path: "/api/tickets/:id",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
 });
 
 // Delete photo from ticket

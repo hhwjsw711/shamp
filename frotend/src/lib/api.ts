@@ -296,6 +296,56 @@ export const api = {
         },
       })
     },
+    getById: async (ticketId: string) => {
+      return request<{
+        success: boolean
+        ticket: {
+          _id: string
+          createdBy: string
+          name?: string
+          description: string
+          location?: string
+          status: string
+          urgency?: 'emergency' | 'urgent' | 'normal' | 'low'
+          issueType?: string
+          predictedTags?: Array<string>
+          problemDescription?: string
+          photoIds: Array<string>
+          photoUrls?: Array<string | null>
+          createdAt: number
+          [key: string]: unknown
+        }
+      }>(`/api/tickets/${ticketId}`, {
+        method: 'GET',
+      })
+    },
+    update: async (ticketId: string, data: {
+      description?: string
+      photoIds?: Array<string>
+      location?: string
+      name?: string
+      urgency?: 'emergency' | 'urgent' | 'normal' | 'low'
+    }) => {
+      return request<{
+        success: boolean
+        ticket: {
+          _id: string
+          photoUrls?: Array<string | null>
+          [key: string]: unknown
+        }
+      }>(`/api/tickets/${ticketId}`, {
+        method: 'PATCH',
+        body: data,
+      })
+    },
+    deleteFile: async (fileId: string) => {
+      return request<{
+        success: boolean
+        message: string
+      }>(`/api/files/${fileId}`, {
+        method: 'DELETE',
+      })
+    },
     list: async (params?: {
       status?: string
       vendorId?: string

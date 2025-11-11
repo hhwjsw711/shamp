@@ -300,25 +300,25 @@ function CreateTicketPage() {
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="emergency" id="urgency-emergency" />
                           <Label htmlFor="urgency-emergency" className="font-normal cursor-pointer">
-                            <span className="font-medium text-red-600">Emergency</span> - Critical: fire, flood, security, guest safety
+                            Emergency - Critical: fire, flood, security, guest safety
                           </Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="urgent" id="urgency-urgent" />
                           <Label htmlFor="urgency-urgent" className="font-normal cursor-pointer">
-                            <span className="font-medium text-orange-600">Urgent</span> - High: guest-facing issues, operational disruption
+                            Urgent - High: guest-facing issues, operational disruption
                           </Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="normal" id="urgency-normal" />
                           <Label htmlFor="urgency-normal" className="font-normal cursor-pointer">
-                            <span className="font-medium text-blue-600">Normal</span> - Standard: routine maintenance
+                            Normal - Standard: routine maintenance
                           </Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="low" id="urgency-low" />
                           <Label htmlFor="urgency-low" className="font-normal cursor-pointer">
-                            <span className="font-medium text-gray-600">Low</span> - Non-critical: cosmetic issues
+                            Low - Non-critical: cosmetic issues
                           </Label>
                         </div>
                       </RadioGroup>
