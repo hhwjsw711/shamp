@@ -61,21 +61,39 @@ export function PageHeader() {
   // Special case: Tickets page should only show "Tickets", not "Home > Tickets"
   const isTicketsPage = location.pathname === '/tickets'
   
+  // Special case: Edit ticket page - start from "Tickets", not "Home"
+  // Breadcrumb should be: Tickets > Ticket > Edit
   const breadcrumbItems = isTicketsPage
     ? [{ label: 'Tickets', href: '/tickets' }]
+    : isEditTicketPage
+    ? [
+        { label: 'Tickets', href: '/tickets' },
+        ...pathSegments.slice(1).map((segment, index) => {
+          const segmentIndex = index + 1 // Adjust index since we're slicing from index 1
+          const href = '/' + pathSegments.slice(0, segmentIndex + 1).join('/')
+          const menuItem = menuItems.find((item) => item.href === href)
+          
+          // Replace ticketId segment with "Ticket" for edit page
+          // The ticketId is at segmentIndex 1 (after 'tickets')
+          let label = menuItem?.title || segment.charAt(0).toUpperCase() + segment.slice(1)
+          if (segmentIndex === 1 && !menuItem) {
+            // If it's the edit page and this segment doesn't match a menu item, it's likely the ticketId
+            label = 'Ticket'
+          }
+          
+          return {
+            label,
+            href,
+          }
+        }),
+      ]
     : [
         { label: 'Home', href: '/' },
         ...pathSegments.map((segment, index) => {
           const href = '/' + pathSegments.slice(0, index + 1).join('/')
           const menuItem = menuItems.find((item) => item.href === href)
           
-          // Replace ticketId segment with "Ticket" for edit page
-          // The ticketId is at index 1 (after 'tickets')
-          let label = menuItem?.title || segment.charAt(0).toUpperCase() + segment.slice(1)
-          if (isEditTicketPage && index === 1 && !menuItem) {
-            // If it's the edit page and this segment doesn't match a menu item, it's likely the ticketId
-            label = 'Ticket'
-          }
+          const label = menuItem?.title || segment.charAt(0).toUpperCase() + segment.slice(1)
           
           return {
             label,
@@ -94,9 +112,9 @@ export function PageHeader() {
 
         {/* Second section: Page name and breadcrumb */}
         <section className="flex flex-col gap-1 flex-1 min-w-0">
-          <h1 className="text-lg font-semibold text-foreground truncate">
+          {/* <h1 className="text-lg font-semibold text-foreground truncate">
             {pageName}
-          </h1>
+          </h1> */}
           <Breadcrumb>
             <BreadcrumbList className="gap-2">
               {breadcrumbItems.map((item, index) => {

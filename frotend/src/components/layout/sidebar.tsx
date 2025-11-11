@@ -163,8 +163,14 @@ function SidebarContentComponent() {
             )}>
               {menuItems.map((item) => {
                 const Icon = item.icon
+                // Check if we're on edit ticket page
+                const isOnEditTicketPage = location.pathname.match(/^\/tickets\/[^/]+\/edit$/)
+                // Tickets menu item should not be active on create or edit pages
                 const isActive = location.pathname === item.href || 
-                  (item.href !== '/' && location.pathname.startsWith(item.href) && location.pathname !== '/tickets/create')
+                  (item.href !== '/' && 
+                   location.pathname.startsWith(item.href) && 
+                   location.pathname !== '/tickets/create' &&
+                   !(item.href === '/tickets' && isOnEditTicketPage))
                 
                 return (
                   <SidebarMenuItem key={item.href}>
