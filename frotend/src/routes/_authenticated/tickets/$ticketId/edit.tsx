@@ -2,13 +2,12 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useRef, useState } from 'react'
-import { useQuery } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import { TriangleAlert } from 'lucide-react'
 import { toast } from 'sonner'
 import type { FileMetadata, FileWithPreview } from '@/hooks/use-file-upload'
 import type { CreateTicketInput } from '@/lib/validations'
 import { createTicketSchema } from '@/lib/validations'
-import { api } from '@/lib/api'
 import { useAuth } from '@/hooks/useAuth'
 import { api as convexApi } from '@/lib/convex-api'
 import GalleryUpload from '@/components/file-upload/gallery-upload'
@@ -51,6 +50,9 @@ function EditTicketPage() {
       ? { ticketId: ticketId as any, userId: user.id as any }
       : 'skip'
   )
+
+  // Use Convex mutation for updating tickets
+  const updateTicket = useMutation(convexApi.functions.tickets.mutations.update)
 
   // Handle loading and error states
   const isLoading = ticketResult === undefined && isAuthenticated
@@ -243,23 +245,16 @@ function EditTicketPage() {
         originalId => !allPhotoIds.includes(originalId)
       )
 
-      // Delete removed images from storage
-      for (const photoId of removedPhotoIds) {
-        try {
-          await api.tickets.deleteFile(photoId)
-        } catch (error) {
-          // Log error but don't fail the update if file deletion fails
-          console.error(`Failed to delete photo ${photoId}:`, error)
-        }
-      }
-
-      // Update ticket
-      await api.tickets.update(ticketId, {
+      // Update ticket using Convex mutation (handles file deletion internally)
+      await updateTicket({
+        ticketId: ticketId as any,
+        userId: user!.id as any,
         description: data.description,
-        photoIds: allPhotoIds,
+        photoIds: allPhotoIds as any,
         location: data.location || undefined,
         name: data.name || undefined,
         urgency: data.urgency || undefined,
+        removedPhotoIds: removedPhotoIds.length > 0 ? (removedPhotoIds as any) : undefined,
       })
 
       // Show success toast

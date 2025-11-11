@@ -2,9 +2,11 @@
  * Ticket mutations - Internal mutations for ticket data modification
  */
 
-import { internalMutation } from "../../_generated/server";
+import { internalMutation, mutation } from "../../_generated/server";
 import { v } from "convex/values";
 import type { Id } from "../../_generated/dataModel";
+import { validateUserId } from "../../utils/queryAuth";
+import { internal } from "../../_generated/api";
 
 /**
  * Create ticket (internal)
@@ -89,6 +91,8 @@ export const updateInternal = internalMutation({
     problemDescription: v.optional(v.string()), // Detailed problem description in simple terms
     description: v.optional(v.string()),
     location: v.optional(v.string()),
+    name: v.optional(v.string()),
+    photoIds: v.optional(v.array(v.id("_storage"))),
     firecrawlResultsId: v.optional(v.id("firecrawlResults")),
     selectedVendorId: v.optional(v.id("vendors")),
     selectedVendorQuoteId: v.optional(v.id("vendorQuotes")),
@@ -169,6 +173,110 @@ export const updateInternal = internalMutation({
     if (Object.keys(fieldsToUpdate).length > 0) {
       await ctx.db.patch(ticketId, fieldsToUpdate);
     }
+  },
+});
+
+/**
+ * Update ticket (public mutation with authorization)
+ * Validates user owns the ticket and ticket can be edited
+ * Handles file deletion for removed photos
+ */
+export const update = mutation({
+  args: {
+    ticketId: v.id("tickets"),
+    userId: v.id("users"), // Required for authorization
+    description: v.optional(v.string()),
+    location: v.optional(v.string()),
+    name: v.optional(v.string()),
+    photoIds: v.optional(v.array(v.id("_storage"))),
+    urgency: v.optional(
+      v.union(
+        v.literal("emergency"),
+        v.literal("urgent"),
+        v.literal("normal"),
+        v.literal("low")
+      )
+    ),
+    removedPhotoIds: v.optional(v.array(v.id("_storage"))), // Photos to delete
+  },
+  handler: async (ctx, args) => {
+    // Validate userId exists
+    await validateUserId(ctx, args.userId);
+    
+    // Get ticket
+    const ticket = await ctx.db.get(args.ticketId);
+    
+    if (!ticket) {
+      throw new Error("Ticket not found");
+    }
+    
+    // SECURITY: Ensure ticket belongs to the requesting user
+    if (ticket.createdBy !== args.userId) {
+      throw new Error("Unauthorized: Ticket does not belong to user");
+    }
+    
+    // Check if ticket can be edited
+    const editableStatuses = ["pending", "analyzed", "processing", "vendors_available"];
+    if (!editableStatuses.includes(ticket.status)) {
+      throw new Error(
+        `Ticket cannot be edited. Current status: ${ticket.status}. Only tickets with status: ${editableStatuses.join(", ")} can be edited.`
+      );
+    }
+    
+    // Validate photoIds if provided
+    if (args.photoIds !== undefined) {
+      if (args.photoIds.length === 0) {
+        throw new Error("At least one photo is required");
+      }
+      if (args.photoIds.length > 5) {
+        throw new Error("Maximum 5 photos allowed");
+      }
+    }
+    
+    // Delete removed photos from storage
+    if (args.removedPhotoIds && args.removedPhotoIds.length > 0) {
+      for (const photoId of args.removedPhotoIds) {
+        try {
+          await ctx.storage.delete(photoId);
+        } catch (error) {
+          // Log error but don't fail the update if file deletion fails
+          console.error(`Failed to delete photo ${photoId}:`, error);
+        }
+      }
+    }
+    
+    // Prepare update fields
+    const updateFields: {
+      description?: string;
+      location?: string;
+      name?: string;
+      photoIds?: Array<Id<"_storage">>;
+      urgency?: "emergency" | "urgent" | "normal" | "low";
+    } = {};
+    
+    if (args.description !== undefined) {
+      updateFields.description = args.description;
+    }
+    if (args.location !== undefined) {
+      updateFields.location = args.location;
+    }
+    if (args.name !== undefined) {
+      updateFields.name = args.name;
+    }
+    if (args.photoIds !== undefined) {
+      updateFields.photoIds = args.photoIds;
+    }
+    if (args.urgency !== undefined) {
+      updateFields.urgency = args.urgency;
+    }
+    
+    // Call internal mutation to update ticket
+    await ctx.runMutation(internal.functions.tickets.mutations.updateInternal, {
+      ticketId: args.ticketId,
+      ...updateFields,
+    });
+    
+    return { success: true };
   },
 });
 
@@ -338,4 +446,3 @@ export const deletePhotoFromTicketInternal = internalMutation({
     }
   },
 });
-

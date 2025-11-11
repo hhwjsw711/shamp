@@ -5,7 +5,7 @@
 
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
-import { api } from "./_generated/api";
+import { corsRouter } from "convex-helpers/server/cors";
 
 // Import auth handlers
 import { getGoogleAuthUrlHandler, googleCallbackHandler } from "./handlers/auth/google";
@@ -93,7 +93,53 @@ import {
 const http = httpRouter();
 
 /**
- * Health check endpoint
+ * CORS Router Configuration
+ * Uses convex-helpers corsRouter which automatically handles OPTIONS preflight requests
+ * including for parameterized routes like /api/tickets/:id
+ */
+const cors = corsRouter(http, {
+  // Dynamic origin handling: use request origin if present
+  // Note: Cannot use "*" with allowCredentials: true, so we must return the actual origin
+  allowedOrigins: async (req: Request) => {
+    const origin = req.headers.get("origin");
+    if (origin) {
+      return [origin];
+    }
+    // If no origin header (e.g., same-origin request), allow it
+    // This handles cases where requests come from the same domain
+    return [];
+  },
+  allowedHeaders: ["Content-Type", "Authorization"],
+  allowCredentials: true,
+  browserCacheMaxAge: 86400, // 24 hours
+});
+
+/**
+ * Catch-all OPTIONS handler for parameterized routes
+ * This ensures OPTIONS requests are handled even if corsRouter has issues with parameterized routes
+ */
+http.route({
+  path: "/api/tickets/:id",
+  method: "OPTIONS",
+  handler: httpAction(async (_ctx, request) => {
+    const origin = request.headers.get("origin");
+    // Must return actual origin, cannot use "*" with allowCredentials: true
+    const allowedOrigin = origin || request.headers.get("referer")?.split("/").slice(0, 3).join("/") || "https://hoveringly-undelineable-fausto.ngrok-free.dev";
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": allowedOrigin,
+        "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Max-Age": "86400",
+      },
+    });
+  }),
+});
+
+/**
+ * Health check endpoint (no CORS needed)
  */
 http.route({
   path: "/health",
@@ -113,119 +159,12 @@ http.route({
 });
 
 /**
- * CORS preflight handler helper function
- */
-const corsPreflightHandler = httpAction(async (ctx, request) => {
-  // Get origin from request header for CORS
-  const origin = request.headers.get("origin");
-  const frontendUrl = await ctx.runAction(
-    (api as any).functions.auth.getEnv.getEnvVar,
-    { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
-  ) || "http://localhost:3000";
-  
-  // Use origin from request if available, otherwise fallback to FRONTEND_URL
-  const allowedOrigin = origin || frontendUrl;
-  
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": allowedOrigin,
-      "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-      "Access-Control-Allow-Credentials": "true",
-      "Access-Control-Max-Age": "86400",
-    },
-  });
-});
-
-/**
- * CORS preflight handlers for specific routes
- * Convex requires explicit OPTIONS handlers for each route
- */
-http.route({
-  path: "/api/auth/google/url",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
-http.route({
-  path: "/api/auth/callback/google",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
-http.route({
-  path: "/api/auth/login",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
-http.route({
-  path: "/api/auth/register",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
-http.route({
-  path: "/api/auth/me",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
-http.route({
-  path: "/api/auth/logout",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
-http.route({
-  path: "/api/auth/email-verification/send-code",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
-http.route({
-  path: "/api/auth/email-verification/verify-code",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
-http.route({
-  path: "/api/auth/password-reset/request",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
-http.route({
-  path: "/api/auth/password-reset/verify",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
-http.route({
-  path: "/api/auth/password-reset/complete",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
-http.route({
-  path: "/api/auth/onboarding",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
-http.route({
-  path: "/api/auth/validate-pin",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
-/**
  * Authentication Routes
+ * All routes use cors.route() which automatically handles OPTIONS preflight requests
  */
 
 // Get Google OAuth URL
-http.route({
+cors.route({
   path: "/api/auth/google/url",
   method: "GET",
   handler: getGoogleAuthUrlHandler,
@@ -233,81 +172,81 @@ http.route({
 
 // Google OAuth callback
 // Note: Google OAuth redirects to /api/auth/callback/google (not /api/auth/google/callback)
-http.route({
+cors.route({
   path: "/api/auth/callback/google",
   method: "GET",
   handler: googleCallbackHandler,
 });
 
 // Email/password login
-http.route({
+cors.route({
   path: "/api/auth/login",
   method: "POST",
   handler: loginHandler,
 });
 
 // Email/password registration
-http.route({
+cors.route({
   path: "/api/auth/register",
   method: "POST",
   handler: registerHandler,
 });
 
 // Get current user
-http.route({
+cors.route({
   path: "/api/auth/me",
   method: "GET",
   handler: meHandler,
 });
 
 // Logout
-http.route({
+cors.route({
   path: "/api/auth/logout",
   method: "POST",
   handler: logoutHandler,
 });
 
 // Email verification routes
-http.route({
+cors.route({
   path: "/api/auth/email-verification/send-code",
   method: "POST",
   handler: sendCodeHandler,
 });
 
-http.route({
+cors.route({
   path: "/api/auth/email-verification/verify-code",
   method: "POST",
   handler: verifyCodeHandler,
 });
 
 // Password reset routes
-http.route({
+cors.route({
   path: "/api/auth/password-reset/request",
   method: "POST",
   handler: requestPasswordResetHandler,
 });
 
-http.route({
+cors.route({
   path: "/api/auth/password-reset/verify",
   method: "POST",
   handler: verifyPasswordResetCodeHandler,
 });
 
-http.route({
+cors.route({
   path: "/api/auth/password-reset/complete",
   method: "POST",
   handler: completePasswordResetHandler,
 });
 
 // Onboarding route
-http.route({
+cors.route({
   path: "/api/auth/onboarding",
   method: "POST",
   handler: completeOnboardingHandler,
 });
 
 // PIN validation route
-http.route({
+cors.route({
   path: "/api/auth/validate-pin",
   method: "POST",
   handler: validatePinHandler,
@@ -315,171 +254,106 @@ http.route({
 
 /**
  * Ticket Routes
+ * All routes use cors.route() which automatically handles OPTIONS preflight requests
+ * including parameterized routes like /api/tickets/:id
  */
 
 // Create ticket
-http.route({
+cors.route({
   path: "/api/tickets",
   method: "POST",
   handler: createTicketHandler,
 });
 
-http.route({
-  path: "/api/tickets",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
 // List tickets
-http.route({
+cors.route({
   path: "/api/tickets",
   method: "GET",
   handler: listTicketsHandler,
 });
 
-// OPTIONS handler for /api/tickets/:id (must be before GET/PATCH/DELETE)
-http.route({
-  path: "/api/tickets/:id",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
 // Get ticket by ID
-http.route({
+cors.route({
   path: "/api/tickets/:id",
   method: "GET",
   handler: getTicketByIdHandler,
 });
 
 // Update ticket
-http.route({
+cors.route({
   path: "/api/tickets/:id",
   method: "PATCH",
   handler: updateTicketHandler,
 });
 
-// Update ticket status
-http.route({
-  path: "/api/tickets/:id/status",
-  method: "PATCH",
-  handler: updateTicketStatusHandler,
-});
-
-http.route({
-  path: "/api/tickets/:id/status",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
-// Assign vendor to ticket
-http.route({
-  path: "/api/tickets/:id/assign-vendor",
-  method: "POST",
-  handler: assignVendorHandler,
-});
-
-http.route({
-  path: "/api/tickets/:id/assign-vendor",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
-// Close ticket
-http.route({
-  path: "/api/tickets/:id/close",
-  method: "POST",
-  handler: closeTicketHandler,
-});
-
-http.route({
-  path: "/api/tickets/:id/close",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
-// Schedule repair
-http.route({
-  path: "/api/tickets/:id/schedule",
-  method: "POST",
-  handler: scheduleRepairHandler,
-});
-
-http.route({
-  path: "/api/tickets/:id/schedule",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
 // Delete ticket
-http.route({
+cors.route({
   path: "/api/tickets/:id",
   method: "DELETE",
   handler: deleteTicketHandler,
 });
 
+// Update ticket status
+cors.route({
+  path: "/api/tickets/:id/status",
+  method: "PATCH",
+  handler: updateTicketStatusHandler,
+});
+
+// Assign vendor to ticket
+cors.route({
+  path: "/api/tickets/:id/assign-vendor",
+  method: "POST",
+  handler: assignVendorHandler,
+});
+
+// Close ticket
+cors.route({
+  path: "/api/tickets/:id/close",
+  method: "POST",
+  handler: closeTicketHandler,
+});
+
+// Schedule repair
+cors.route({
+  path: "/api/tickets/:id/schedule",
+  method: "POST",
+  handler: scheduleRepairHandler,
+});
+
 // Delete photo from ticket
-http.route({
+cors.route({
   path: "/api/tickets/:id/photos/:photoId",
   method: "DELETE",
   handler: deletePhotoFromTicketHandler,
 });
 
-http.route({
-  path: "/api/tickets/:id/photos/:photoId",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
 // Submit ticket with PIN (for staff/guests)
-http.route({
+cors.route({
   path: "/api/tickets/submit-with-pin",
   method: "POST",
   handler: submitTicketWithPinHandler,
 });
 
-http.route({
-  path: "/api/tickets/submit-with-pin",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
 // Update vendor status
-http.route({
+cors.route({
   path: "/api/tickets/:id/vendor-status",
   method: "PATCH",
   handler: updateVendorStatusHandler,
 });
 
-http.route({
-  path: "/api/tickets/:id/vendor-status",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
 // Upload after photos
-http.route({
+cors.route({
   path: "/api/tickets/:id/after-photos",
   method: "POST",
   handler: uploadAfterPhotosHandler,
 });
 
-http.route({
-  path: "/api/tickets/:id/after-photos",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
 // Update guest impact
-http.route({
+cors.route({
   path: "/api/tickets/:id/guest-impact",
   method: "PATCH",
   handler: updateGuestImpactHandler,
-});
-
-http.route({
-  path: "/api/tickets/:id/guest-impact",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
 });
 
 /**
@@ -516,32 +390,21 @@ http.route({
 
 /**
  * Vendor Quotes Routes
+ * All routes use cors.route() which automatically handles OPTIONS preflight requests
  */
 
 // List vendor quotes
-http.route({
+cors.route({
   path: "/api/vendor-quotes",
   method: "GET",
   handler: listVendorQuotesHandler,
 });
 
-http.route({
-  path: "/api/vendor-quotes",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
 // Get vendor quote by ID
-http.route({
+cors.route({
   path: "/api/vendor-quotes/:id",
   method: "GET",
   handler: getVendorQuoteByIdHandler,
-});
-
-http.route({
-  path: "/api/vendor-quotes/:id",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
 });
 
 /**
@@ -635,79 +498,52 @@ http.route({
 
 /**
  * Analytics Routes
+ * All routes use cors.route() which automatically handles OPTIONS preflight requests
  */
 
 // Get dashboard statistics
-http.route({
+cors.route({
   path: "/api/analytics/dashboard",
   method: "GET",
   handler: getDashboardStatsHandler,
 });
 
-http.route({
-  path: "/api/analytics/dashboard",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
 /**
  * Chat Routes
+ * All routes use cors.route() which automatically handles OPTIONS preflight requests
  */
 
 // Chat with user chat agent
-http.route({
+cors.route({
   path: "/api/chat",
   method: "POST",
   handler: chatHandler,
 });
 
-http.route({
-  path: "/api/chat",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
 /**
  * File Routes
+ * All routes use cors.route() which automatically handles OPTIONS preflight requests
  */
 
 // Upload file
-http.route({
+cors.route({
   path: "/api/files/upload",
   method: "POST",
   handler: uploadFileHandler,
 });
 
-http.route({
-  path: "/api/files/upload",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
 // Get file URL
-http.route({
+cors.route({
   path: "/api/files/:id/url",
   method: "GET",
   handler: getFileUrlHandler,
 });
 
-http.route({
-  path: "/api/files/:id/url",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
-});
-
 // Delete file
-http.route({
+cors.route({
   path: "/api/files/:id",
   method: "DELETE",
   handler: deleteFileHandler,
-});
-
-http.route({
-  path: "/api/files/:id",
-  method: "OPTIONS",
-  handler: corsPreflightHandler,
 });
 
 export default http;

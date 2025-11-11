@@ -95,8 +95,23 @@ async function request<T>(
   }
 
   const fullUrl = `${CONVEX_URL}${endpoint}`
+  console.log('[request] Making request:', {
+    method: config.method || 'GET',
+    url: fullUrl,
+    hasBody: !!config.body,
+    hasAuth: !!sessionToken,
+    credentials: config.credentials,
+    headers: config.headers,
+  })
 
   const response = await fetch(fullUrl, config)
+  
+  console.log('[request] Response received:', {
+    status: response.status,
+    statusText: response.statusText,
+    ok: response.ok,
+    headers: Object.fromEntries(response.headers.entries()),
+  })
 
   // Read response text once (can only be read once)
   const responseText = await response.text()
@@ -326,17 +341,47 @@ export const api = {
       name?: string
       urgency?: 'emergency' | 'urgent' | 'normal' | 'low'
     }) => {
-      return request<{
-        success: boolean
-        ticket: {
-          _id: string
-          photoUrls?: Array<string | null>
-          [key: string]: unknown
-        }
-      }>(`/api/tickets/${ticketId}`, {
-        method: 'PATCH',
-        body: data,
-      })
+      console.log('[api.tickets.update] Starting update request:', {
+        ticketId,
+        data: {
+          description: data.description?.substring(0, 50),
+          location: data.location,
+          photoIdsCount: data.photoIds?.length,
+          urgency: data.urgency,
+          name: data.name,
+        },
+      });
+      
+      const CONVEX_URL =
+        import.meta.env.VITE_CONVEX_SITE_URL || 
+        import.meta.env.VITE_CONVEX_URL?.replace('.convex.cloud', '.convex.site') ||
+        ''
+      
+      console.log('[api.tickets.update] CONVEX_URL:', CONVEX_URL);
+      
+      const endpoint = `/api/tickets/${ticketId}`;
+      const fullUrl = `${CONVEX_URL}${endpoint}`;
+      console.log('[api.tickets.update] Full URL:', fullUrl);
+      
+      try {
+        const result = await request<{
+          success: boolean
+          ticket: {
+            _id: string
+            photoUrls?: Array<string | null>
+            [key: string]: unknown
+          }
+        }>(endpoint, {
+          method: 'PATCH',
+          body: data,
+        });
+        
+        console.log('[api.tickets.update] Success:', result);
+        return result;
+      } catch (error) {
+        console.error('[api.tickets.update] Error:', error);
+        throw error;
+      }
     },
     deleteFile: async (fileId: string) => {
       return request<{

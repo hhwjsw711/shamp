@@ -588,16 +588,27 @@ export const listTicketsHandler = httpAction(async (ctx, request) => {
  */
 export const updateTicketHandler = httpAction(async (ctx, request) => {
   try {
+    console.log("[updateTicketHandler] Processing PATCH request");
     // Get origin from request header for CORS
     const origin = request.headers.get("origin");
-    const frontendUrl = await ctx.runAction(
-      (api as any).functions.auth.getEnv.getEnvVar,
-      { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
-    ) || "http://localhost:3000";
+    console.log("[updateTicketHandler] PATCH request origin:", origin);
+    
+    let frontendUrl: string;
+    try {
+      frontendUrl = await ctx.runAction(
+        (api as any).functions.auth.getEnv.getEnvVar,
+        { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
+      ) || "http://localhost:3000";
+    } catch (error) {
+      console.error("[updateTicketHandler] Error getting FRONTEND_URL:", error);
+      frontendUrl = "http://localhost:3000";
+    }
     
     const allowedOrigin = origin || frontendUrl;
+    console.log("[updateTicketHandler] PATCH allowed origin:", allowedOrigin);
 
     const user = await authenticateUser(ctx, request);
+    console.log("[updateTicketHandler] Authenticated user:", user ? { userId: user.userId } : null);
     if (!user) {
       return new Response(
         JSON.stringify({ error: "Not authenticated" }),
@@ -615,8 +626,10 @@ export const updateTicketHandler = httpAction(async (ctx, request) => {
     // Extract ticket ID from URL
     const url = new URL(request.url);
     const ticketId = url.pathname.split("/").pop();
+    console.log("[updateTicketHandler] Extracted ticketId:", ticketId);
 
     if (!ticketId) {
+      console.log("[updateTicketHandler] ERROR: No ticketId found in URL");
       return new Response(
         JSON.stringify({ error: "Ticket ID is required" }),
         {
@@ -631,16 +644,31 @@ export const updateTicketHandler = httpAction(async (ctx, request) => {
     }
 
     // Extract fields from request body
+    console.log("[updateTicketHandler] Parsing request body...");
     const body = await request.json();
+    console.log("[updateTicketHandler] Request body:", { 
+      description: body.description?.substring(0, 50),
+      location: body.location,
+      photoIdsCount: body.photoIds?.length,
+      urgency: body.urgency,
+      name: body.name,
+    });
     const { description, location, photoIds, urgency, name } = body;
 
     // Verify user owns the ticket
+    console.log("[updateTicketHandler] Fetching ticket from database...");
     const ticket = await ctx.runQuery(
       (internal as any).functions.tickets.queries.getByIdInternal,
       { ticketId: ticketId as any }
     );
+    console.log("[updateTicketHandler] Ticket found:", ticket ? { 
+      _id: ticket._id, 
+      status: ticket.status, 
+      createdBy: ticket.createdBy 
+    } : null);
 
     if (!ticket) {
+      console.log("[updateTicketHandler] ERROR: Ticket not found");
       return new Response(
         JSON.stringify({ error: "Ticket not found" }),
         {
@@ -655,6 +683,10 @@ export const updateTicketHandler = httpAction(async (ctx, request) => {
     }
 
     if (ticket.createdBy !== user.userId) {
+      console.log("[updateTicketHandler] ERROR: User not authorized", {
+        ticketCreatedBy: ticket.createdBy,
+        userId: user.userId,
+      });
       return new Response(
         JSON.stringify({ error: "Not authorized to update this ticket" }),
         {
@@ -670,7 +702,13 @@ export const updateTicketHandler = httpAction(async (ctx, request) => {
 
     // Check if ticket can be edited (only allow editing if status is: pending, analyzed, processing, vendors_available)
     const editableStatuses = ["pending", "analyzed", "processing", "vendors_available"];
+    console.log("[updateTicketHandler] Checking editable status:", {
+      currentStatus: ticket.status,
+      editableStatuses,
+      canEdit: editableStatuses.includes(ticket.status),
+    });
     if (!editableStatuses.includes(ticket.status)) {
+      console.log("[updateTicketHandler] ERROR: Ticket cannot be edited");
       return new Response(
         JSON.stringify({ 
           error: `Ticket cannot be edited. Current status: ${ticket.status}. Only tickets with status: ${editableStatuses.join(", ")} can be edited.` 
@@ -688,7 +726,9 @@ export const updateTicketHandler = httpAction(async (ctx, request) => {
 
     // Validate photoIds if provided
     if (photoIds !== undefined) {
+      console.log("[updateTicketHandler] Validating photoIds:", { photoIdsCount: photoIds.length });
       if (!Array.isArray(photoIds) || photoIds.length === 0) {
+        console.log("[updateTicketHandler] ERROR: Invalid photoIds");
         return new Response(
           JSON.stringify({ error: "At least one photo is required" }),
           {
@@ -702,6 +742,7 @@ export const updateTicketHandler = httpAction(async (ctx, request) => {
         );
       }
       if (photoIds.length > 5) {
+        console.log("[updateTicketHandler] ERROR: Too many photos");
         return new Response(
           JSON.stringify({ error: "Maximum 5 photos allowed" }),
           {
@@ -717,6 +758,7 @@ export const updateTicketHandler = httpAction(async (ctx, request) => {
     }
 
     // Update ticket
+    console.log("[updateTicketHandler] Updating ticket in database...");
     await ctx.runMutation(
       (internal as any).functions.tickets.mutations.updateInternal,
       {
@@ -728,8 +770,10 @@ export const updateTicketHandler = httpAction(async (ctx, request) => {
         name,
       }
     );
+    console.log("[updateTicketHandler] Ticket updated successfully");
 
     // Get updated ticket with photo URLs
+    console.log("[updateTicketHandler] Fetching updated ticket...");
     const updatedTicket = await ctx.runQuery(
       (internal as any).functions.tickets.queries.getByIdInternal,
       { ticketId: ticketId as any }
@@ -738,12 +782,14 @@ export const updateTicketHandler = httpAction(async (ctx, request) => {
     // Get photo URLs for response
     const photoUrls: Array<string | null> = [];
     if (updatedTicket) {
+      console.log("[updateTicketHandler] Generating photo URLs...");
       for (const photoId of updatedTicket.photoIds) {
         const url = await ctx.storage.getUrl(photoId);
         photoUrls.push(url);
       }
     }
 
+    console.log("[updateTicketHandler] Returning success response");
     return new Response(
       JSON.stringify({ 
         success: true, 
@@ -759,14 +805,31 @@ export const updateTicketHandler = httpAction(async (ctx, request) => {
       }
     );
   } catch (error) {
-    console.error("Update ticket error:", error);
+    console.error("[updateTicketHandler] ERROR caught:", error);
+    console.error("[updateTicketHandler] Error stack:", error instanceof Error ? error.stack : "No stack");
+    // Get origin for error response
+    const origin = request.headers.get("origin");
+    let frontendUrl: string;
+    try {
+      frontendUrl = await ctx.runAction(
+        (api as any).functions.auth.getEnv.getEnvVar,
+        { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
+      ) || "http://localhost:3000";
+    } catch (envError) {
+      console.error("[updateTicketHandler] Error getting FRONTEND_URL in catch:", envError);
+      frontendUrl = "http://localhost:3000";
+    }
+    const allowedOrigin = origin || frontendUrl;
+    console.log("[updateTicketHandler] Error response allowed origin:", allowedOrigin);
+    
     return new Response(
       JSON.stringify({ error: getErrorMessage(error) }),
       {
         status: 400,
         headers: {
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Origin": allowedOrigin,
+          "Access-Control-Allow-Credentials": "true",
         },
       }
     );
