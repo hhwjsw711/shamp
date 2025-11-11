@@ -19,6 +19,14 @@ export const createInternal = internalMutation({
     photoIds: v.array(v.id("_storage")), // Required array of photo IDs (max 5)
     issueType: v.optional(v.string()),
     predictedTags: v.optional(v.array(v.string())),
+    urgency: v.optional(
+      v.union(
+        v.literal("emergency"),
+        v.literal("urgent"),
+        v.literal("normal"),
+        v.literal("low")
+      )
+    ),
     status: v.optional(
       v.union(
         v.literal("pending"),
@@ -55,6 +63,7 @@ export const createInternal = internalMutation({
       beforePhotoIds: args.photoIds, // Set beforePhotoIds to initial photos
       issueType: args.issueType,
       predictedTags: args.predictedTags || [],
+      urgency: args.urgency,
       status: args.status || "pending",
       vendorStatus: "not_started", // Initialize vendor status
       createdAt: Date.now(),

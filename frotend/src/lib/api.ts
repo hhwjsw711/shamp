@@ -276,6 +276,7 @@ export const api = {
       photoIds: Array<string>
       location?: string
       name?: string
+      urgency?: 'emergency' | 'urgent' | 'normal' | 'low'
     }) => {
       // Send as JSON with photoIds array (files are already uploaded)
       return request<{
@@ -291,6 +292,7 @@ export const api = {
           photoIds: data.photoIds,
           location: data.location,
           name: data.name,
+          urgency: data.urgency,
         },
       })
     },

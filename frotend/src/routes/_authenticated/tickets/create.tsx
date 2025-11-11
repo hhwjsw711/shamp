@@ -21,9 +21,11 @@ import {
 } from '@/components/ui/form'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { FormFooter } from '@/components/layout/form-footer'
+import { Label } from '@/components/ui/label'
 
 export const Route = createFileRoute('/_authenticated/tickets/create')({
   component: CreateTicketPage,
@@ -44,6 +46,7 @@ function CreateTicketPage() {
       location: '',
       name: user?.name || '',
       photoIds: [],
+      urgency: undefined,
     },
   })
 
@@ -177,6 +180,7 @@ function CreateTicketPage() {
         photoIds: allPhotoIds,
         location: data.location || undefined,
         name: data.name || undefined,
+        urgency: data.urgency || undefined,
       })
 
       // Show success toast
@@ -271,6 +275,53 @@ function CreateTicketPage() {
                       <Input
                         {...field}
                       />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Urgency */}
+              <FormField
+                control={form.control}
+                name="urgency"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Urgency (Optional)</FormLabel>
+                    <FormDescription>
+                      How urgent is this issue? This helps prioritize your request. Leave unselected if unsure.
+                    </FormDescription>
+                    <FormControl>
+                      <RadioGroup
+                        value={field.value || ''}
+                        onValueChange={(value) => field.onChange(value || undefined)}
+                        className="flex flex-col gap-3"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="emergency" id="urgency-emergency" />
+                          <Label htmlFor="urgency-emergency" className="font-normal cursor-pointer">
+                            <span className="font-medium text-red-600">Emergency</span> - Critical: fire, flood, security, guest safety
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="urgent" id="urgency-urgent" />
+                          <Label htmlFor="urgency-urgent" className="font-normal cursor-pointer">
+                            <span className="font-medium text-orange-600">Urgent</span> - High: guest-facing issues, operational disruption
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="normal" id="urgency-normal" />
+                          <Label htmlFor="urgency-normal" className="font-normal cursor-pointer">
+                            <span className="font-medium text-blue-600">Normal</span> - Standard: routine maintenance
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="low" id="urgency-low" />
+                          <Label htmlFor="urgency-low" className="font-normal cursor-pointer">
+                            <span className="font-medium text-gray-600">Low</span> - Non-critical: cosmetic issues
+                          </Label>
+                        </div>
+                      </RadioGroup>
                     </FormControl>
                     <FormMessage />
                   </FormItem>

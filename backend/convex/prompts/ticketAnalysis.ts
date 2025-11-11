@@ -29,17 +29,22 @@ export function getTicketAnalysisPrompt(params: {
   description: string
   location: string | undefined
   imageUrls: string[] // Changed to array of image URLs
+  urgency: "emergency" | "urgent" | "normal" | "low" | undefined // User-provided urgency (if any)
 }) {
-  const { description, location, imageUrls } = params
+  const { description, location, imageUrls, urgency } = params
 
   const imageSection = imageUrls.length > 0
     ? `Images (${imageUrls.length} total):\n${imageUrls.map((url, idx) => `  Image ${idx + 1}: ${url}`).join('\n')}`
     : 'No images provided'
 
+  const urgencySection = urgency
+    ? `\nUser-provided urgency: ${urgency} (RESPECT THIS - do not override unless the analysis reveals it's clearly incorrect)`
+    : ''
+
   return `Analyze this maintenance ticket from a hospitality business (hotel or restaurant):
     
 Description: ${description}
-Location: ${location || 'Not specified'}
+Location: ${location || 'Not specified'}${urgencySection}
 ${imageSection}
 
 IMPORTANT: You must analyze ALL images provided (${imageUrls.length} image${imageUrls.length !== 1 ? 's' : ''}) to get a complete understanding of the problem.
@@ -51,7 +56,8 @@ Steps:
    - Combine insights from all images to understand the full scope of the problem
 
 2. Classify the issue from the description text, considering the hospitality context
-   - Use the classifyIssue tool to get issue type, tags, and urgency level
+   - Use the classifyIssue tool to get issue type and tags
+   ${urgency ? `- IMPORTANT: User has already set urgency to "${urgency}". When calling classifyIssue, pass existingUrgency: "${urgency}" so it can validate it. Only override if the analysis reveals it's clearly incorrect (e.g., user marked "low" but images show a fire/flood). Otherwise, respect the user's urgency selection.` : `- Use the classifyIssue tool to also get urgency level`}
    - Urgency levels: emergency (fire, flood, security, guest safety), urgent (guest-facing issues, operational disruption), normal (routine maintenance), low (non-critical, cosmetic)
 
 3. Generate a COMPREHENSIVE problem description in SIMPLE, PLAIN LANGUAGE:
@@ -63,7 +69,7 @@ Steps:
 
 4. Combine all analyses to generate comprehensive tags and issue type relevant to hospitality maintenance
 
-5. Update the ticket with your findings, including the detailed problem description and urgency level
+5. Update the ticket with your findings, including the detailed problem description${urgency ? ` and urgency level (use "${urgency}" unless analysis clearly shows it should be different)` : ' and urgency level'}
    - Use the updateTicket tool to save your analysis
    - Set status to "analyzed" after completing the analysis
    - Valid status values: pending, analyzed, processing, vendors_available, vendor_selected, vendor_scheduled, fixed, closed`

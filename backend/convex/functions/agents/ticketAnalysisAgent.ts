@@ -81,6 +81,7 @@ export const analyzeTicket = action({
       description: ticket.description,
       location: ticket.location,
       imageUrls, // Pass array of all image URLs
+      urgency: ticket.urgency, // Pass user-provided urgency (if any)
     });
 
     const result = await agent.generate({ prompt });

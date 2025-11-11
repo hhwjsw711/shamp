@@ -118,6 +118,7 @@ export const createTicketHandler = httpAction(async (ctx, request) => {
     let issueType: string | undefined;
     let predictedTags: string[] | undefined;
     let name: string | undefined;
+    let urgency: "emergency" | "urgent" | "normal" | "low" | undefined;
 
     // Handle multipart/form-data (file upload)
     if (contentType.includes("multipart/form-data")) {
@@ -215,6 +216,10 @@ export const createTicketHandler = httpAction(async (ctx, request) => {
       location = formData.get("location") as string | undefined;
       issueType = formData.get("issueType") as string | undefined;
       name = formData.get("name") as string | undefined;
+      const urgencyValue = formData.get("urgency") as string | null;
+      if (urgencyValue && ["emergency", "urgent", "normal", "low"].includes(urgencyValue)) {
+        urgency = urgencyValue as "emergency" | "urgent" | "normal" | "low";
+      }
       
       // Handle predictedTags (could be JSON string or array)
       const tagsValue = formData.get("predictedTags");
@@ -246,6 +251,9 @@ export const createTicketHandler = httpAction(async (ctx, request) => {
       issueType = body.issueType;
       predictedTags = body.predictedTags;
       name = body.name;
+      if (body.urgency && ["emergency", "urgent", "normal", "low"].includes(body.urgency)) {
+        urgency = body.urgency;
+      }
     }
 
     if (!description || typeof description !== "string") {
@@ -286,6 +294,7 @@ export const createTicketHandler = httpAction(async (ctx, request) => {
         photoIds: photoIds as any[],
         issueType,
         predictedTags: predictedTags || [],
+        urgency,
       }
     );
 
