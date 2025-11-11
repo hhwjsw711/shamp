@@ -63,6 +63,8 @@ Steps:
 
 4. Combine all analyses to generate comprehensive tags and issue type relevant to hospitality maintenance
 
-5. Update the ticket with your findings, including the detailed problem description and urgency level`
+5. Update the ticket with your findings, including the detailed problem description and urgency level
+   - Use the updateTicket tool to save your analysis
+   - Set status to "analyzed" after completing the analysis
+   - Valid status values: pending, analyzed, processing, vendors_available, vendor_selected, vendor_scheduled, fixed, closed`
 }
-

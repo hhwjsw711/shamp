@@ -15,7 +15,16 @@ const updateTicketSchema = z.object({
   predictedTags: z.array(z.string()).optional().describe("Predicted tags"),
   problemDescription: z.string().optional().describe("Detailed problem description in simple, plain language"),
   urgency: z.enum(["emergency", "urgent", "normal", "low"]).optional().describe("Urgency level"),
-  status: z.string().optional().describe("Ticket status"),
+  status: z.enum([
+    "pending",
+    "analyzed",
+    "processing",
+    "vendors_available",
+    "vendor_selected",
+    "vendor_scheduled",
+    "fixed",
+    "closed"
+  ]).optional().describe("Ticket status. Valid values: pending, analyzed, processing, vendors_available, vendor_selected, vendor_scheduled, fixed, closed. For ticket analysis, use 'analyzed'."),
 });
 
 type UpdateTicketParams = z.infer<typeof updateTicketSchema>;
