@@ -363,6 +363,59 @@ export const scheduleRepairInternal = internalMutation({
 });
 
 /**
+ * Delete ticket (public mutation with authorization)
+ * Validates user owns the ticket and ticket can be deleted
+ * Can only delete tickets in early stages OR fixed/closed tickets
+ */
+export const deleteTicket = mutation({
+  args: {
+    ticketId: v.id("tickets"),
+    userId: v.id("users"), // Required for authorization
+  },
+  handler: async (ctx, args) => {
+    // Validate userId exists
+    await validateUserId(ctx, args.userId);
+    
+    // Get ticket
+    const ticket = await ctx.db.get(args.ticketId);
+    
+    if (!ticket) {
+      throw new Error("Ticket not found");
+    }
+    
+    // SECURITY: Ensure ticket belongs to the requesting user
+    if (ticket.createdBy !== args.userId) {
+      throw new Error("Unauthorized: Ticket does not belong to user");
+    }
+    
+    // Check if ticket can be deleted
+    // Can delete: early stages OR fixed/closed
+    // Cannot delete: vendor_selected, vendor_scheduled (vendor engagement stages)
+    const deletableStatuses = [
+      "pending",
+      "analyzed",
+      "processing",
+      "vendors_available",
+      "fixed",
+      "closed",
+    ];
+    
+    if (!deletableStatuses.includes(ticket.status)) {
+      throw new Error(
+        `Ticket cannot be deleted. Current status: ${ticket.status}. Cannot delete tickets with vendor engagement (vendor_selected, vendor_scheduled).`
+      );
+    }
+    
+    // Call internal mutation to delete ticket (handles file deletion)
+    await ctx.runMutation(internal.functions.tickets.mutations.deleteTicketInternal, {
+      ticketId: args.ticketId,
+    });
+    
+    return { success: true };
+  },
+});
+
+/**
  * Delete ticket (internal)
  * Deletes ticket and associated files from storage
  */

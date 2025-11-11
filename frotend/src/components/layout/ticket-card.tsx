@@ -5,6 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 interface TicketCardProps {
   title: string
@@ -15,6 +23,7 @@ interface TicketCardProps {
   location?: string
   date: string
   issueType?: string
+  status?: 'pending' | 'analyzed' | 'processing' | 'vendors_available' | 'vendor_selected' | 'vendor_scheduled' | 'fixed' | 'closed'
   onClick?: () => void
   onEdit?: () => void
   onDelete?: () => void
@@ -45,12 +54,14 @@ export function TicketCard({
   location,
   date,
   issueType,
+  status,
   onClick,
   onEdit,
   onDelete,
   className = ''
 }: TicketCardProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   
   // Use problemDescription if available, otherwise fall back to description
   const displayText = problemDescription || description || ''
@@ -58,19 +69,37 @@ export function TicketCard({
   // Filter out null/undefined photoUrls
   const validPhotoUrls = photoUrls.filter((url): url is string => Boolean(url))
 
+  // Determine which buttons to show based on status
+  // Can edit/delete: pending, analyzed, processing, vendors_available
+  // Cannot edit/delete: vendor_selected, vendor_scheduled
+  // Can only delete: fixed, closed
+  const canEdit = status && ['pending', 'analyzed', 'processing', 'vendors_available'].includes(status)
+  const canDelete = status && ['pending', 'analyzed', 'processing', 'vendors_available', 'fixed', 'closed'].includes(status)
+  const showButtons = (canEdit && onEdit) || (canDelete && onDelete)
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setShowDeleteDialog(true)
+  }
+
+  const handleConfirmDelete = () => {
+    setShowDeleteDialog(false)
+    onDelete?.()
+  }
+
   return (
     <>
       <Card 
-        className={`group relative bg-zinc-100 rounded-2xl border-0 shadow-none cursor-pointer ${className}`}
+        className={`group relative bg-zinc-100 rounded-2xl border-0 shadow-none ${className}`}
         onClick={onClick}
       >
         {/* Action Buttons - Top Right */}
-        {(onEdit || onDelete) && (
+        {showButtons && (
           <ButtonGroup
             className="absolute bg-background px-2 py-1 flex items-center gap-2 rounded-xl end-2 top-2 z-10 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
             onClick={(e) => e.stopPropagation()}
           >
-            {onEdit && (
+            {canEdit && onEdit && (
               <Button
                 type="button"
                 variant="ghost"
@@ -79,22 +108,19 @@ export function TicketCard({
                   e.stopPropagation()
                   onEdit()
                 }}
-                className="size-7"
+                className="size-7 cursor-pointer"
                 aria-label="Edit ticket"
               >
                 <Edit className="size-4" />
               </Button>
             )}
-            {onDelete && (
+            {canDelete && onDelete && (
               <Button
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onDelete()
-                }}
-                className="size-7 text-destructive hover:text-destructive"
+                onClick={handleDeleteClick}
+                className="size-7 text-destructive hover:text-destructive cursor-pointer"
                 aria-label="Delete ticket"
               >
                 <Trash2 className="size-4" />
@@ -173,6 +199,34 @@ export function TicketCard({
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete this ticket</DialogTitle>
+            <DialogDescription>
+              Deleting this ticket means all associated data including photos, vendor quotes, and conversation history will be permanently removed. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-row justify-start gap-4">
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleConfirmDelete}
+            >
+              Delete ticket
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Image Preview Modal */}
       <AnimatePresence>

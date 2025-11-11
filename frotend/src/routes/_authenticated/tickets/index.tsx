@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useQuery } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import { useEffect, useState } from 'react'
 import { TriangleAlert } from 'lucide-react'
+import { toast } from 'sonner'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Spinner } from '@/components/ui/spinner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -62,8 +63,8 @@ function formatDate(timestamp: number) {
 function TicketsPage() {
   const navigate = useNavigate()
   const { user, isAuthenticated } = useAuth()
-  const [selectedStatus, setSelectedStatus] = useState<TicketStatus | 'all'>('all')
   const [isMobile, setIsMobile] = useState(false)
+  const [selectedStatus, setSelectedStatus] = useState<TicketStatus | 'all'>('all')
   
   // Search and sort state per status
   const [searchQueries, setSearchQueries] = useState<Record<TicketStatus, string>>({
@@ -87,6 +88,9 @@ function TicketsPage() {
     fixed: 'date',
     closed: 'date',
   })
+
+  // Use Convex mutation for deleting tickets
+  const deleteTicket = useMutation(api.functions.tickets.mutations.deleteTicket)
 
   // Use Convex query for real-time ticket updates
   // Only query if user is authenticated and has an ID
@@ -289,6 +293,7 @@ function TicketsPage() {
                     location={ticket.location}
                     date={formatDate(ticket.createdAt)}
                     issueType={ticket.issueType}
+                    status={ticket.status}
                     onClick={() => {
                       // TODO: Navigate to ticket detail page
                       console.log('Clicked ticket:', ticket._id)
@@ -296,9 +301,25 @@ function TicketsPage() {
                     onEdit={() => {
                       navigate({ to: `/tickets/${ticket._id}/edit` })
                     }}
-                    onDelete={() => {
-                      console.log('Delete ticket:', ticket._id)
-                      // TODO: Show delete confirmation dialog
+                    onDelete={async () => {
+                      if (!user?.id) return
+                      
+                      try {
+                        await deleteTicket({
+                          ticketId: ticket._id as any,
+                          userId: user.id as any,
+                        })
+                        
+                        toast.success('Ticket Deleted', {
+                          description: 'The ticket has been successfully deleted.',
+                          duration: 3000,
+                        })
+                      } catch (error) {
+                        toast.error('Failed to Delete Ticket', {
+                          description: error instanceof Error ? error.message : 'An error occurred while deleting the ticket.',
+                          duration: 5000,
+                        })
+                      }
                     }}
                   />
                 ))}
