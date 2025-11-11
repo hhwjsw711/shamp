@@ -244,6 +244,14 @@ function TicketsPage() {
                       // TODO: Navigate to ticket detail page
                       console.log('Clicked ticket:', ticket._id)
                     }}
+                    onEdit={() => {
+                      console.log('Edit ticket:', ticket._id)
+                      // TODO: Navigate to edit ticket page or open edit modal
+                    }}
+                    onDelete={() => {
+                      console.log('Delete ticket:', ticket._id)
+                      // TODO: Show delete confirmation dialog
+                    }}
                   />
                 ))}
               </TicketStatusColumn>
