@@ -18,6 +18,7 @@ interface TicketCardProps {
   title: string
   description?: string
   problemDescription?: string
+  ticketName?: string
   photoUrls?: Array<string | null>
   urgency?: 'emergency' | 'urgent' | 'normal' | 'low'
   location?: string
@@ -49,6 +50,7 @@ export function TicketCard({
   title,
   description,
   problemDescription,
+  ticketName,
   photoUrls = [],
   urgency,
   location,
@@ -153,7 +155,7 @@ export function TicketCard({
         <CardHeader className={`pb-3 ${validPhotoUrls.length > 0 ? 'pt-0' : ''}`}>
           <div className="flex items-start justify-between gap-2">
             <CardTitle className="text-sm font-medium line-clamp-2">
-              {title}
+              {ticketName || title}
             </CardTitle>
             {urgency && (
               <Badge className={`shrink-0 ${getUrgencyStyles(urgency)}`}>
@@ -206,7 +208,9 @@ export function TicketCard({
           <DialogHeader>
             <DialogTitle>Delete this ticket</DialogTitle>
             <DialogDescription>
-              Deleting this ticket means all associated data including photos, vendor quotes, and conversation history will be permanently removed. This action cannot be undone.
+              {ticketName 
+                ? `Deleting "${ticketName}" means all associated data including photos, vendor quotes, and conversation history will be permanently removed. This action cannot be undone.`
+                : 'Deleting this ticket means all associated data including photos, vendor quotes, and conversation history will be permanently removed. This action cannot be undone.'}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-row justify-start gap-4">

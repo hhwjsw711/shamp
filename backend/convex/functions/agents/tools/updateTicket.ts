@@ -11,6 +11,7 @@ import type { ActionCtx } from "../../../_generated/server";
 import type { Doc } from "../../../_generated/dataModel";
 
 const updateTicketSchema = z.object({
+  ticketName: z.string().optional().describe("Concise name for the ticket (e.g., 'AC Leak in Room 205', 'Broken Door Handle'). Should be brief and descriptive, generated based on the issue type, location, and problem description."),
   issueType: z.string().optional().describe("Issue type"),
   predictedTags: z.array(z.string()).optional().describe("Predicted tags"),
   problemDescription: z.string().optional().describe("Detailed problem description in simple, plain language"),
@@ -34,6 +35,7 @@ export function createUpdateTicketTool(ctx: ActionCtx, ticketId: string) {
     description: "Update ticket fields in the database",
     inputSchema: updateTicketSchema,
     execute: async ({
+      ticketName,
       issueType,
       predictedTags,
       problemDescription,
@@ -45,6 +47,7 @@ export function createUpdateTicketTool(ctx: ActionCtx, ticketId: string) {
         (internal as any).functions.tickets.mutations.updateInternal,
         {
           ticketId: ticketId as any,
+          ticketName,
           issueType,
           predictedTags,
           problemDescription,

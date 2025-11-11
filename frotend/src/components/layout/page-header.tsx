@@ -1,5 +1,6 @@
 import * as React from 'react'
-import { Link, useLocation } from '@tanstack/react-router'
+import { Link, useLocation, useParams } from '@tanstack/react-router'
+import { useQuery } from 'convex/react'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import {
   Breadcrumb,
@@ -9,6 +10,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
+import { api as convexApi } from '@/lib/convex-api'
+import { useAuth } from '@/hooks/useAuth'
 
 const menuItems = [
   {
@@ -39,21 +42,21 @@ const menuItems = [
 
 export function PageHeader() {
   const location = useLocation()
+  const params = useParams({ strict: false })
+  const { user, isAuthenticated } = useAuth()
 
   // Check if we're on the edit ticket page
   const isEditTicketPage = location.pathname.match(/^\/tickets\/[^/]+\/edit$/)
 
-  // Find the active page name - check exact matches first, then prefix matches
-  const activePage = menuItems.find(
-    (item) => location.pathname === item.href
-  ) || (isEditTicketPage 
-    ? menuItems.find((item) => item.href === '/tickets/$ticketId/edit')
-    : menuItems.find(
-        (item) => item.href !== '/' && location.pathname.startsWith(item.href)
-      )
+  // Get ticket data for edit page breadcrumb
+  const ticketResult = useQuery(
+    convexApi.functions.tickets.queries.getById,
+    isEditTicketPage && user?.id && isAuthenticated && params.ticketId
+      ? { ticketId: params.ticketId as any, userId: user.id as any }
+      : 'skip'
   )
 
-  const pageName = activePage?.title || 'Home'
+  const ticketName = ticketResult?.ticketName || 'Ticket'
 
   // Generate breadcrumb items based on pathname
   const pathSegments = location.pathname.split('/').filter(Boolean)
@@ -73,12 +76,13 @@ export function PageHeader() {
           const href = '/' + pathSegments.slice(0, segmentIndex + 1).join('/')
           const menuItem = menuItems.find((item) => item.href === href)
           
-          // Replace ticketId segment with "Ticket" for edit page
+          // Replace ticketId segment with ticketName for edit page
           // The ticketId is at segmentIndex 1 (after 'tickets')
           let label = menuItem?.title || segment.charAt(0).toUpperCase() + segment.slice(1)
           if (segmentIndex === 1 && !menuItem) {
             // If it's the edit page and this segment doesn't match a menu item, it's likely the ticketId
-            label = 'Ticket'
+            // Use ticketName if available, otherwise fall back to "Ticket"
+            label = ticketName
           }
           
           return {

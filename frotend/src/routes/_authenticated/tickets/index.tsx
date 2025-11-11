@@ -29,6 +29,7 @@ type Ticket = {
   _id: string
   createdBy: string
   name?: string
+  ticketName?: string
   description: string
   location?: string
   status: TicketStatus
@@ -288,6 +289,7 @@ function TicketsPage() {
                     title={ticket.description}
                     description={ticket.description}
                     problemDescription={ticket.problemDescription}
+                    ticketName={ticket.ticketName}
                     photoUrls={ticket.photoUrls}
                     urgency={ticket.urgency}
                     location={ticket.location}
