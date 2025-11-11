@@ -1,8 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
-import { api } from '@/lib/api'
+import { useQuery } from 'convex/react'
 import { Spinner } from '@/components/ui/spinner'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useAuth } from '@/hooks/useAuth'
+import { api } from '@/lib/convex-api'
 
 export const Route = createFileRoute('/_authenticated/')({
   component: App,
@@ -32,26 +33,21 @@ interface DashboardStats {
 }
 
 function App() {
-  const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { user, isAuthenticated } = useAuth()
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setIsLoading(true)
-        setError(null)
-        const response = await api.analytics.getDashboardStats()
-        setStats(response.data)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load dashboard statistics')
-      } finally {
-        setIsLoading(false)
-      }
-    }
+  // Use Convex query for real-time dashboard stats
+  // SECURITY: userId is validated on the backend - users can only see their own stats
+  const statsResult = useQuery(
+    api.functions.analytics.queries.getDashboardStats,
+    user?.id && isAuthenticated
+      ? { userId: user.id as any } // Type assertion - backend validates userId
+      : 'skip' // Skip query if not authenticated
+  )
 
-    fetchStats()
-  }, [])
+  // Handle loading and error states
+  const isLoading = statsResult === undefined && isAuthenticated
+  const hasError = statsResult === null
+  const stats = statsResult as DashboardStats | undefined
 
   if (isLoading) {
     return (
@@ -63,11 +59,11 @@ function App() {
     )
   }
 
-  if (error) {
+  if (hasError) {
     return (
       <section className="flex flex-col gap-2 p-4">
         <div className="flex items-center justify-center h-64">
-          <p className="text-destructive">{error}</p>
+          <p className="text-destructive">Failed to load dashboard statistics</p>
         </div>
       </section>
     )

@@ -1,13 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { useQuery } from 'convex/react'
+import { useState } from 'react'
 import { TriangleAlert } from 'lucide-react'
-import { api } from '@/lib/api'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
 import { Spinner } from '@/components/ui/spinner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { TicketStatusColumn } from '@/components/layout/ticket-status-column'
 import { TicketCard } from '@/components/layout/ticket-card'
+import { useAuth } from '@/hooks/useAuth'
+import { api } from '@/lib/convex-api'
 
 export const Route = createFileRoute('/_authenticated/tickets/')({
   component: TicketsPage,
@@ -35,6 +36,7 @@ type Ticket = {
   predictedTags?: Array<string>
   problemDescription?: string
   photoIds: Array<string>
+  photoUrls?: Array<string | null>
   createdAt: number
 }
 
@@ -49,8 +51,6 @@ const TICKET_STATUSES: Array<{ value: TicketStatus; label: string }> = [
   { value: 'closed', label: 'Closed' },
 ]
 
-
-
 function formatDate(timestamp: number) {
   return new Date(timestamp).toLocaleDateString('en-US', {
     month: 'short',
@@ -60,37 +60,32 @@ function formatDate(timestamp: number) {
 }
 
 function TicketsPage() {
-  const [tickets, setTickets] = useState<Array<Ticket>>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { user, isAuthenticated } = useAuth()
   const [selectedStatus, setSelectedStatus] = useState<TicketStatus | 'all'>('all')
 
-  useEffect(() => {
-    fetchTickets()
-  }, [])
+  // Use Convex query for real-time ticket updates
+  // Only query if user is authenticated and has an ID
+  // SECURITY: userId is validated on the backend - users can only see their own tickets
+  // The backend query validates userId exists and filters by createdBy
+  const ticketsResult = useQuery(
+    api.functions.tickets.queries.list,
+    user?.id && isAuthenticated
+      ? { userId: user.id as any } // Type assertion - backend validates userId
+      : 'skip' // Skip query if not authenticated
+  )
 
-  const fetchTickets = async () => {
-    try {
-      setIsLoading(true)
-      setError(null)
-      const response = await api.tickets.list()
-      if (response.success) {
-        // Cast status to TicketStatus type
-        setTickets(response.tickets as Array<Ticket>)
-      } else {
-        setError('Failed to load tickets')
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load tickets')
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  // Handle loading and error states
+  // useQuery returns undefined while loading, array when loaded, or null on error
+  const isLoading = ticketsResult === undefined && isAuthenticated
+  const hasError = ticketsResult === null
+  const tickets = ticketsResult as Array<Ticket> | undefined
 
   const getTicketsByStatus = (status: TicketStatus) => {
-    return tickets.filter((ticket) => ticket.status === status)
+    if (!tickets) return []
+    return tickets.filter((ticket: Ticket) => ticket.status === status)
   }
 
+  // Show loading state
   if (isLoading) {
     return (
       <main className="flex items-center justify-center h-full">
@@ -99,12 +94,24 @@ function TicketsPage() {
     )
   }
 
-  if (error) {
+  // Show error state
+  if (hasError) {
     return (
       <main className="flex items-center justify-center h-full p-4">
         <Alert variant="destructive" className="max-w-md">
           <TriangleAlert className="size-4" />
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>Failed to load tickets</AlertDescription>
+        </Alert>
+      </main>
+    )
+  }
+
+  // Show empty state if no tickets
+  if (!tickets || tickets.length === 0) {
+    return (
+      <main className="flex items-center justify-center h-full p-4">
+        <Alert className="max-w-md">
+          <AlertDescription>No tickets found. Create your first ticket to get started.</AlertDescription>
         </Alert>
       </main>
     )
@@ -166,5 +173,3 @@ function TicketsPage() {
     </main>
   )
 }
-
-

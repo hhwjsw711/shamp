@@ -3,6 +3,8 @@
  * Provides authentication methods and state
  */
 
+import { useQuery } from 'convex/react'
+import { useEffect } from 'react'
 import type {
   EmailVerificationInput,
   LoginInput,
@@ -14,11 +16,46 @@ import type {
 } from '@/lib/validations'
 import { useAuthStore } from '@/stores/authStore'
 import { api } from '@/lib/api'
+import { api as convexApi } from '@/lib/convex-api'
 
 export function useAuth() {
   // Zustand automatically subscribes to changes when destructuring
   const { user, isAuthenticated, isLoading, setUser, setLoading, logout } =
     useAuthStore()
+
+  // Use Convex query for real-time user data updates
+  // Only query if we have a userId (from initial auth check)
+  const userDataResult = useQuery(
+    convexApi.functions.auth.queries.getCurrentUser,
+    user?.id
+      ? { userId: user.id as any } // Type assertion - backend validates userId
+      : 'skip' // Skip query if no userId
+  )
+
+  // Sync Convex query result to Zustand store for real-time updates
+  useEffect(() => {
+    if (userDataResult !== undefined && user?.id) {
+      // userDataResult is undefined while loading, null on error, or user data
+      if (userDataResult === null) {
+        // Query error - user might have been deleted or unauthorized
+        // Don't clear user immediately, might be temporary error
+        console.warn('Failed to fetch user data from Convex query')
+      } else if (userDataResult) {
+        // Update store with fresh data from Convex (real-time updates)
+        const userData = {
+          id: userDataResult._id,
+          email: userDataResult.email,
+          name: userDataResult.name,
+          orgName: userDataResult.orgName,
+          location: userDataResult.location,
+          profilePic: userDataResult.profilePic,
+          emailVerified: userDataResult.emailVerified,
+          onboardingCompleted: userDataResult.onboardingCompleted,
+        }
+        setUser(userData)
+      }
+    }
+  }, [userDataResult, user?.id, setUser])
 
   const register = async (data: RegisterInput) => {
     try {

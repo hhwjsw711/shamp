@@ -112,6 +112,7 @@ import type * as utils_constants from "../utils/constants.js";
 import type * as utils_errors from "../utils/errors.js";
 import type * as utils_httpAuth from "../utils/httpAuth.js";
 import type * as utils_nameUtils from "../utils/nameUtils.js";
+import type * as utils_queryAuth from "../utils/queryAuth.js";
 import type * as utils_security from "../utils/security.js";
 import type * as utils_validation from "../utils/validation.js";
 
@@ -234,6 +235,7 @@ declare const fullApi: ApiFromModules<{
   "utils/errors": typeof utils_errors;
   "utils/httpAuth": typeof utils_httpAuth;
   "utils/nameUtils": typeof utils_nameUtils;
+  "utils/queryAuth": typeof utils_queryAuth;
   "utils/security": typeof utils_security;
   "utils/validation": typeof utils_validation;
 }>;
