@@ -2,7 +2,8 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useRef, useState } from 'react'
-import { CheckCircle2, TriangleAlert } from 'lucide-react'
+import { TriangleAlert } from 'lucide-react'
+import { toast } from 'sonner'
 import type { FileWithPreview } from '@/hooks/use-file-upload'
 import type { CreateTicketInput } from '@/lib/validations'
 import { createTicketSchema } from '@/lib/validations'
@@ -20,10 +21,8 @@ import {
 } from '@/components/ui/form'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Spinner } from '@/components/ui/spinner'
 import { FormFooter } from '@/components/layout/form-footer'
 
 export const Route = createFileRoute('/_authenticated/tickets/create')({
@@ -35,7 +34,7 @@ function CreateTicketPage() {
   const { user } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
-  const [submitSuccess, setSubmitSuccess] = useState(false)
+
   const filesRef = useRef<Array<FileWithPreview>>([])
 
   const form = useForm<CreateTicketInput>({
@@ -143,7 +142,6 @@ function CreateTicketPage() {
     try {
       setIsSubmitting(true)
       setSubmitError(null)
-      setSubmitSuccess(false)
 
       // Upload files that aren't already uploaded
       const filesToUpload = filesRef.current.filter(f => f.file instanceof File)
@@ -181,11 +179,16 @@ function CreateTicketPage() {
         name: data.name || undefined,
       })
 
-      setSubmitSuccess(true)
-      // Redirect to dashboard after a short delay (ticket detail page doesn't exist yet)
+      // Show success toast
+      toast.success('Ticket Created Successfully', {
+        description: 'Your maintenance request has been submitted.',
+        duration: 4000,
+      })
+      
+      // Redirect to dashboard after a short delay
       setTimeout(() => {
         navigate({ to: '/' })
-      }, 1500)
+      }, 1000)
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Failed to create ticket')
     } finally {
@@ -282,19 +285,6 @@ function CreateTicketPage() {
                   <TriangleAlert className="size-4" />
                   <AlertTitle>Error</AlertTitle>
                   <AlertDescription>{submitError}</AlertDescription>
-                </Alert>
-              )}
-
-              {/* Success Alert */}
-              {submitSuccess && (
-                <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
-                  <CheckCircle2 className="size-4 text-green-600 dark:text-green-400" />
-                  <AlertTitle className="text-green-800 dark:text-green-200">
-                    Ticket Created Successfully
-                  </AlertTitle>
-                  <AlertDescription className="text-green-700 dark:text-green-300">
-                    Redirecting to ticket details...
-                  </AlertDescription>
                 </Alert>
               )}
 
