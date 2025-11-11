@@ -23,7 +23,7 @@ export function createSearchVendorsTool() {
   return tool({
     description:
       "Search for local vendors using Firecrawl Search API to discover URLs, then use Extract API to get accurate vendor information from web pages",
-    parameters: searchVendorsSchema,
+    inputSchema: searchVendorsSchema,
     execute: async ({ location, tags, specialty }: SearchVendorsParams) => {
       const searchQuery = `${specialty || tags.join(" ")} ${location} maintenance repair service`;
 

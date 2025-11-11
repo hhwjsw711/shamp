@@ -25,7 +25,7 @@ export function createQueryTicketsTool(ctx: ActionCtx) {
   return tool({
     description:
       "Query tickets for a user using semantic search. Understands natural language queries to find relevant tickets. Returns ticket details including ID, description, status, location, issue type, and tags. Use this when the user asks about specific tickets, issues, or problems.",
-    parameters: queryTicketsSchema,
+    inputSchema: queryTicketsSchema,
     execute: async ({
       userId,
       query,

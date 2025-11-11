@@ -60,7 +60,7 @@ export const analyzeTicket = action({
     }
 
     // Create tools
-    const analyzeImage = createAnalyzeImageTool(ctx);
+    const analyzeImage = createAnalyzeImageTool();
     const classifyIssue = createClassifyIssueTool();
     const updateTicket = createUpdateTicketTool(ctx);
 

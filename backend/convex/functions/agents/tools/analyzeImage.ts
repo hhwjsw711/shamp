@@ -4,27 +4,23 @@
 
 "use node";
 
-import { tool } from "ai";
 import { z } from "zod";
+import { tool } from "ai";
 import OpenAI from "openai";
-import type { ActionCtx } from "../../../_generated/server";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-const analyzeImageSchema = z.object({
-  imageUrl: z.string().describe("URL of the image to analyze"),
-});
-
-type AnalyzeImageParams = z.infer<typeof analyzeImageSchema>;
-
-export function createAnalyzeImageTool(ctx: ActionCtx) {
+export function createAnalyzeImageTool() {
   return tool({
     description:
       "Analyze an image to identify equipment type, problem description, and visual tags",
-    parameters: analyzeImageSchema,
-    execute: async ({ imageUrl }: AnalyzeImageParams) => {
+    inputSchema: z.object({
+      imageUrl: z.string().describe("URL of the image to analyze"),
+    }),
+    execute: async (params: { imageUrl: string }) => {
+      const { imageUrl } = params;
       // Fetch image and convert to base64
       const imageResponse = await fetch(imageUrl);
       if (!imageResponse.ok) {
@@ -67,7 +63,7 @@ Return as JSON with these exact fields: equipmentType, problemDescription, visua
 
       return {
         equipmentType: analysis.equipmentType || "Unknown",
-        problemDescription: analysis.problemDescription || "", // Detailed description in simple terms
+        problemDescription: analysis.problemDescription || "",
         visualTags: analysis.visualTags || [],
       };
     },

@@ -19,7 +19,7 @@ export function createClassifyIssueTool() {
   return tool({
     description:
       "Classify issue type, generate tags, and predict urgency from description text",
-    parameters: classifyIssueSchema,
+    inputSchema: classifyIssueSchema,
     execute: async ({ description }: ClassifyIssueParams) => {
       const { object } = await generateObject({
         model: openai("gpt-4o-mini"),

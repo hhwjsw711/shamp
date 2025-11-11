@@ -22,7 +22,7 @@ export function createDraftResponseTool(ctx: ActionCtx) {
   return tool({
     description:
       "Draft a response to a vendor. This creates a draft that the user can review and send. Returns the draft ID and preview of the message.",
-    parameters: draftResponseSchema,
+    inputSchema: draftResponseSchema,
     execute: async ({
       ticketId,
       vendorId,

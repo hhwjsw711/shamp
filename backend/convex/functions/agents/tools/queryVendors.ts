@@ -23,7 +23,7 @@ export function createQueryVendorsTool(ctx: ActionCtx) {
   return tool({
     description:
       "Query vendors using semantic search. Understands natural language queries to find relevant vendors. Returns vendor details including business name, email, specialty, address, and rating. Use this when the user asks about vendors, contractors, or service providers.",
-    parameters: queryVendorsSchema,
+    inputSchema: queryVendorsSchema,
     execute: async ({
       query,
       specialty,

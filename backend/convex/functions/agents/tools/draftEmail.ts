@@ -13,7 +13,7 @@ export function createDraftEmailTool() {
   return tool({
     description:
       "Draft a professional email to a vendor with ticket details, images, and location",
-    parameters: z.object({
+    inputSchema: z.object({
       ticketDetails: z.string().describe("Ticket description and details"),
       vendorInfo: z.string().describe("Vendor business name and contact info"),
       location: z.string().describe("Location of the issue"),

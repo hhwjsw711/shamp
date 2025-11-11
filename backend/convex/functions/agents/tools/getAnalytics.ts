@@ -19,7 +19,7 @@ export function createGetAnalyticsTool(ctx: ActionCtx) {
   return tool({
     description:
       "Get dashboard analytics and KPIs for a user. Returns ticket counts by status, quote statistics, average response times, and vendor performance metrics.",
-    parameters: getAnalyticsSchema,
+    inputSchema: getAnalyticsSchema,
     execute: async ({ userId }: GetAnalyticsParams) => {
       const stats = await ctx.runQuery(
         (internal as any).functions.analytics.queries.getDashboardStatsInternal,

@@ -25,7 +25,7 @@ export function createQueryQuotesTool(ctx: ActionCtx) {
   return tool({
     description:
       "Query vendor quotes using semantic search. Understands natural language queries to find relevant quotes. Returns quote details including price, currency, delivery time, ratings, and vendor information. Use this when the user asks about quotes, pricing, vendors, or comparisons.",
-    parameters: queryQuotesSchema,
+    inputSchema: queryQuotesSchema,
     execute: async ({
       userId,
       query,

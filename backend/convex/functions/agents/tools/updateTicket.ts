@@ -24,7 +24,7 @@ type UpdateTicketParams = z.infer<typeof updateTicketSchema>;
 export function createUpdateTicketTool(ctx: ActionCtx) {
   return tool({
     description: "Update ticket fields in the database",
-    parameters: updateTicketSchema,
+    inputSchema: updateTicketSchema,
     execute: async ({
       ticketId,
       issueType,
