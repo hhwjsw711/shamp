@@ -92,7 +92,7 @@ export function TicketCard({
   return (
     <>
       <Card 
-        className={`group relative bg-zinc-100 rounded-2xl border-0 shadow-none ${className}`}
+        className={`group relative bg-zinc-100 rounded-2xl border-0 shadow-none ${onClick ? 'cursor-pointer' : ''} ${className}`}
         onClick={onClick}
       >
         {/* Action Buttons - Top Right */}

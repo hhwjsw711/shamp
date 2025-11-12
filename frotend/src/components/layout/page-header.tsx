@@ -45,13 +45,14 @@ export function PageHeader() {
   const params = useParams({ strict: false })
   const { user, isAuthenticated } = useAuth()
 
-  // Check if we're on the edit ticket page
+  // Check if we're on the edit ticket page or ticket details page
   const isEditTicketPage = location.pathname.match(/^\/tickets\/[^/]+\/edit$/)
+  const isTicketDetailsPage = location.pathname.match(/^\/tickets\/[^/]+$/) && !isEditTicketPage
 
-  // Get ticket data for edit page breadcrumb
+  // Get ticket data for edit page or details page breadcrumb
   const ticketResult = useQuery(
     convexApi.functions.tickets.queries.getById,
-    isEditTicketPage && user?.id && isAuthenticated && params.ticketId
+    (isEditTicketPage || isTicketDetailsPage) && user?.id && isAuthenticated && params.ticketId
       ? { ticketId: params.ticketId as any, userId: user.id as any }
       : 'skip'
   )
@@ -66,9 +67,11 @@ export function PageHeader() {
   
   // Special case: Edit ticket page - start from "Tickets", not "Home"
   // Breadcrumb should be: Tickets > Ticket > Edit
+  // Special case: Ticket details page - start from "Tickets", not "Home"
+  // Breadcrumb should be: Tickets > Ticket Name
   const breadcrumbItems = isTicketsPage
     ? [{ label: 'Tickets', href: '/tickets' }]
-    : isEditTicketPage
+    : isEditTicketPage || isTicketDetailsPage
     ? [
         { label: 'Tickets', href: '/tickets' },
         ...pathSegments.slice(1).map((segment, index) => {
@@ -76,11 +79,11 @@ export function PageHeader() {
           const href = '/' + pathSegments.slice(0, segmentIndex + 1).join('/')
           const menuItem = menuItems.find((item) => item.href === href)
           
-          // Replace ticketId segment with ticketName for edit page
+          // Replace ticketId segment with ticketName for edit/details page
           // The ticketId is at segmentIndex 1 (after 'tickets')
           let label = menuItem?.title || segment.charAt(0).toUpperCase() + segment.slice(1)
           if (segmentIndex === 1 && !menuItem) {
-            // If it's the edit page and this segment doesn't match a menu item, it's likely the ticketId
+            // If it's the edit/details page and this segment doesn't match a menu item, it's likely the ticketId
             // Use ticketName if available, otherwise fall back to "Ticket"
             label = ticketName
           }

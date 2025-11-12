@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { useEffect, useState } from 'react'
-import { TriangleAlert } from 'lucide-react'
 import { toast } from 'sonner'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Spinner } from '@/components/ui/spinner'
@@ -105,9 +104,8 @@ function TicketsPage() {
   )
 
   // Handle loading and error states
-  // useQuery returns undefined while loading, array when loaded, or null on error
+  // useQuery returns undefined while loading, array when loaded
   const isLoading = ticketsResult === undefined && isAuthenticated
-  const hasError = ticketsResult === null
   const tickets = ticketsResult as Array<Ticket> | undefined
 
   // Detect mobile screen size
@@ -216,18 +214,6 @@ function TicketsPage() {
     )
   }
 
-  // Show error state
-  if (hasError) {
-    return (
-      <main className="flex items-center justify-center h-full p-4">
-        <Alert variant="destructive" className="max-w-md">
-          <TriangleAlert className="size-4" />
-          <AlertDescription>Failed to load tickets</AlertDescription>
-        </Alert>
-      </main>
-    )
-  }
-
   // Show empty state if no tickets
   if (!tickets || tickets.length === 0) {
     return (
@@ -297,8 +283,7 @@ function TicketsPage() {
                     issueType={ticket.issueType}
                     status={ticket.status}
                     onClick={() => {
-                      // TODO: Navigate to ticket detail page
-                      console.log('Clicked ticket:', ticket._id)
+                      navigate({ to: `/tickets/${ticket._id}` })
                     }}
                     onEdit={() => {
                       navigate({ to: `/tickets/${ticket._id}/edit` })
