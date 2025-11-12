@@ -2,13 +2,15 @@
  * Helper function to authenticate user from cookie in HTTP handlers
  * Returns user payload or null if not authenticated
  */
+import { api } from "../_generated/api";
+
 export async function authenticateUser(
   ctx: any,
   request: Request
 ): Promise<{ userId: string; email: string; name?: string } | null> {
   const cookieHeader = request.headers.get("cookie");
   const sessionToken = await ctx.runAction(
-    (ctx.api as any).functions.auth.authHelpers.extractSessionTokenAction,
+    (api as any).functions.auth.authHelpers.extractSessionTokenAction,
     { cookieHeader }
   );
 
@@ -17,7 +19,7 @@ export async function authenticateUser(
   }
 
   const payload = await ctx.runAction(
-    (ctx.api as any).functions.auth.authHelpers.verifyTokenAction,
+    (api as any).functions.auth.authHelpers.verifyTokenAction,
     { token: sessionToken }
   );
 

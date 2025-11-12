@@ -6,7 +6,7 @@
 /// <reference types="node" />
 
 import { httpAction } from "../../_generated/server";
-import { api } from "../../_generated/api";
+import { api, internal } from "../../_generated/api";
 import { getErrorMessage } from "../../utils/errors";
 import { authenticateUser } from "../../utils/httpAuth";
 import { Experimental_Agent as Agent, stepCountIs } from "ai";
@@ -154,6 +154,9 @@ export const discoverVendorsHandler = httpAction(async (ctx, request) => {
  * Discover vendors handler (streaming)
  * POST /api/agents/discover-vendors/stream
  * Returns Server-Sent Events (SSE) stream
+ * 
+ * This handler delegates to the Convex action discoverVendorsStream
+ * and converts its async generator output to SSE format for the frontend.
  */
 export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
   try {
@@ -212,7 +215,7 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
           sendEvent({ type: "status", message: "Loading ticket information..." });
           
           const ticket = await ctx.runQuery(
-            (api as any).functions.tickets.queries.getByIdInternal,
+            (internal as any).functions.tickets.queries.getByIdInternal,
             { ticketId: ticketId as any }
           );
 
@@ -298,7 +301,7 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
             );
 
             await ctx.runMutation(
-              (api as any).functions.tickets.mutations.updateInternal,
+              (internal as any).functions.tickets.mutations.updateInternal,
               { ticketId: ticketId as any, firecrawlResultsId }
             );
 
@@ -351,26 +354,29 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
           let stepNumber = 0;
           const allVendors: Array<any> = [];
 
-          // Stream agent steps - agent.stream() returns an async iterable
+          // Stream agent steps - agent.stream() returns an object with textStream and fullStream properties
+          // According to Vercel AI SDK docs: https://ai-sdk.dev/docs/agents/building-agents
           const streamResult = agent.stream({ prompt });
-          // The stream result itself is async iterable
-          for await (const step of streamResult as any) {
-            stepNumber++;
-            
-            sendEvent({ 
-              type: "step", 
-              stepNumber, 
-              description: `Processing step ${stepNumber}...` 
-            });
-
-            // Handle tool calls - check both content array and direct toolCalls property
-            const toolCalls = step.toolCalls || 
-              (step.content?.filter((c: any) => c.type === "tool-call") || []);
-            
-            if (toolCalls.length > 0) {
-              for (const toolCall of toolCalls) {
-                const toolName = toolCall.toolName || toolCall.name;
-                const args = toolCall.args || toolCall.input;
+          
+          // Use fullStream to get all events including tool calls, tool results, and text
+          // fullStream is an AsyncIterable<TextStreamPart> that includes all stream events
+          const fullStream = streamResult.fullStream;
+          
+          // Iterate over the full stream to capture all agent steps
+          // TextStreamPart has different types: 'text', 'tool-call', 'tool-result', 'start-step', 'finish-step', etc.
+          try {
+            for await (const step of fullStream) {
+              // Handle different step types based on TextStreamPart structure
+              if (step.type === 'start-step') {
+                stepNumber++;
+                sendEvent({ 
+                  type: "step", 
+                  stepNumber, 
+                  description: `Processing step ${stepNumber}...` 
+                });
+              } else if (step.type === 'tool-call') {
+                const toolName = step.toolName;
+                const args = step.input;
                 
                 sendEvent({
                   type: "tool_call",
@@ -381,20 +387,12 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
                 if (toolName === "searchVendors") {
                   sendEvent({ 
                     type: "status", 
-                    message: `Searching for vendors in ${args?.location || location}...` 
+                    message: `Searching for vendors in ${(args as any)?.location || location}...` 
                   });
                 }
-              }
-            }
-
-            // Handle tool results - check both content array and direct toolResults property
-            const toolResults = step.toolResults || 
-              (step.content?.filter((c: any) => c.type === "tool-result") || []);
-            
-            if (toolResults.length > 0) {
-              for (const toolResult of toolResults) {
-                const toolName = toolResult.toolName || toolResult.name;
-                const result = toolResult.result || toolResult.output;
+              } else if (step.type === 'tool-result') {
+                const toolName = step.toolName;
+                const result = step.output;
                 
                 sendEvent({
                   type: "tool_result",
@@ -405,9 +403,12 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
                 // Extract vendors from searchVendors tool results
                 if (
                   toolName === "searchVendors" &&
-                  result?.vendors
+                  result &&
+                  typeof result === 'object' &&
+                  'vendors' in result &&
+                  Array.isArray((result as any).vendors)
                 ) {
-                  const vendors = result.vendors.map((vendor: any) => ({
+                  const vendors = (result as any).vendors.map((vendor: any) => ({
                     businessName: vendor.businessName || "Unknown",
                     email: vendor.email,
                     phone: vendor.phone,
@@ -437,13 +438,20 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
                     message: `Found ${vendors.length} vendor(s). Extracting details...` 
                   });
                 }
+              } else if (step.type === 'text-delta') {
+                // Text deltas are accumulated by the SDK, we can optionally send status updates
+                // For now, we'll skip individual text deltas to avoid spam
               }
             }
-
-            // Handle text output from agent
-            if (step.text) {
-              sendEvent({ type: "status", message: step.text });
-            }
+          } catch (iterationError) {
+            // Handle stream iteration errors
+            console.error('Error iterating agent stream:', iterationError);
+            sendEvent({ 
+              type: "error", 
+              error: `Stream iteration error: ${iterationError instanceof Error ? iterationError.message : String(iterationError)}` 
+            });
+            controller.close();
+            return;
           }
 
           // Store results
@@ -456,7 +464,7 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
             );
 
             await ctx.runMutation(
-              (api as any).functions.tickets.mutations.updateInternal,
+              (internal as any).functions.tickets.mutations.updateInternal,
               { ticketId: ticketId as any, firecrawlResultsId }
             );
           }
@@ -507,7 +515,9 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
   } catch (error) {
     console.error("Discover vendors stream error:", error);
     return new Response(
-      JSON.stringify({ error: getErrorMessage(error) }),
+      JSON.stringify({ 
+        error: getErrorMessage(error),
+      }),
       {
         status: 400,
         headers: {

@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useAction, useMutation, useQuery } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Calendar, History, MapPin, MessageSquare, Pencil, Tag, Trash2, TriangleAlert, Users, X } from 'lucide-react'
@@ -129,6 +129,7 @@ function TicketDetailsPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showDiscoveryLog, setShowDiscoveryLog] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isMarkingAsReviewed, setIsMarkingAsReviewed] = useState(false)
   const [discoveryMessages, setDiscoveryMessages] = useState<Array<{
     type: 'status' | 'tool_call' | 'tool_result' | 'vendor_found' | 'step' | 'complete' | 'error'
     message?: string
@@ -142,9 +143,6 @@ function TicketDetailsPage() {
   // Mutations
   const markAsReviewed = useMutation(convexApi.functions.tickets.mutations.markAsReviewed)
   const deleteTicket = useMutation(convexApi.functions.tickets.mutations.deleteTicket)
-  
-  // Actions
-  const discoverVendors = useAction(convexApi.functions.agents.vendorDiscoveryAgent.discoverVendors)
 
   // Use Convex query for real-time ticket data
   const ticketResult = useQuery(
@@ -237,13 +235,15 @@ function TicketDetailsPage() {
     const canProcessTicket = ticket.status === 'reviewed'
 
     const ctas = (
-      <>
+      <section>
         {canMarkAsReviewed && (
           <Button
             variant="default-glass"
             size="sm"
+            disabled={isMarkingAsReviewed}
             onClick={async () => {
-              if (!user.id) return
+              if (!user.id || isMarkingAsReviewed) return
+              setIsMarkingAsReviewed(true)
               try {
                 await markAsReviewed({ 
                   ticketId: ticketId as any,
@@ -258,10 +258,19 @@ function TicketDetailsPage() {
                   description: error instanceof Error ? error.message : 'An error occurred.',
                   duration: 5000,
                 })
+              } finally {
+                setIsMarkingAsReviewed(false)
               }
             }}
           >
-            Mark As Reviewed
+            {isMarkingAsReviewed ? (
+              <>
+                <Spinner className="size-4" />
+                Marking...
+              </>
+            ) : (
+              'Mark As Reviewed'
+            )}
           </Button>
         )}
         {canProcessTicket && (
@@ -378,7 +387,7 @@ function TicketDetailsPage() {
             <Trash2 className="size-4" />
           </Button>
         )}
-      </>
+      </section>
     )
 
     setCTAs(ctas)
@@ -387,7 +396,7 @@ function TicketDetailsPage() {
     return () => {
       setCTAs(null)
     }
-  }, [ticketResult, user, ticketId, markAsReviewed, discoverVendors, navigate, setCTAs])
+  }, [ticketResult, user, ticketId, markAsReviewed, navigate, setCTAs, isMarkingAsReviewed, isProcessing])
 
   const handleDeleteTicket = async () => {
     if (!ticket || !user?.id) return
@@ -544,7 +553,7 @@ function TicketDetailsPage() {
 
   // Render Discovery Log Section
   const renderDiscoveryLog = () => (
-    <section className="flex flex-col w-full md:flex-1 md:min-w-96 bg-background rounded-3xl">
+    <section className="flex flex-col w-full md:flex-1 md:min-w-96 bg-background rounded-3xl min-h-0">
       {/* Header */}
       <header className="p-4 shrink-0 flex flex-row items-center justify-between">
         <section className="flex items-center gap-2">
@@ -838,8 +847,32 @@ function TicketDetailsPage() {
           </section>
 
           {/* Vendors / Discovery Log */}
-          <section className={isMobile && selectedTab !== 'vendors' ? 'hidden' : 'flex'}>
-            {showDiscoveryLog ? renderDiscoveryLog() : renderVendors()}
+          <section className={isMobile && selectedTab !== 'vendors' ? 'hidden' : 'flex flex-col h-full'}>
+            <AnimatePresence mode="wait">
+              {showDiscoveryLog ? (
+                <motion.div
+                  key="discovery-log"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.2, ease: 'easeInOut' }}
+                  className="flex flex-col h-full w-full"
+                >
+                  {renderDiscoveryLog()}
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="vendors"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ duration: 0.2, ease: 'easeInOut' }}
+                  className="flex flex-col h-full w-full"
+                >
+                  {renderVendors()}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </section>
 
           {/* Conversations */}
