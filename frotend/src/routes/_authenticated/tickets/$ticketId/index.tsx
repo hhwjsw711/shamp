@@ -105,7 +105,9 @@ function TicketDetailsPage() {
         <Card className="border-0 rounded-2xl shadow-none max-w-4xl w-full">
           <CardHeader>
             <CardTitle className="text-2xl">
-              {ticket.ticketName || 'Ticket Details'}
+              {ticket.status === 'analyzing' 
+                ? 'Awaiting ticket name' 
+                : ticket.ticketName || 'Ticket Details'}
             </CardTitle>
             <CardDescription>
               View all information about this maintenance request

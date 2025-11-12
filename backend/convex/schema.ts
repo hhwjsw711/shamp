@@ -87,12 +87,12 @@ export default defineSchema({
     photoIds: v.array(v.id("_storage")), // Required array of photo IDs (max 5) - initial/before photos
     createdAt: v.number(),
     status: v.union(
-      v.literal("pending"),
+      v.literal("analyzing"),
       v.literal("analyzed"),
+      v.literal("reviewed"),
       v.literal("processing"),
-      v.literal("vendors_available"),
-      v.literal("vendor_selected"),
-      v.literal("vendor_scheduled"),
+      v.literal("quotes_available"),
+      v.literal("scheduled"),
       v.literal("fixed"),
       v.literal("closed")
     ),
@@ -151,7 +151,7 @@ export default defineSchema({
       v.union(
         v.literal("awaiting_quotes"),
         v.literal("quotes_received"),
-        v.literal("vendor_selected"),
+        v.literal("quotes_available"),
         v.literal("scheduling")
       )
     ),

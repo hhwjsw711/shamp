@@ -31,12 +31,12 @@ export const createInternal = internalMutation({
     ),
     status: v.optional(
       v.union(
-        v.literal("pending"),
+        v.literal("analyzing"),
         v.literal("analyzed"),
+        v.literal("reviewed"),
         v.literal("processing"),
-        v.literal("vendors_available"),
-        v.literal("vendor_selected"),
-        v.literal("vendor_scheduled"),
+        v.literal("quotes_available"),
+        v.literal("scheduled"),
         v.literal("fixed"),
         v.literal("closed")
       )
@@ -66,7 +66,7 @@ export const createInternal = internalMutation({
       issueType: args.issueType,
       predictedTags: args.predictedTags || [],
       urgency: args.urgency,
-      status: args.status || "pending",
+      status: args.status || "analyzing",
       vendorStatus: "not_started", // Initialize vendor status
       createdAt: Date.now(),
       submittedViaPin: args.submittedViaPin || false,
@@ -101,6 +101,32 @@ export const updateInternal = internalMutation({
     scheduledDate: v.optional(v.number()),
     verificationPhotoId: v.optional(v.id("_storage")),
     closedAt: v.optional(v.number()),
+    embedding: v.optional(v.array(v.float64())),
+    // PIN submission fields
+    submittedViaPin: v.optional(v.boolean()), // Whether ticket was submitted via PIN
+    pinOwnerId: v.optional(v.id("users")), // Which user's PIN was used
+    submittedByEmail: v.optional(v.string()), // Email of PIN submitter (optional)
+    submittedByPhone: v.optional(v.string()), // Phone of PIN submitter (optional)
+    quoteStatus: v.optional(
+      v.union(
+        v.literal("awaiting_quotes"),
+        v.literal("quotes_received"),
+        v.literal("quotes_available"),
+        v.literal("scheduling")
+      )
+    ),
+    status: v.optional(
+      v.union(
+        v.literal("analyzing"),
+        v.literal("analyzed"),
+        v.literal("reviewed"),
+        v.literal("processing"),
+        v.literal("quotes_available"),
+        v.literal("scheduled"),
+        v.literal("fixed"),
+        v.literal("closed")
+      )
+    ),
     // Urgency/Priority
     urgency: v.optional(
       v.union(
@@ -139,26 +165,6 @@ export const updateInternal = internalMutation({
       )
     ),
     guestNotificationSentAt: v.optional(v.number()),
-    quoteStatus: v.optional(
-      v.union(
-        v.literal("awaiting_quotes"),
-        v.literal("quotes_received"),
-        v.literal("vendor_selected"),
-        v.literal("scheduling")
-      )
-    ),
-    status: v.optional(
-      v.union(
-        v.literal("pending"),
-        v.literal("analyzed"),
-        v.literal("processing"),
-        v.literal("vendors_available"),
-        v.literal("vendor_selected"),
-        v.literal("vendor_scheduled"),
-        v.literal("fixed"),
-        v.literal("closed")
-      )
-    ),
   },
   handler: async (ctx, args) => {
     const { ticketId, ...updates } = args;
@@ -171,113 +177,11 @@ export const updateInternal = internalMutation({
       }
     });
 
-    if (Object.keys(fieldsToUpdate).length > 0) {
-      await ctx.db.patch(ticketId, fieldsToUpdate);
+    if (Object.keys(fieldsToUpdate).length === 0) {
+      return; // No updates to make
     }
-  },
-});
 
-/**
- * Update ticket (public mutation with authorization)
- * Validates user owns the ticket and ticket can be edited
- * Handles file deletion for removed photos
- */
-export const update = mutation({
-  args: {
-    ticketId: v.id("tickets"),
-    userId: v.id("users"), // Required for authorization
-    description: v.optional(v.string()),
-    location: v.optional(v.string()),
-    name: v.optional(v.string()),
-    photoIds: v.optional(v.array(v.id("_storage"))),
-    urgency: v.optional(
-      v.union(
-        v.literal("emergency"),
-        v.literal("urgent"),
-        v.literal("normal"),
-        v.literal("low")
-      )
-    ),
-    removedPhotoIds: v.optional(v.array(v.id("_storage"))), // Photos to delete
-  },
-  handler: async (ctx, args) => {
-    // Validate userId exists
-    await validateUserId(ctx, args.userId);
-    
-    // Get ticket
-    const ticket = await ctx.db.get(args.ticketId);
-    
-    if (!ticket) {
-      throw new Error("Ticket not found");
-    }
-    
-    // SECURITY: Ensure ticket belongs to the requesting user
-    if (ticket.createdBy !== args.userId) {
-      throw new Error("Unauthorized: Ticket does not belong to user");
-    }
-    
-    // Check if ticket can be edited
-    const editableStatuses = ["pending", "analyzed", "processing", "vendors_available"];
-    if (!editableStatuses.includes(ticket.status)) {
-      throw new Error(
-        `Ticket cannot be edited. Current status: ${ticket.status}. Only tickets with status: ${editableStatuses.join(", ")} can be edited.`
-      );
-    }
-    
-    // Validate photoIds if provided
-    if (args.photoIds !== undefined) {
-      if (args.photoIds.length === 0) {
-        throw new Error("At least one photo is required");
-      }
-      if (args.photoIds.length > 5) {
-        throw new Error("Maximum 5 photos allowed");
-      }
-    }
-    
-    // Delete removed photos from storage
-    if (args.removedPhotoIds && args.removedPhotoIds.length > 0) {
-      for (const photoId of args.removedPhotoIds) {
-        try {
-          await ctx.storage.delete(photoId);
-        } catch (error) {
-          // Log error but don't fail the update if file deletion fails
-          console.error(`Failed to delete photo ${photoId}:`, error);
-        }
-      }
-    }
-    
-    // Prepare update fields
-    const updateFields: {
-      description?: string;
-      location?: string;
-      name?: string;
-      photoIds?: Array<Id<"_storage">>;
-      urgency?: "emergency" | "urgent" | "normal" | "low";
-    } = {};
-    
-    if (args.description !== undefined) {
-      updateFields.description = args.description;
-    }
-    if (args.location !== undefined) {
-      updateFields.location = args.location;
-    }
-    if (args.name !== undefined) {
-      updateFields.name = args.name;
-    }
-    if (args.photoIds !== undefined) {
-      updateFields.photoIds = args.photoIds;
-    }
-    if (args.urgency !== undefined) {
-      updateFields.urgency = args.urgency;
-    }
-    
-    // Call internal mutation to update ticket
-    await ctx.runMutation(internal.functions.tickets.mutations.updateInternal, {
-      ticketId: args.ticketId,
-      ...updateFields,
-    });
-    
-    return { success: true };
+    await ctx.db.patch(ticketId, fieldsToUpdate);
   },
 });
 
@@ -288,12 +192,12 @@ export const updateStatusInternal = internalMutation({
   args: {
     ticketId: v.id("tickets"),
     status: v.union(
-      v.literal("pending"),
+      v.literal("analyzing"),
       v.literal("analyzed"),
+      v.literal("reviewed"),
       v.literal("processing"),
-      v.literal("vendors_available"),
-      v.literal("vendor_selected"),
-      v.literal("vendor_scheduled"),
+      v.literal("quotes_available"),
+      v.literal("scheduled"),
       v.literal("fixed"),
       v.literal("closed")
     ),
@@ -312,11 +216,13 @@ export const assignVendorInternal = internalMutation({
   args: {
     ticketId: v.id("tickets"),
     vendorId: v.id("vendors"),
+    quoteId: v.id("vendorQuotes"),
   },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.ticketId, {
       selectedVendorId: args.vendorId,
-      status: "vendor_selected",
+      selectedVendorQuoteId: args.quoteId,
+      status: "scheduled",
     });
   },
 });
@@ -327,56 +233,123 @@ export const assignVendorInternal = internalMutation({
 export const closeTicketInternal = internalMutation({
   args: {
     ticketId: v.id("tickets"),
-    verificationPhotoId: v.optional(v.id("_storage")),
-  },
-  handler: async (ctx, args) => {
-    const updates: {
-      status: "closed";
-      closedAt: number;
-      verificationPhotoId?: Id<"_storage">;
-    } = {
-      status: "closed",
-      closedAt: Date.now(),
-    };
-
-    if (args.verificationPhotoId) {
-      updates.verificationPhotoId = args.verificationPhotoId;
-    }
-
-    await ctx.db.patch(args.ticketId, updates);
-  },
-});
-
-/**
- * Schedule repair (internal)
- */
-export const scheduleRepairInternal = internalMutation({
-  args: {
-    ticketId: v.id("tickets"),
-    scheduledDate: v.number(),
   },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.ticketId, {
-      scheduledDate: args.scheduledDate,
-      status: "vendor_scheduled",
+      status: "closed",
+      closedAt: Date.now(),
     });
   },
 });
 
 /**
- * Delete ticket (public mutation with authorization)
- * Validates user owns the ticket and ticket can be deleted
- * Can only delete tickets in early stages OR fixed/closed tickets
+ * Update vendor status (internal)
+ */
+export const updateVendorStatusInternal = internalMutation({
+  args: {
+    ticketId: v.id("tickets"),
+    vendorStatus: v.union(
+      v.literal("not_started"),
+      v.literal("arrived"),
+      v.literal("in_progress"),
+      v.literal("completed")
+    ),
+    vendorArrivedAt: v.optional(v.number()),
+    vendorStartedAt: v.optional(v.number()),
+    vendorCompletedAt: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const { ticketId, vendorStatus, vendorArrivedAt, vendorStartedAt, vendorCompletedAt } = args;
+    
+    const updates: Record<string, any> = {
+      vendorStatus,
+    };
+    
+    if (vendorArrivedAt !== undefined) {
+      updates.vendorArrivedAt = vendorArrivedAt;
+    }
+    if (vendorStartedAt !== undefined) {
+      updates.vendorStartedAt = vendorStartedAt;
+    }
+    if (vendorCompletedAt !== undefined) {
+      updates.vendorCompletedAt = vendorCompletedAt;
+    }
+    
+    await ctx.db.patch(ticketId, updates);
+  },
+});
+
+/**
+ * Add after photos to ticket (internal)
+ */
+export const addAfterPhotosInternal = internalMutation({
+  args: {
+    ticketId: v.id("tickets"),
+    afterPhotoIds: v.array(v.id("_storage")),
+  },
+  handler: async (ctx, args) => {
+    const ticket = await ctx.db.get(args.ticketId);
+    if (!ticket) {
+      throw new Error("Ticket not found");
+    }
+    
+    const existingAfterPhotoIds = ticket.afterPhotoIds || [];
+    const updatedAfterPhotoIds = [...existingAfterPhotoIds, ...args.afterPhotoIds];
+    
+    await ctx.db.patch(args.ticketId, {
+      afterPhotoIds: updatedAfterPhotoIds,
+    });
+  },
+});
+
+/**
+ * Update guest impact tracking (internal)
+ */
+export const updateGuestImpactInternal = internalMutation({
+  args: {
+    ticketId: v.id("tickets"),
+    affectedRooms: v.optional(v.array(v.string())),
+    guestsAffected: v.optional(v.number()),
+    guestsNotified: v.optional(v.boolean()),
+    guestNotificationMethod: v.optional(
+      v.union(
+        v.literal("email"),
+        v.literal("sms"),
+        v.literal("phone"),
+        v.literal("in_person"),
+        v.literal("none")
+      )
+    ),
+    guestNotificationSentAt: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const { ticketId, ...updates } = args;
+    
+    const fieldsToUpdate: Record<string, any> = {};
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value !== undefined) {
+        fieldsToUpdate[key] = value;
+      }
+    });
+
+    if (Object.keys(fieldsToUpdate).length === 0) {
+      return; // No updates to make
+    }
+
+    await ctx.db.patch(ticketId, fieldsToUpdate);
+  },
+});
+
+/**
+ * Delete ticket (public mutation)
+ * Only allows deletion of tickets in early stages or fixed/closed
  */
 export const deleteTicket = mutation({
   args: {
     ticketId: v.id("tickets"),
-    userId: v.id("users"), // Required for authorization
+    userId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    // Validate userId exists
-    await validateUserId(ctx, args.userId);
-    
     // Get ticket
     const ticket = await ctx.db.get(args.ticketId);
     
@@ -390,20 +363,18 @@ export const deleteTicket = mutation({
     }
     
     // Check if ticket can be deleted
-    // Can delete: early stages OR fixed/closed
-    // Cannot delete: vendor_selected, vendor_scheduled (vendor engagement stages)
+    // Can delete: analyzed, reviewed OR fixed/closed
+    // Cannot delete: processing, quotes_available, scheduled (vendor engagement stages)
     const deletableStatuses = [
-      "pending",
       "analyzed",
-      "processing",
-      "vendors_available",
+      "reviewed",
       "fixed",
       "closed",
     ];
     
     if (!deletableStatuses.includes(ticket.status)) {
       throw new Error(
-        `Ticket cannot be deleted. Current status: ${ticket.status}. Cannot delete tickets with vendor engagement (vendor_selected, vendor_scheduled).`
+        `Ticket cannot be deleted. Current status: ${ticket.status}. Cannot delete tickets with vendor engagement (processing, quotes_available, scheduled).`
       );
     }
     
@@ -417,53 +388,49 @@ export const deleteTicket = mutation({
 });
 
 /**
- * Delete ticket (internal)
- * Deletes ticket and associated files from storage
+ * Delete ticket (internal mutation)
+ * Handles actual deletion and file cleanup
  */
 export const deleteTicketInternal = internalMutation({
   args: {
     ticketId: v.id("tickets"),
   },
   handler: async (ctx, args) => {
-    // Get ticket to access file IDs
     const ticket = await ctx.db.get(args.ticketId);
     
     if (!ticket) {
       throw new Error("Ticket not found");
     }
-
-    // Delete associated photos from storage
-    for (const photoId of ticket.photoIds) {
+    
+    // Delete all photos from storage
+    const allPhotoIds = [
+      ...(ticket.photoIds || []),
+      ...(ticket.beforePhotoIds || []),
+      ...(ticket.afterPhotoIds || []),
+    ];
+    
+    for (const photoId of allPhotoIds) {
       try {
         await ctx.storage.delete(photoId);
       } catch (error) {
-        // Log error but don't fail ticket deletion if file deletion fails
-        console.error(`Failed to delete photo ${photoId}:`, error);
+        // Log error but don't fail if file deletion fails
+        console.error(`Failed to delete photo ${photoId} from storage:`, error);
       }
     }
-
-    if (ticket.verificationPhotoId) {
-      try {
-        await ctx.storage.delete(ticket.verificationPhotoId);
-      } catch (error) {
-        // Log error but don't fail ticket deletion if file deletion fails
-        console.error(`Failed to delete verification photo ${ticket.verificationPhotoId}:`, error);
-      }
-    }
-
+    
     // Delete ticket from database
     await ctx.db.delete(args.ticketId);
   },
 });
 
 /**
- * Delete photo from ticket (internal)
- * Removes a single photo from ticket's photoIds array
+ * Delete photo from ticket (public mutation)
  */
-export const deletePhotoFromTicketInternal = internalMutation({
+export const deletePhoto = mutation({
   args: {
     ticketId: v.id("tickets"),
     photoId: v.id("_storage"),
+    userId: v.id("users"),
   },
   handler: async (ctx, args) => {
     // Get ticket
@@ -472,21 +439,19 @@ export const deletePhotoFromTicketInternal = internalMutation({
     if (!ticket) {
       throw new Error("Ticket not found");
     }
-
-    // Check if photo exists in ticket
+    
+    // SECURITY: Ensure ticket belongs to the requesting user
+    if (ticket.createdBy !== args.userId) {
+      throw new Error("Unauthorized: Ticket does not belong to user");
+    }
+    
+    // Check if photoId exists in ticket's photoIds
     if (!ticket.photoIds.includes(args.photoId)) {
       throw new Error("Photo not found in ticket");
     }
-
-    // Ensure at least one photo remains
-    if (ticket.photoIds.length <= 1) {
-      throw new Error("Cannot delete the last photo. At least one photo is required.");
-    }
-
-    // Remove photo from array
+    
+    // Remove photoId from ticket
     const updatedPhotoIds = ticket.photoIds.filter((id) => id !== args.photoId);
-
-    // Update ticket
     await ctx.db.patch(args.ticketId, {
       photoIds: updatedPhotoIds,
     });
@@ -498,5 +463,40 @@ export const deletePhotoFromTicketInternal = internalMutation({
       // Log error but don't fail if file deletion fails
       console.error(`Failed to delete photo ${args.photoId} from storage:`, error);
     }
+  },
+});
+
+/**
+ * Mark ticket as reviewed (public mutation)
+ * Allows users to mark their ticket as reviewed after analysis
+ */
+export const markAsReviewed = mutation({
+  args: {
+    ticketId: v.id("tickets"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await validateUserId(ctx);
+    
+    // Get ticket to verify ownership
+    const ticket = await ctx.db.get(args.ticketId);
+    if (!ticket) {
+      throw new Error("Ticket not found");
+    }
+    
+    if (ticket.createdBy !== userId) {
+      throw new Error("Not authorized to update this ticket");
+    }
+    
+    // Only allow marking as reviewed if ticket is currently "analyzed"
+    if (ticket.status !== "analyzed") {
+      throw new Error(`Cannot mark ticket as reviewed. Current status is: ${ticket.status}`);
+    }
+    
+    // Update status to reviewed
+    await ctx.db.patch(args.ticketId, {
+      status: "reviewed",
+    });
+    
+    return { success: true };
   },
 });

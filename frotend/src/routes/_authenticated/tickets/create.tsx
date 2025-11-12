@@ -175,7 +175,7 @@ function CreateTicketPage() {
       }
 
       // Submit ticket with photo IDs
-      await api.tickets.create({
+      const response = await api.tickets.create({
         description: data.description,
         photoIds: allPhotoIds,
         location: data.location || undefined,
@@ -189,10 +189,17 @@ function CreateTicketPage() {
         duration: 4000,
       })
       
-      // Redirect to dashboard after a short delay
-      setTimeout(() => {
-        navigate({ to: '/' })
-      }, 1000)
+      // Redirect to ticket details page after a short delay
+      if (response?.ticket?._id) {
+        setTimeout(() => {
+          navigate({ to: `/tickets/${response.ticket._id}` })
+        }, 1000)
+      } else {
+        // Fallback to tickets list if ticket ID not available
+        setTimeout(() => {
+          navigate({ to: '/tickets' })
+        }, 1000)
+      }
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Failed to create ticket')
     } finally {

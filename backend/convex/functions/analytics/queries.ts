@@ -49,7 +49,7 @@ export const getDashboardStats = query({
     // Calculate quote statistics
     const newQuotesCount = quotes.filter((q) => q.status === "received").length;
     const pendingQuotesCount = quotes.filter(
-      (q) => q.status === "pending",
+      (q) => q.status === "analyzing",
     ).length;
     const selectedQuotesCount = quotes.filter(
       (q) => q.status === "selected",
@@ -225,7 +225,7 @@ export const getDashboardStatsInternal = internalQuery({
     // Calculate quote statistics
     const newQuotesCount = quotes.filter((q) => q.status === "received").length;
     const pendingQuotesCount = quotes.filter(
-      (q) => q.status === "pending",
+      (q) => q.status === "analyzing",
     ).length;
     const selectedQuotesCount = quotes.filter(
       (q) => q.status === "selected",

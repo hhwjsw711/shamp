@@ -143,7 +143,7 @@ export const submitTicketWithPinHandler = httpAction(async (ctx, request) => {
         description: description.trim(),
         photoIds: photoIdsArray as any[],
         location: location || undefined,
-        status: "pending",
+        status: "analyzing",
         submittedViaPin: true,
         pinOwnerId: pinOwner._id,
         submittedByEmail: submittedByEmail || undefined,

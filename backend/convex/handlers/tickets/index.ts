@@ -584,7 +584,7 @@ export const listTicketsHandler = httpAction(async (ctx, request) => {
 /**
  * Update ticket handler
  * PATCH /api/tickets/:id
- * Only allows editing tickets with status: pending, analyzed, processing, vendors_available
+ * Only allows editing tickets with status: analyzed, reviewed
  */
 export const updateTicketHandler = httpAction(async (ctx, request) => {
   try {
@@ -700,8 +700,8 @@ export const updateTicketHandler = httpAction(async (ctx, request) => {
       );
     }
 
-    // Check if ticket can be edited (only allow editing if status is: pending, analyzed, processing, vendors_available)
-    const editableStatuses = ["pending", "analyzed", "processing", "vendors_available"];
+    // Check if ticket can be edited (only allow editing if status is: analyzed, reviewed)
+    const editableStatuses = ["analyzed", "reviewed"];
     console.log("[updateTicketHandler] Checking editable status:", {
       currentStatus: ticket.status,
       editableStatuses,

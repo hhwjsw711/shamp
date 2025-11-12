@@ -73,7 +73,7 @@ export const searchTicketsSemantic = internalAction({
     // Check if this is a simple query that can use direct database queries
     if (isSimpleQuery(args.query)) {
       // Extract status from query if present
-      const statusMatch = queryLower.match(/(pending|processing|fixed|closed|analyzed|vendors_available|vendor_selected|vendor_scheduled)/);
+      const statusMatch = queryLower.match(/(analyzing|processing|fixed|closed|analyzed|reviewed|quotes_available|scheduled)/);
       const status = statusMatch ? statusMatch[1] : null;
 
       // Use direct query for simple requests

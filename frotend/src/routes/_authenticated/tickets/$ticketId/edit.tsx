@@ -74,7 +74,7 @@ function EditTicketPage() {
     if (!ticket) return
 
     // Check if ticket can be edited
-    const editableStatuses = ['pending', 'analyzed', 'processing', 'vendors_available']
+    const editableStatuses = ['analyzed', 'reviewed']
     if (!editableStatuses.includes(ticket.status)) {
       setSubmitError(
         `This ticket cannot be edited. Current status: ${ticket.status}. Only tickets with status: ${editableStatuses.join(', ')} can be edited.`
@@ -263,9 +263,9 @@ function EditTicketPage() {
         duration: 4000,
       })
       
-      // Redirect to tickets page after a short delay
+      // Redirect to ticket details page after a short delay
       setTimeout(() => {
-        navigate({ to: '/tickets' })
+        navigate({ to: `/tickets/${ticketId}` })
       }, 1000)
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Failed to update ticket')

@@ -24,7 +24,7 @@ interface TicketCardProps {
   location?: string
   date: string
   issueType?: string
-  status?: 'pending' | 'analyzed' | 'processing' | 'vendors_available' | 'vendor_selected' | 'vendor_scheduled' | 'fixed' | 'closed'
+  status?: 'analyzing' | 'analyzed' | 'reviewed' | 'processing' | 'quotes_available' | 'scheduled' | 'fixed' | 'closed'
   onClick?: () => void
   onEdit?: () => void
   onDelete?: () => void
@@ -72,11 +72,11 @@ export function TicketCard({
   const validPhotoUrls = photoUrls.filter((url): url is string => Boolean(url))
 
   // Determine which buttons to show based on status
-  // Can edit/delete: pending, analyzed, processing, vendors_available
-  // Cannot edit/delete: vendor_selected, vendor_scheduled
-  // Can only delete: fixed, closed
-  const canEdit = status && ['pending', 'analyzed', 'processing', 'vendors_available'].includes(status)
-  const canDelete = status && ['pending', 'analyzed', 'processing', 'vendors_available', 'fixed', 'closed'].includes(status)
+  // Can edit/delete: analyzed, reviewed
+  // Can edit only (no delete): processing, quotes_available, scheduled
+  // Can only delete (no edit): fixed, closed
+  const canEdit = status && ['analyzed', 'reviewed'].includes(status)
+  const canDelete = status && ['analyzed', 'reviewed', 'fixed', 'closed'].includes(status)
   const showButtons = (canEdit && onEdit) || (canDelete && onDelete)
 
   const handleDeleteClick = (e: React.MouseEvent) => {
@@ -153,16 +153,18 @@ export function TicketCard({
         )}
 
         <CardHeader className={`pb-3 ${validPhotoUrls.length > 0 ? 'pt-0' : ''}`}>
-          <div className="flex items-start justify-between gap-2">
+          <section className="flex items-start justify-between gap-2">
             <CardTitle className="text-sm font-medium line-clamp-2">
-              {ticketName || title}
+              {status === 'analyzing' 
+                ? 'Awaiting ticket name' 
+                : ticketName || title}
             </CardTitle>
             {urgency && (
               <Badge className={`shrink-0 ${getUrgencyStyles(urgency)}`}>
                 {urgency}
               </Badge>
             )}
-          </div>
+          </section>
         </CardHeader>
 
         <CardContent className="pt-0 space-y-3">

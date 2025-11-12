@@ -229,7 +229,7 @@ export const sendOutreachEmails = action({
         (api as any).functions.tickets.mutations.updateStatusInternal,
         {
           ticketId: args.ticketId,
-          status: "Awaiting Vendor",
+          status: "processing",
         }
       );
 

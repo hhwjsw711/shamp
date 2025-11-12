@@ -17,12 +17,12 @@ export const searchByStatusSemantic = action({
   args: {
     userId: v.id("users"),
     status: v.union(
-      v.literal("pending"),
+      v.literal("analyzing"),
       v.literal("analyzed"),
       v.literal("processing"),
-      v.literal("vendors_available"),
-      v.literal("vendor_selected"),
-      v.literal("vendor_scheduled"),
+      v.literal("reviewed"),
+      v.literal("quotes_available"),
+      v.literal("scheduled"),
       v.literal("fixed"),
       v.literal("closed")
     ),

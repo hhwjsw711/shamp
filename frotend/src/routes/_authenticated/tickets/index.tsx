@@ -15,12 +15,12 @@ export const Route = createFileRoute('/_authenticated/tickets/')({
 })
 
 type TicketStatus =
-  | 'pending'
+  | 'analyzing'
   | 'analyzed'
+  | 'reviewed'
   | 'processing'
-  | 'vendors_available'
-  | 'vendor_selected'
-  | 'vendor_scheduled'
+  | 'quotes_available'
+  | 'scheduled'
   | 'fixed'
   | 'closed'
 
@@ -41,13 +41,13 @@ type Ticket = {
   createdAt: number
 }
 
+// Only show these statuses in the UI (analyzing is transient, not shown)
 const TICKET_STATUSES: Array<{ value: TicketStatus; label: string }> = [
-  { value: 'pending', label: 'Pending' },
   { value: 'analyzed', label: 'Analyzed' },
+  { value: 'reviewed', label: 'Reviewed' },
   { value: 'processing', label: 'Processing' },
-  { value: 'vendors_available', label: 'Vendors Available' },
-  { value: 'vendor_selected', label: 'Vendor Selected' },
-  { value: 'vendor_scheduled', label: 'Scheduled' },
+  { value: 'quotes_available', label: 'Quotes Available' },
+  { value: 'scheduled', label: 'Scheduled' },
   { value: 'fixed', label: 'Fixed' },
   { value: 'closed', label: 'Closed' },
 ]
@@ -66,25 +66,25 @@ function TicketsPage() {
   const [isMobile, setIsMobile] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState<TicketStatus | 'all'>('all')
   
-  // Search and sort state per status
+  // Search and sort state per status (only for statuses shown in UI)
   const [searchQueries, setSearchQueries] = useState<Record<TicketStatus, string>>({
-    pending: '',
+    analyzing: '',
     analyzed: '',
+    reviewed: '',
     processing: '',
-    vendors_available: '',
-    vendor_selected: '',
-    vendor_scheduled: '',
+    quotes_available: '',
+    scheduled: '',
     fixed: '',
     closed: '',
   })
   
   const [sortBy, setSortBy] = useState<Record<TicketStatus, 'date' | 'urgency'>>({
-    pending: 'date',
+    analyzing: 'date',
     analyzed: 'date',
+    reviewed: 'date',
     processing: 'date',
-    vendors_available: 'date',
-    vendor_selected: 'date',
-    vendor_scheduled: 'date',
+    quotes_available: 'date',
+    scheduled: 'date',
     fixed: 'date',
     closed: 'date',
   })
