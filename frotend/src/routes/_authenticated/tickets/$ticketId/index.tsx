@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useAction, useMutation, useQuery } from 'convex/react'
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Calendar, MapPin, MessageSquare, Pencil, Tag, Trash2, TriangleAlert, Users, X } from 'lucide-react'
+import { Calendar, History, MapPin, MessageSquare, Pencil, Tag, Trash2, TriangleAlert, Users, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Spinner } from '@/components/ui/spinner'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -127,6 +127,17 @@ function TicketDetailsPage() {
   const [selectedTab, setSelectedTab] = useState<'details' | 'vendors' | 'conversations'>('details')
   const [isMobile, setIsMobile] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showDiscoveryLog, setShowDiscoveryLog] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [discoveryMessages, setDiscoveryMessages] = useState<Array<{
+    type: 'status' | 'tool_call' | 'tool_result' | 'vendor_found' | 'step' | 'complete' | 'error'
+    message?: string
+    toolName?: string
+    vendor?: any
+    stepNumber?: number
+    error?: string
+    timestamp: number
+  }>>([])
 
   // Mutations
   const markAsReviewed = useMutation(convexApi.functions.tickets.mutations.markAsReviewed)
@@ -202,6 +213,16 @@ function TicketDetailsPage() {
     }
   }, [isMobile, selectedTab])
 
+  // Auto-scroll discovery log to bottom when new messages arrive
+  useEffect(() => {
+    if (showDiscoveryLog && discoveryMessages.length > 0) {
+      const logContainer = document.querySelector('[data-discovery-log]')
+      if (logContainer) {
+        logContainer.scrollTop = logContainer.scrollHeight
+      }
+    }
+  }, [discoveryMessages, showDiscoveryLog])
+
   // Set up page header CTAs
   useEffect(() => {
     if (!ticket || !user) {
@@ -247,18 +268,79 @@ function TicketDetailsPage() {
           <Button
             variant="default-glass"
             size="sm"
+            disabled={isProcessing}
             onClick={async () => {
-              if (!user.id) return
+              if (!user.id || isProcessing) return
+              
+              setIsProcessing(true)
+              setShowDiscoveryLog(true)
+              setDiscoveryMessages([])
+              
               try {
-                await discoverVendors({
-                  ticketId: ticketId as any,
-                  userId: user.id as any,
+                // Get Convex URL from environment (convert .convex.cloud to .convex.site for HTTP routes)
+                const convexCloudUrl = import.meta.env.VITE_CONVEX_URL || 'https://good-gerbil-245.convex.cloud'
+                const convexUrl = convexCloudUrl.replace('.convex.cloud', '.convex.site')
+                const response = await fetch(`${convexUrl}/api/agents/discover-vendors/stream`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  credentials: 'include',
+                  body: JSON.stringify({ ticketId }),
                 })
-                toast.success('Ticket Processing Started', {
-                  description: 'Vendor discovery has been initiated. The ticket status will update automatically.',
-                  duration: 4000,
-                })
+
+                if (!response.ok) {
+                  throw new Error('Failed to start vendor discovery')
+                }
+
+                if (!response.body) {
+                  throw new Error('No response body')
+                }
+
+                const reader = response.body.getReader()
+                const decoder = new TextDecoder()
+
+                for (;;) {
+                  const result = await reader.read()
+                  
+                  if (result.done) {
+                    break
+                  }
+
+                  const chunk = decoder.decode(result.value)
+                  const lines = chunk.split('\n')
+
+                  for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                      try {
+                        const data = JSON.parse(line.slice(6))
+                        setDiscoveryMessages(prev => [...prev, {
+                          ...data,
+                          timestamp: Date.now(),
+                        }])
+
+                        if (data.type === 'complete' || data.type === 'error') {
+                          setIsProcessing(false)
+                          if (data.type === 'complete') {
+                            toast.success('Vendor Discovery Complete', {
+                              description: data.text || 'Vendors have been discovered and contacted.',
+                              duration: 4000,
+                            })
+                          }
+                        }
+                      } catch (e) {
+                        // Ignore JSON parse errors
+                      }
+                    }
+                  }
+                }
               } catch (error) {
+                setIsProcessing(false)
+                setDiscoveryMessages(prev => [...prev, {
+                  type: 'error',
+                  error: error instanceof Error ? error.message : 'An error occurred',
+                  timestamp: Date.now(),
+                }])
                 toast.error('Failed to Process Ticket', {
                   description: error instanceof Error ? error.message : 'An error occurred while processing the ticket.',
                   duration: 5000,
@@ -266,7 +348,14 @@ function TicketDetailsPage() {
               }
             }}
           >
-            Process Ticket
+            {isProcessing ? (
+              <>
+                <Spinner className="size-4" />
+                Processing...
+              </>
+            ) : (
+              'Process Ticket'
+            )}
           </Button>
         )}
         {canEdit && (
@@ -453,18 +542,159 @@ function TicketDetailsPage() {
     </section>
   )
 
+  // Render Discovery Log Section
+  const renderDiscoveryLog = () => (
+    <section className="flex flex-col w-full md:flex-1 md:min-w-96 bg-background rounded-3xl">
+      {/* Header */}
+      <header className="p-4 shrink-0 flex flex-row items-center justify-between">
+        <section className="flex items-center gap-2">
+          <History className="size-4" />
+          <h2 className="font-semibold text-sm">Discovery Log</h2>
+        </section>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setShowDiscoveryLog(false)}
+          aria-label="Close discovery log"
+        >
+          <X className="size-4" />
+        </Button>
+      </header>
+
+      {/* Scrollable Content */}
+      <section 
+        data-discovery-log
+        className="flex-1 overflow-y-auto p-4 min-h-0"
+      >
+        {discoveryMessages.length === 0 ? (
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <History />
+              </EmptyMedia>
+              <EmptyTitle>No discovery activity</EmptyTitle>
+              <EmptyDescription>Click "Process Ticket" to start vendor discovery.</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <section className="space-y-2">
+            {discoveryMessages.map((msg, index) => (
+              <motion.section
+                key={index}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+                className={`p-3 rounded-lg transition-all ${
+                  msg.type === 'error'
+                    ? 'bg-red-50/50 border border-red-200/50'
+                    : msg.type === 'complete'
+                    ? 'bg-green-50/50 border border-green-200/50'
+                    : msg.type === 'vendor_found'
+                    ? 'bg-blue-50/50 border border-blue-200/50'
+                    : msg.type === 'tool_call'
+                    ? 'bg-purple-50/50 border border-purple-200/50'
+                    : 'bg-zinc-50/50 border border-zinc-200/50'
+                }`}
+              >
+                {msg.type === 'status' && (
+                  <p className="text-sm text-foreground leading-relaxed">{msg.message}</p>
+                )}
+                {msg.type === 'tool_call' && (
+                  <section className="space-y-1.5">
+                    <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Tool Call</p>
+                    <p className="text-sm text-foreground leading-relaxed">
+                      <span className="font-medium text-purple-900">{msg.toolName}</span>
+                      {msg.message && (
+                        <span className="text-muted-foreground">: {msg.message}</span>
+                      )}
+                    </p>
+                  </section>
+                )}
+                {msg.type === 'tool_result' && (
+                  <section className="space-y-1.5">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tool Result</p>
+                    <p className="text-sm text-foreground leading-relaxed">
+                      <span className="font-medium">{msg.toolName}</span> completed successfully
+                    </p>
+                  </section>
+                )}
+                {msg.type === 'vendor_found' && msg.vendor && (
+                  <section className="space-y-2">
+                    <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Vendor Found</p>
+                    <p className="text-sm font-semibold text-foreground">{msg.vendor.businessName}</p>
+                    {msg.vendor.specialty && (
+                      <p className="text-xs text-muted-foreground">Specialty: {msg.vendor.specialty}</p>
+                    )}
+                    {msg.vendor.address && (
+                      <p className="text-xs text-muted-foreground">📍 {msg.vendor.address}</p>
+                    )}
+                    {msg.vendor.rating && (
+                      <p className="text-xs text-muted-foreground">⭐ Rating: {msg.vendor.rating}/5</p>
+                    )}
+                  </section>
+                )}
+                {msg.type === 'step' && (
+                  <section className="space-y-1.5">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      Step {msg.stepNumber}
+                    </p>
+                    <p className="text-sm text-foreground leading-relaxed">{msg.message}</p>
+                  </section>
+                )}
+                {msg.type === 'complete' && (
+                  <section className="space-y-1.5">
+                    <p className="text-sm font-semibold text-green-700 flex items-center gap-2">
+                      <span>✓</span>
+                      <span>Discovery Complete</span>
+                    </p>
+                    <p className="text-sm text-foreground leading-relaxed">{msg.message}</p>
+                  </section>
+                )}
+                {msg.type === 'error' && (
+                  <section className="space-y-1.5">
+                    <p className="text-sm font-semibold text-red-700 flex items-center gap-2">
+                      <span>✗</span>
+                      <span>Error</span>
+                    </p>
+                    <p className="text-sm text-foreground leading-relaxed">{msg.error}</p>
+                  </section>
+                )}
+              </motion.section>
+            ))}
+            {isProcessing && (
+              <motion.section
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex items-center gap-2 p-3 rounded-lg bg-zinc-50/50 border border-zinc-200/50"
+              >
+                <Spinner className="size-4 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Processing...</p>
+              </motion.section>
+            )}
+          </section>
+        )}
+      </section>
+    </section>
+  )
+
   // Render Vendors Section
   const renderVendors = () => (
     <section className="flex flex-col w-full md:flex-1 md:min-w-96 bg-background rounded-3xl">
       {/* Header */}
-      <header className="p-4 shrink-0">
-        <section className="flex items-center justify-between">
-          <section className="flex items-center gap-2">
-            <Users className="size-4" />
-            <h2 className="font-semibold text-sm">Vendors</h2>
-            <Badge variant="secondary">{vendorQuotes.length}</Badge>
-          </section>
+      <header className="p-4 shrink-0 flex flex-row items-center justify-between">
+        <section className="flex items-center gap-2">
+          <Users className="size-4" />
+          <h2 className="font-semibold text-sm">Vendors</h2>
+          <Badge variant="secondary">{vendorQuotes.length}</Badge>
         </section>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setShowDiscoveryLog(true)}
+          aria-label="View discovery log"
+        >
+          <History className="size-4" />
+        </Button>
       </header>
 
       {/* Scrollable Content */}
@@ -590,7 +820,7 @@ function TicketDetailsPage() {
               Details
             </TabsTrigger>
             <TabsTrigger value="vendors" className="shrink-0">
-              Vendors ({vendorQuotes.length})
+              {showDiscoveryLog ? 'Discovery Log' : `Vendors (${vendorQuotes.length})`}
             </TabsTrigger>
             <TabsTrigger value="conversations" className="shrink-0">
               Conversations ({conversation?.messages.length || 0})
@@ -607,9 +837,9 @@ function TicketDetailsPage() {
             {renderTicketDetails()}
           </section>
 
-          {/* Vendors */}
+          {/* Vendors / Discovery Log */}
           <section className={isMobile && selectedTab !== 'vendors' ? 'hidden' : 'flex'}>
-            {renderVendors()}
+            {showDiscoveryLog ? renderDiscoveryLog() : renderVendors()}
           </section>
 
           {/* Conversations */}
