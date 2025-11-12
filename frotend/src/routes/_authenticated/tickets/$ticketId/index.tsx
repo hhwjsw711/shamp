@@ -173,10 +173,10 @@ function TicketDetailsPage() {
 
       {/* Scrollable Content */}
       <section className="flex-1 overflow-y-auto p-2 min-h-0">
-        <div className="bg-zinc-100 rounded-2xl p-4 space-y-6">
+        <section className="flex flex-col gap-2">
         {/* Images Section */}
         {validPhotoUrls.length > 0 && (
-          <section>
+          <section className="bg-zinc-100 rounded-2xl p-4">
             <h3 className="text-xs font-normal text-muted-foreground/70 mb-3 uppercase tracking-wide">Photos</h3>
             <section className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
               {validPhotoUrls.map((url, index) => (
@@ -198,14 +198,14 @@ function TicketDetailsPage() {
         )}
 
         {/* Description */}
-        <section>
+        <section className="bg-zinc-100 rounded-2xl p-4">
           <h3 className="text-xs font-normal text-muted-foreground/70 mb-2 uppercase tracking-wide">Description</h3>
           <p className="text-base font-medium text-foreground whitespace-pre-wrap">{ticket.description || 'No description provided'}</p>
         </section>
 
         {/* Problem Description */}
         {ticket.problemDescription && (
-          <section>
+          <section className="bg-zinc-100 rounded-2xl p-4">
             <h3 className="text-xs font-normal text-muted-foreground/70 mb-2 uppercase tracking-wide">Problem Analysis</h3>
             <p className="text-base font-medium text-foreground whitespace-pre-wrap">{ticket.problemDescription}</p>
           </section>
@@ -213,7 +213,7 @@ function TicketDetailsPage() {
 
         {/* Issue Type */}
         {ticket.issueType && (
-          <section>
+          <section className="bg-zinc-100 rounded-2xl p-4">
             <h3 className="text-xs font-normal text-muted-foreground/70 mb-2 flex items-center gap-2 uppercase tracking-wide">
               <Tag className="size-3" />
               Issue Type
@@ -225,7 +225,7 @@ function TicketDetailsPage() {
         )}
 
         {/* Urgency */}
-        <section>
+        <section className="bg-zinc-100 rounded-2xl p-4">
           <h3 className="text-xs font-normal text-muted-foreground/70 mb-2 uppercase tracking-wide">Urgency</h3>
           <Badge
             variant="outline"
@@ -237,7 +237,7 @@ function TicketDetailsPage() {
 
         {/* Location */}
         {ticket.location && (
-          <section>
+          <section className="bg-zinc-100 rounded-2xl p-4">
             <h3 className="text-xs font-normal text-muted-foreground/70 mb-2 flex items-center gap-2 uppercase tracking-wide">
               <MapPin className="size-3" />
               Location
@@ -247,14 +247,14 @@ function TicketDetailsPage() {
         )}
 
         {/* Date */}
-        <section>
+        <section className="bg-zinc-100 rounded-2xl p-4">
           <h3 className="text-xs font-normal text-muted-foreground/70 mb-2 flex items-center gap-2 uppercase tracking-wide">
             <Calendar className="size-3" />
             Created Date
           </h3>
           <p className="text-base font-medium text-foreground">{formatDate(ticket.createdAt)}</p>
         </section>
-        </div>
+        </section>
       </section>
     </section>
   )
@@ -264,13 +264,13 @@ function TicketDetailsPage() {
     <section className="flex flex-col w-full md:flex-1 md:min-w-96 bg-background rounded-3xl">
       {/* Header */}
       <header className="p-4 shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <section className="flex items-center justify-between">
+          <section className="flex items-center gap-2">
             <Users className="size-4" />
             <h2 className="font-semibold text-sm">Vendors</h2>
             <Badge variant="secondary">{vendorQuotes.length}</Badge>
-          </div>
-        </div>
+          </section>
+        </section>
       </header>
 
       {/* Scrollable Content */}
@@ -286,22 +286,22 @@ function TicketDetailsPage() {
             </EmptyHeader>
           </Empty>
         ) : (
-          <div className="space-y-4">
+          <section className="space-y-4">
             {vendorQuotes.map((quote) => {
               const vendor = vendorsMap.get(quote.vendorId)
               const vendorName = vendor?.businessName || 'Unknown Vendor'
               const priceInDollars = quote.price / 100 // Convert from cents to dollars
               
               return (
-                <div key={quote._id} className="p-4 border rounded-lg">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
+                <section key={quote._id} className="p-4 border rounded-lg">
+                  <section className="space-y-2">
+                    <section className="flex items-center justify-between">
                       <h4 className="font-medium text-sm">{vendorName}</h4>
                       <Badge variant="outline" className="text-xs">
                         {quote.status}
                       </Badge>
-                    </div>
-                    <div className="flex items-center gap-2">
+                    </section>
+                    <section className="flex items-center gap-2">
                       <p className="text-sm font-semibold">
                         {quote.currency} ${priceInDollars.toFixed(2)}
                       </p>
@@ -310,7 +310,7 @@ function TicketDetailsPage() {
                           • {quote.estimatedDeliveryTime}h
                         </span>
                       )}
-                    </div>
+                    </section>
                     {quote.responseText && (
                       <p className="text-xs text-muted-foreground line-clamp-2">
                         {quote.responseText}
@@ -319,11 +319,11 @@ function TicketDetailsPage() {
                     <p className="text-xs text-muted-foreground">
                       {formatDate(quote.createdAt)}
                     </p>
-                  </div>
-                </div>
+                  </section>
+                </section>
               )
             })}
-          </div>
+          </section>
         )}
       </section>
     </section>
@@ -334,13 +334,13 @@ function TicketDetailsPage() {
     <section className="flex flex-col w-full md:w-80 md:min-w-80 shrink-0 bg-background rounded-3xl">
       {/* Header */}
       <header className="p-4 shrink-0">
-        <div className="flex items-center gap-2">
+        <section className="flex items-center gap-2">
           <MessageSquare className="size-4" />
           <h2 className="font-semibold text-sm">Conversations</h2>
           {conversation && (
             <Badge variant="secondary">{conversation.messages.length}</Badge>
           )}
-        </div>
+        </section>
       </header>
 
       {/* Scrollable Content */}
@@ -356,9 +356,9 @@ function TicketDetailsPage() {
             </EmptyHeader>
           </Empty>
         ) : (
-          <div className="space-y-4">
+          <section className="space-y-4">
             {conversation.messages.map((message, index) => (
-              <div
+              <section
                 key={index}
                 className={`p-3 rounded-lg ${
                   message.sender === 'user'
@@ -368,16 +368,16 @@ function TicketDetailsPage() {
                     : 'bg-secondary/50 mr-auto max-w-[80%]'
                 }`}
               >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-medium capitalize">{message.sender}</span>
-                  <span className="text-xs text-muted-foreground">
+                <section className="flex items-center gap-2 mb-1">
+                  <section className="text-xs font-medium capitalize">{message.sender}</section>
+                  <section className="text-xs text-muted-foreground">
                     {formatDate(message.date)}
-                  </span>
-                </div>
+                  </section>
+                </section>
                 <p className="text-sm">{message.message}</p>
-              </div>
+              </section>
             ))}
-          </div>
+          </section>
         )}
       </section>
     </section>
