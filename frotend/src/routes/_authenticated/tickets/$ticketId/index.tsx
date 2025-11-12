@@ -1,15 +1,25 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useQuery } from 'convex/react'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useMutation, useQuery } from 'convex/react'
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Calendar, MapPin, MessageSquare, Tag, TriangleAlert, Users, X } from 'lucide-react'
+import { Calendar, MapPin, MessageSquare, Pencil, Tag, Trash2, TriangleAlert, Users, X } from 'lucide-react'
+import { toast } from 'sonner'
 import { Spinner } from '@/components/ui/spinner'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { useAuth } from '@/hooks/useAuth'
 import { api as convexApi } from '@/lib/convex-api'
+import { usePageHeaderCTAs } from '@/components/layout/page-header-ctas'
 import {
   Empty,
   EmptyDescription,
@@ -52,6 +62,52 @@ function getUrgencyLabel(urgency?: string) {
   }
 }
 
+function getStatusLabel(status: string) {
+  switch (status) {
+    case 'analyzing':
+      return 'Analyzing'
+    case 'analyzed':
+      return 'Analyzed'
+    case 'reviewed':
+      return 'Reviewed'
+    case 'processing':
+      return 'Processing'
+    case 'quotes_available':
+      return 'Quotes Available'
+    case 'scheduled':
+      return 'Scheduled'
+    case 'fixed':
+      return 'Fixed'
+    case 'closed':
+      return 'Closed'
+    default:
+      return status
+  }
+}
+
+function getStatusStyles(status: string) {
+  switch (status) {
+    case 'analyzing':
+      return 'bg-gray-100 text-gray-700 border-gray-200'
+    case 'analyzed':
+      return 'bg-blue-100 text-blue-700 border-blue-200'
+    case 'reviewed':
+      return 'bg-purple-100 text-purple-700 border-purple-200'
+    case 'processing':
+      return 'bg-yellow-100 text-yellow-700 border-yellow-200'
+    case 'quotes_available':
+      return 'bg-orange-100 text-orange-700 border-orange-200'
+    case 'scheduled':
+      return 'bg-indigo-100 text-indigo-700 border-indigo-200'
+    case 'fixed':
+      return 'bg-green-100 text-green-700 border-green-200'
+    case 'closed':
+      return 'bg-gray-100 text-gray-700 border-gray-200'
+    default:
+      return ''
+  }
+}
+
 function formatDate(timestamp: number) {
   return new Date(timestamp).toLocaleDateString('en-US', {
     month: 'long',
@@ -64,10 +120,17 @@ function formatDate(timestamp: number) {
 
 function TicketDetailsPage() {
   const { ticketId } = Route.useParams()
+  const navigate = useNavigate()
   const { user, isAuthenticated } = useAuth()
+  const { setCTAs } = usePageHeaderCTAs()
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [selectedTab, setSelectedTab] = useState<'details' | 'vendors' | 'conversations'>('details')
   const [isMobile, setIsMobile] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+
+  // Mutations
+  const markAsReviewed = useMutation(convexApi.functions.tickets.mutations.markAsReviewed)
+  const deleteTicket = useMutation(convexApi.functions.tickets.mutations.deleteTicket)
 
   // Use Convex query for real-time ticket data
   const ticketResult = useQuery(
@@ -113,6 +176,11 @@ function TicketDetailsPage() {
       : 'skip'
   )
 
+  // Handle loading and error states
+  const isLoading = ticketResult === undefined && isAuthenticated
+  const ticket = ticketResult || null
+  const conversation = conversationResult || null
+
   // Detect mobile screen size
   useEffect(() => {
     const checkMobile = () => {
@@ -131,10 +199,96 @@ function TicketDetailsPage() {
     }
   }, [isMobile, selectedTab])
 
-  // Handle loading and error states
-  const isLoading = ticketResult === undefined && isAuthenticated
-  const ticket = ticketResult || null
-  const conversation = conversationResult || null
+  // Set up page header CTAs
+  useEffect(() => {
+    if (!ticket || !user) {
+      setCTAs(null)
+      return
+    }
+
+    const editableStatuses = ['analyzed', 'reviewed']
+    const canEdit = editableStatuses.includes(ticket.status)
+    const canDelete = ['analyzed', 'reviewed', 'fixed', 'closed'].includes(ticket.status)
+    const canMarkAsReviewed = ticket.status === 'analyzed'
+
+    const ctas = (
+      <>
+        {canMarkAsReviewed && (
+          <Button
+            variant="default-glass"
+            size="sm"
+            onClick={async () => {
+              try {
+                await markAsReviewed({ ticketId: ticketId as any })
+                toast.success('Ticket Marked as Reviewed', {
+                  description: 'The ticket has been successfully marked as reviewed.',
+                  duration: 3000,
+                })
+              } catch (error) {
+                toast.error('Failed to Mark as Reviewed', {
+                  description: error instanceof Error ? error.message : 'An error occurred.',
+                  duration: 5000,
+                })
+              }
+            }}
+          >
+            Mark As Reviewed
+          </Button>
+        )}
+        {canEdit && (
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => navigate({ to: `/tickets/${ticketId}/edit` })}
+            aria-label="Edit ticket"
+          >
+            <Pencil className="size-4" />
+          </Button>
+        )}
+        {canDelete && (
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setShowDeleteDialog(true)}
+            aria-label="Delete ticket"
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        )}
+      </>
+    )
+
+    setCTAs(ctas)
+
+    // Cleanup: clear CTAs when component unmounts or ticket changes
+    return () => {
+      setCTAs(null)
+    }
+  }, [ticketResult, user, ticketId, markAsReviewed, navigate, setCTAs])
+
+  const handleDeleteTicket = async () => {
+    if (!ticket || !user?.id) return
+
+    try {
+      await deleteTicket({
+        ticketId: ticketId as any,
+        userId: user.id as any,
+      })
+
+      toast.success('Ticket Deleted', {
+        description: 'The ticket has been successfully deleted.',
+        duration: 3000,
+      })
+
+      setShowDeleteDialog(false)
+      navigate({ to: '/tickets' })
+    } catch (error) {
+      toast.error('Failed to Delete Ticket', {
+        description: error instanceof Error ? error.message : 'An error occurred while deleting the ticket.',
+        duration: 5000,
+      })
+    }
+  }
 
   // Show loading state
   if (isLoading) {
@@ -167,8 +321,14 @@ function TicketDetailsPage() {
   const renderTicketDetails = () => (
     <section className="flex flex-col w-full md:w-80 md:min-w-80 shrink-0 bg-background rounded-3xl">
       {/* Header */}
-      <header className="p-4 shrink-0">
+      <header className="p-4 shrink-0 flex flex-row items-center justify-between">
         <h2 className="font-semibold text-sm">Ticket Details</h2>
+        <Badge
+          variant="outline"
+          className={`text-xs px-2 py-1 ${getStatusStyles(ticket.status)}`}
+        >
+          {getStatusLabel(ticket.status)}
+        </Badge>
       </header>
 
       {/* Scrollable Content */}
@@ -424,6 +584,36 @@ function TicketDetailsPage() {
           </section>
         </section>
       </section>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete this ticket</DialogTitle>
+            <DialogDescription>
+              {ticket.ticketName
+                ? `Deleting "${ticket.ticketName}" means all associated data including photos, vendor quotes, and conversation history will be permanently removed. This action cannot be undone.`
+                : 'Deleting this ticket means all associated data including photos, vendor quotes, and conversation history will be permanently removed. This action cannot be undone.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-row justify-start gap-4">
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDeleteTicket}
+            >
+              Delete ticket
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Image Preview Modal */}
       <AnimatePresence>

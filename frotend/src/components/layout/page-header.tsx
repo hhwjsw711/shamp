@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { Link, useLocation, useParams } from '@tanstack/react-router'
 import { useQuery } from 'convex/react'
+import { PageHeaderCTAsContainer } from './page-header-ctas'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import {
   Breadcrumb,
@@ -111,39 +112,42 @@ export function PageHeader() {
 
   return (
     <header className="bg-zinc-100 rounded-[22px] px-4 py-2">
-      <section className="flex flex-row gap-2 items-center justify-start w-full">
-        {/* First section: SidebarTrigger */}
-        <section className="flex items-center md:hidden">
-          <SidebarTrigger />
+      <section className="flex flex-row gap-2 items-center justify-between w-full">
+        {/* Left section: SidebarTrigger and breadcrumb */}
+        <section className="flex flex-row gap-2 items-center flex-1 min-w-0">
+          {/* SidebarTrigger */}
+          <section className="flex items-center md:hidden">
+            <SidebarTrigger />
+          </section>
+
+          {/* Breadcrumb */}
+          <section className="flex flex-col gap-1 flex-1 min-w-0">
+            <Breadcrumb>
+              <BreadcrumbList className="gap-2">
+                {breadcrumbItems.map((item, index) => {
+                  const isLast = index === breadcrumbItems.length - 1
+                  return (
+                    <React.Fragment key={item.href}>
+                      {index > 0 && <BreadcrumbSeparator />}
+                      <BreadcrumbItem>
+                        {isLast ? (
+                          <BreadcrumbPage>{item.label}</BreadcrumbPage>
+                        ) : (
+                          <BreadcrumbLink asChild>
+                            <Link to={item.href}>{item.label}</Link>
+                          </BreadcrumbLink>
+                        )}
+                      </BreadcrumbItem>
+                    </React.Fragment>
+                  )
+                })}
+              </BreadcrumbList>
+            </Breadcrumb>
+          </section>
         </section>
 
-        {/* Second section: Page name and breadcrumb */}
-        <section className="flex flex-col gap-1 flex-1 min-w-0">
-          {/* <h1 className="text-lg font-semibold text-foreground truncate">
-            {pageName}
-          </h1> */}
-          <Breadcrumb>
-            <BreadcrumbList className="gap-2">
-              {breadcrumbItems.map((item, index) => {
-                const isLast = index === breadcrumbItems.length - 1
-                return (
-                  <React.Fragment key={item.href}>
-                    {index > 0 && <BreadcrumbSeparator />}
-                    <BreadcrumbItem>
-                      {isLast ? (
-                        <BreadcrumbPage>{item.label}</BreadcrumbPage>
-                      ) : (
-                        <BreadcrumbLink asChild>
-                          <Link to={item.href}>{item.label}</Link>
-                        </BreadcrumbLink>
-                      )}
-                    </BreadcrumbItem>
-                  </React.Fragment>
-                )
-              })}
-            </BreadcrumbList>
-          </Breadcrumb>
-        </section>
+        {/* Right section: CTAs */}
+        <PageHeaderCTAsContainer />
       </section>
     </header>
   )

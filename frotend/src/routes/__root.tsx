@@ -8,6 +8,7 @@ import appCss from '../styles.css?url'
 import { Toaster } from '@/components/ui/sonner'
 import { AppSidebar } from '@/components/layout/sidebar'
 import { PageHeader } from '@/components/layout/page-header'
+import { PageHeaderCTAsProvider } from '@/components/layout/page-header-ctas'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { convex } from '@/lib/convex'
 
@@ -77,35 +78,36 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   
   return (
     <ConvexProvider client={convex}>
-      <html lang="en" style={{ fontFamily: 'Manrope, sans-serif' }}>
-        <head>
-          <HeadContent />
-        </head>
-        <body style={{ backgroundColor: '#fafafa', margin: 0 }}>
-          <AnimatePresence mode="wait">
-            <main key={location.pathname} className="flex flex-row h-screen gap-0 overflow-hidden">
-              {isAuthenticatedRoute ? (
-                <SidebarProvider>
-                  <AppSidebar />
-                  <SidebarInset className="flex-1 flex flex-col gap-2 p-4 overflow-hidden">
-                    <section className="md:hidden">
-                      <PageHeader />
-                    </section>
-                    <section className="bg-zinc-100 rounded-[22px] overflow-hidden flex-1 min-h-0 flex flex-col gap-2">
-                      <section className="hidden md:block">
+      <PageHeaderCTAsProvider>
+        <html lang="en" style={{ fontFamily: 'Manrope, sans-serif' }}>
+          <head>
+            <HeadContent />
+          </head>
+          <body style={{ backgroundColor: '#fafafa', margin: 0 }}>
+            <AnimatePresence mode="wait">
+              <main key={location.pathname} className="flex flex-row h-screen gap-0 overflow-hidden">
+                {isAuthenticatedRoute ? (
+                  <SidebarProvider>
+                    <AppSidebar />
+                    <SidebarInset className="flex-1 flex flex-col gap-2 p-4 overflow-hidden">
+                      <section className="md:hidden">
                         <PageHeader />
                       </section>
-                      {children}
-                    </section>
-                  </SidebarInset>
-                </SidebarProvider>
-              ) : (
-                <section className="flex-1">
-                  {children}
-                </section>
-              )}
-            </main>
-          </AnimatePresence>
+                      <section className="bg-zinc-100 rounded-[22px] overflow-hidden flex-1 min-h-0 flex flex-col gap-2">
+                        <section className="hidden md:block">
+                          <PageHeader />
+                        </section>
+                        {children}
+                      </section>
+                    </SidebarInset>
+                  </SidebarProvider>
+                ) : (
+                  <section className="flex-1">
+                    {children}
+                  </section>
+                )}
+              </main>
+            </AnimatePresence>
           <Toaster position="top-center" />
           <TanStackDevtools
             config={{
@@ -118,9 +120,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               },
             ]}
           />
-          <Scripts />
-        </body>
-      </html>
+            <Scripts />
+          </body>
+        </html>
+      </PageHeaderCTAsProvider>
     </ConvexProvider>
   )
 }
