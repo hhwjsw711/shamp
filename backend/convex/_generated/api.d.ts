@@ -23,6 +23,7 @@ import type * as functions_agents_tools_updateTicket from "../functions/agents/t
 import type * as functions_agents_userChatAgent from "../functions/agents/userChatAgent.js";
 import type * as functions_agents_vendorConversationAgent from "../functions/agents/vendorConversationAgent.js";
 import type * as functions_agents_vendorDiscoveryAgent from "../functions/agents/vendorDiscoveryAgent.js";
+import type * as functions_agents_vendorDiscoveryAgentStream from "../functions/agents/vendorDiscoveryAgentStream.js";
 import type * as functions_agents_vendorRankingAgent from "../functions/agents/vendorRankingAgent.js";
 import type * as functions_agents_vendorResponseAgent from "../functions/agents/vendorResponseAgent.js";
 import type * as functions_analytics_queries from "../functions/analytics/queries.js";
@@ -147,6 +148,7 @@ declare const fullApi: ApiFromModules<{
   "functions/agents/userChatAgent": typeof functions_agents_userChatAgent;
   "functions/agents/vendorConversationAgent": typeof functions_agents_vendorConversationAgent;
   "functions/agents/vendorDiscoveryAgent": typeof functions_agents_vendorDiscoveryAgent;
+  "functions/agents/vendorDiscoveryAgentStream": typeof functions_agents_vendorDiscoveryAgentStream;
   "functions/agents/vendorRankingAgent": typeof functions_agents_vendorRankingAgent;
   "functions/agents/vendorResponseAgent": typeof functions_agents_vendorResponseAgent;
   "functions/analytics/queries": typeof functions_analytics_queries;

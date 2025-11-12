@@ -100,8 +100,8 @@ function TicketDetailsPage() {
   const validPhotoUrls = ticket.photoUrls.filter((url): url is string => Boolean(url))
 
   return (
-    <>
-      <main className="flex flex-col items-center gap-6 p-4 md:p-6 lg:p-8 overflow-y-auto max-h-full">
+    <section>
+      <section className="flex flex-col items-center gap-6 p-4 md:p-6 lg:p-8 overflow-y-auto max-h-full">
         <Card className="border-0 rounded-2xl shadow-none max-w-4xl w-full">
           <CardHeader>
             <CardTitle className="text-2xl">
@@ -116,9 +116,9 @@ function TicketDetailsPage() {
             {validPhotoUrls.length > 0 && (
               <section>
                 <h3 className="text-lg font-semibold mb-4">Photos</h3>
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+                <section className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
                   {validPhotoUrls.map((url, index) => (
-                    <div
+                    <section
                       key={index}
                       className="group relative aspect-square cursor-pointer"
                       onClick={() => setSelectedImage(url)}
@@ -128,32 +128,32 @@ function TicketDetailsPage() {
                         alt={`Ticket photo ${index + 1}`}
                         className="h-full w-full rounded-lg border object-cover transition-transform group-hover:scale-105"
                       />
-                      <div className="absolute inset-0 rounded-lg bg-black/0 group-hover:bg-black/10 transition-colors" />
-                    </div>
+                      <section className="absolute inset-0 rounded-lg bg-black/0 group-hover:bg-black/10 transition-colors" />
+                    </section>
                   ))}
-                </div>
+                </section>
               </section>
             )}
 
             {/* Ticket Information Grid */}
             <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Description */}
-              <div className="md:col-span-2">
+              <section className="md:col-span-2">
                 <h3 className="text-sm font-medium text-muted-foreground mb-2">Description</h3>
                 <p className="text-base whitespace-pre-wrap">{ticket.description || 'No description provided'}</p>
-              </div>
+              </section>
 
               {/* Problem Description */}
               {ticket.problemDescription && (
-                <div className="md:col-span-2">
+                <section className="md:col-span-2">
                   <h3 className="text-sm font-medium text-muted-foreground mb-2">Problem Analysis</h3>
                   <p className="text-base whitespace-pre-wrap">{ticket.problemDescription}</p>
-                </div>
+                </section>
               )}
 
               {/* Issue Type */}
               {ticket.issueType && (
-                <div>
+                <section>
                   <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
                     <Tag className="size-4" />
                     Issue Type
@@ -161,11 +161,11 @@ function TicketDetailsPage() {
                   <Badge variant="outline" className="text-base px-3 py-1">
                     {ticket.issueType}
                   </Badge>
-                </div>
+                </section>
               )}
 
               {/* Urgency */}
-              <div>
+              <section>
                 <h3 className="text-sm font-medium text-muted-foreground mb-2">Urgency</h3>
                 <Badge
                   variant="outline"
@@ -173,31 +173,31 @@ function TicketDetailsPage() {
                 >
                   {getUrgencyLabel(ticket.urgency)}
                 </Badge>
-              </div>
+              </section>
 
               {/* Location */}
               {ticket.location && (
-                <div>
+                <section>
                   <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
                     <MapPin className="size-4" />
                     Location
                   </h3>
                   <p className="text-base">{ticket.location}</p>
-                </div>
+                </section>
               )}
 
               {/* Date */}
-              <div>
+              <section>
                 <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
                   <Calendar className="size-4" />
                   Created Date
                 </h3>
                 <p className="text-base">{formatDate(ticket.createdAt)}</p>
-              </div>
+              </section>
             </section>
           </CardContent>
         </Card>
-      </main>
+      </section>
 
       {/* Image Preview Modal */}
       <AnimatePresence>
@@ -236,6 +236,6 @@ function TicketDetailsPage() {
           </motion.div>
         )}
       </AnimatePresence>
-    </>
+    </section>
   )
 }

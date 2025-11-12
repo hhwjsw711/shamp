@@ -68,6 +68,7 @@ import {
 import {
   analyzeTicketHandler,
   discoverVendorsHandler,
+  discoverVendorsStreamHandler,
   sendOutreachEmailsHandler,
   rankVendorsHandler,
   selectVendorHandler,
@@ -450,11 +451,18 @@ http.route({
   handler: analyzeTicketHandler,
 });
 
-// Discover vendors
+// Discover vendors (non-streaming)
 http.route({
   path: "/api/agents/discover-vendors",
   method: "POST",
   handler: discoverVendorsHandler,
+});
+
+// Discover vendors (streaming)
+cors.route({
+  path: "/api/agents/discover-vendors/stream",
+  method: "POST",
+  handler: discoverVendorsStreamHandler,
 });
 
 // Send outreach emails
