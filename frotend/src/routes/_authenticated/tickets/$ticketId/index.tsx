@@ -688,7 +688,7 @@ function TicketDetailsPage() {
 
   // Render Vendors Section
   const renderVendors = () => (
-    <section className="flex flex-col w-full md:flex-1 md:min-w-96 bg-background rounded-3xl">
+    <section className="flex flex-col w-full md:flex-1 md:min-w-96 bg-background rounded-3xl min-h-0">
       {/* Header */}
       <header className="p-4 shrink-0 flex flex-row items-center justify-between">
         <section className="flex items-center gap-2">
@@ -847,7 +847,7 @@ function TicketDetailsPage() {
           </section>
 
           {/* Vendors / Discovery Log */}
-          <section className={isMobile && selectedTab !== 'vendors' ? 'hidden' : 'flex flex-col h-full'}>
+          <section className={isMobile && selectedTab !== 'vendors' ? 'hidden' : 'flex flex-col h-full flex-1 min-w-0'}>
             <AnimatePresence mode="wait">
               {showDiscoveryLog ? (
                 <motion.div
@@ -856,7 +856,7 @@ function TicketDetailsPage() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.2, ease: 'easeInOut' }}
-                  className="flex flex-col h-full w-full"
+                  className="flex flex-col h-full w-full flex-1 min-w-0"
                 >
                   {renderDiscoveryLog()}
                 </motion.div>
@@ -867,7 +867,7 @@ function TicketDetailsPage() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
                   transition={{ duration: 0.2, ease: 'easeInOut' }}
-                  className="flex flex-col h-full w-full"
+                  className="flex flex-col h-full w-full flex-1 min-w-0"
                 >
                   {renderVendors()}
                 </motion.div>
