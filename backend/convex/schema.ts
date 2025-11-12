@@ -240,6 +240,10 @@ export default defineSchema({
         address: v.string(),
         rating: v.optional(v.number()),
         vendorId: v.optional(v.id("vendors")), // Optional vendor ID if vendor exists in database
+        url: v.optional(v.string()), // URL from web search
+        description: v.optional(v.string()), // Description from search results
+        position: v.optional(v.number()), // Search result position/ranking
+        services: v.optional(v.array(v.string())), // Services offered by vendor
       })
     ),
     createdAt: v.number(),
