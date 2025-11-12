@@ -24,7 +24,7 @@ interface TicketCardProps {
   location?: string
   date: string
   issueType?: string
-  status?: 'analyzing' | 'analyzed' | 'reviewed' | 'processing' | 'quotes_available' | 'scheduled' | 'fixed' | 'closed'
+  status?: 'analyzing' | 'analyzed' | 'reviewed' | 'processing' | 'quotes_available' | 'quote_selected' | 'fixed' | 'closed'
   onClick?: () => void
   onEdit?: () => void
   onDelete?: () => void
@@ -73,7 +73,7 @@ export function TicketCard({
 
   // Determine which buttons to show based on status
   // Can edit/delete: analyzed, reviewed
-  // Can edit only (no delete): processing, quotes_available, scheduled
+  // Can edit only (no delete): processing, quotes_available
   // Can only delete (no edit): fixed, closed
   const canEdit = status && ['analyzed', 'reviewed'].includes(status)
   const canDelete = status && ['analyzed', 'reviewed', 'fixed', 'closed'].includes(status)

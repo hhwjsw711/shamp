@@ -85,5 +85,5 @@ Steps:
 6. Update the ticket with your findings, including the ticket name, detailed problem description${urgency ? ` and urgency level (use "${urgency}" unless analysis clearly shows it should be different)` : ' and urgency level'}
    - Use the updateTicket tool to save your analysis
    - Set status to "analyzed" after completing the analysis
-   - Valid status values: analyzing, analyzed, reviewed, processing, quotes_available, scheduled, fixed, closed`
+   - Valid status values: analyzing, analyzed, reviewed, processing, quotes_available, quote_selected, fixed, closed`
 }

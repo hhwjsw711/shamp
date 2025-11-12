@@ -74,8 +74,8 @@ function getStatusLabel(status: string) {
       return 'Processing'
     case 'quotes_available':
       return 'Quotes Available'
-    case 'scheduled':
-      return 'Scheduled'
+    case 'quote_selected':
+      return 'Quote Selected'
     case 'fixed':
       return 'Fixed'
     case 'closed':
@@ -97,7 +97,7 @@ function getStatusStyles(status: string) {
       return 'bg-yellow-100 text-yellow-700 border-yellow-200'
     case 'quotes_available':
       return 'bg-orange-100 text-orange-700 border-orange-200'
-    case 'scheduled':
+    case 'quote_selected':
       return 'bg-indigo-100 text-indigo-700 border-indigo-200'
     case 'fixed':
       return 'bg-green-100 text-green-700 border-green-200'

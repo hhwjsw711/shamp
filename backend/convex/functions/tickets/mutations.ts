@@ -36,7 +36,7 @@ export const createInternal = internalMutation({
         v.literal("reviewed"),
         v.literal("processing"),
         v.literal("quotes_available"),
-        v.literal("scheduled"),
+        v.literal("quote_selected"),
         v.literal("fixed"),
         v.literal("closed")
       )
@@ -122,7 +122,7 @@ export const updateInternal = internalMutation({
         v.literal("reviewed"),
         v.literal("processing"),
         v.literal("quotes_available"),
-        v.literal("scheduled"),
+        v.literal("quote_selected"),
         v.literal("fixed"),
         v.literal("closed")
       )
@@ -197,7 +197,6 @@ export const updateStatusInternal = internalMutation({
       v.literal("reviewed"),
       v.literal("processing"),
       v.literal("quotes_available"),
-      v.literal("scheduled"),
       v.literal("fixed"),
       v.literal("closed")
     ),
@@ -222,7 +221,7 @@ export const assignVendorInternal = internalMutation({
     await ctx.db.patch(args.ticketId, {
       selectedVendorId: args.vendorId,
       selectedVendorQuoteId: args.quoteId,
-      status: "scheduled",
+      status: "quote_selected",
     });
   },
 });
@@ -364,7 +363,7 @@ export const deleteTicket = mutation({
     
     // Check if ticket can be deleted
     // Can delete: analyzed, reviewed OR fixed/closed
-    // Cannot delete: processing, quotes_available, scheduled (vendor engagement stages)
+    // Cannot delete: processing, quotes_available, quote_selected (vendor engagement stages)
     const deletableStatuses = [
       "analyzed",
       "reviewed",
@@ -374,7 +373,7 @@ export const deleteTicket = mutation({
     
     if (!deletableStatuses.includes(ticket.status)) {
       throw new Error(
-        `Ticket cannot be deleted. Current status: ${ticket.status}. Cannot delete tickets with vendor engagement (processing, quotes_available, scheduled).`
+        `Ticket cannot be deleted. Current status: ${ticket.status}. Cannot delete tickets with vendor engagement (processing, quotes_available, quote_selected).`
       );
     }
     

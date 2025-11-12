@@ -20,7 +20,7 @@ type TicketStatus =
   | 'reviewed'
   | 'processing'
   | 'quotes_available'
-  | 'scheduled'
+  | 'quote_selected'
   | 'fixed'
   | 'closed'
 
@@ -47,7 +47,7 @@ const TICKET_STATUSES: Array<{ value: TicketStatus; label: string }> = [
   { value: 'reviewed', label: 'Reviewed' },
   { value: 'processing', label: 'Processing' },
   { value: 'quotes_available', label: 'Quotes Available' },
-  { value: 'scheduled', label: 'Scheduled' },
+  { value: 'quote_selected', label: 'Quote Selected' },
   { value: 'fixed', label: 'Fixed' },
   { value: 'closed', label: 'Closed' },
 ]
@@ -73,7 +73,7 @@ function TicketsPage() {
     reviewed: '',
     processing: '',
     quotes_available: '',
-    scheduled: '',
+    quote_selected: '',
     fixed: '',
     closed: '',
   })
@@ -84,7 +84,7 @@ function TicketsPage() {
     reviewed: 'date',
     processing: 'date',
     quotes_available: 'date',
-    scheduled: 'date',
+    quote_selected: 'date',
     fixed: 'date',
     closed: 'date',
   })

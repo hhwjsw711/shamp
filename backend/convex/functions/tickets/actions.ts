@@ -22,7 +22,7 @@ export const searchByStatusSemantic = action({
       v.literal("processing"),
       v.literal("reviewed"),
       v.literal("quotes_available"),
-      v.literal("scheduled"),
+      v.literal("quote_selected"),
       v.literal("fixed"),
       v.literal("closed")
     ),

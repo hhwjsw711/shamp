@@ -22,10 +22,10 @@ const updateTicketSchema = z.object({
     "reviewed",
     "processing",
     "quotes_available",
-    "scheduled",
+    "quote_selected",
     "fixed",
     "closed"
-  ]).optional().describe("Ticket status. Valid values: analyzing, analyzed, reviewed, processing, quotes_available, scheduled, fixed, closed. For ticket analysis, use 'analyzed'."),
+  ]).optional().describe("Ticket status. Valid values: analyzing, analyzed, reviewed, processing, quotes_available, quote_selected, fixed, closed. For ticket analysis, use 'analyzed'."),
 });
 
 type UpdateTicketParams = z.infer<typeof updateTicketSchema>;

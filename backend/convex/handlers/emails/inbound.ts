@@ -394,11 +394,23 @@ export const handleInboundEmail = httpAction(async (ctx, request) => {
               }
             );
 
+            // Check if this is the first quote received
+            const existingQuotes = await ctx.runQuery(
+              (internal as any).functions.vendorQuotes.queries.getByTicketIdInternal,
+              {
+                ticketId: ticketId as Id<"tickets">,
+              }
+            );
+            
+            const isFirstQuote = existingQuotes.length === 1;
+
             await ctx.runMutation(
               (internal as any).functions.tickets.mutations.updateInternal,
               {
                 ticketId: ticketId as Id<"tickets">,
                 quoteStatus: "quotes_received",
+                // Update status to "quotes_available" when first quote is received
+                ...(isFirstQuote ? { status: "quotes_available" } : {}),
               }
             );
           } else if (quoteData.isDeclining) {

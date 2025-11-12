@@ -63,6 +63,15 @@ export const discoverVendors = action({
       throw new Error("Not authorized to discover vendors for this ticket");
     }
 
+    // Update ticket status to "processing" immediately when processing starts
+    await ctx.runMutation(
+      (api as any).functions.tickets.mutations.updateStatusInternal,
+      {
+        ticketId: args.ticketId,
+        status: "processing",
+      }
+    );
+
     // Get user location - prioritize user's location from users table
     const userData: Doc<"users"> | null = await ctx.runQuery(
       (internal as any).functions.auth.queries.getUserByIdInternal,

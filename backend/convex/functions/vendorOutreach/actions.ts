@@ -225,14 +225,7 @@ export const sendOutreachEmails = action({
     const successfulSends: number = outreachResults.filter((r) => r.emailId).length;
 
     if (successfulSends > 0) {
-      await ctx.runMutation(
-        (api as any).functions.tickets.mutations.updateStatusInternal,
-        {
-          ticketId: args.ticketId,
-          status: "processing",
-        }
-      );
-
+      // Update quoteStatus to awaiting_quotes (status is already set to "processing" by discoverVendors)
       await ctx.runMutation(
         (internal as any).functions.tickets.mutations.updateInternal,
         {
