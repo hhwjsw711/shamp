@@ -152,6 +152,14 @@ function TicketDetailsPage() {
       : 'skip'
   )
 
+  // Fetch discovery logs from database
+  const discoveryLogsResult = useQuery(
+    convexApi.functions.discoveryLogs.queries.getByTicketId,
+    user?.id && isAuthenticated && ticketId
+      ? { ticketId: ticketId as any, userId: user.id as any }
+      : 'skip'
+  )
+
   // Fetch vendor quotes for this ticket
   const vendorQuotesResult = useQuery(
     convexApi.functions.vendorQuotes.queries.getByTicketId,
@@ -210,6 +218,25 @@ function TicketDetailsPage() {
       setSelectedTab('details')
     }
   }, [isMobile, selectedTab])
+
+  // Load persisted discovery logs when component mounts or logs are fetched
+  useEffect(() => {
+    if (discoveryLogsResult?.logs && discoveryLogsResult.logs.length > 0 && discoveryMessages.length === 0) {
+      // Convert persisted logs to the format expected by the UI
+      const persistedMessages = discoveryLogsResult.logs.map((log) => ({
+        type: log.type as 'status' | 'tool_call' | 'tool_result' | 'vendor_found' | 'step' | 'complete' | 'error',
+        message: log.message,
+        toolName: log.toolName,
+        vendor: log.vendor,
+        stepNumber: log.stepNumber,
+        error: log.error,
+        timestamp: log.timestamp,
+      }))
+      
+      // Only set if we don't have any messages yet (to avoid overwriting active stream)
+      setDiscoveryMessages(persistedMessages)
+    }
+  }, [discoveryLogsResult?.logs, discoveryMessages.length])
 
   // Auto-scroll discovery log to bottom when new messages arrive
   useEffect(() => {

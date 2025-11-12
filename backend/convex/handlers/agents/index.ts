@@ -198,21 +198,57 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
     const stream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
+        let sequenceNumber = 0;
 
-        const sendEvent = (event: any) => {
+        const sendEvent = async (event: any) => {
           try {
             const data = JSON.stringify(event);
             controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+
+            // Save event to database for persistence
+            try {
+              sequenceNumber++;
+              await ctx.runMutation(
+                (internal as any).functions.discoveryLogs.mutations.addEntry,
+                {
+                  ticketId: ticketId as any,
+                  type: event.type,
+                  message: event.message,
+                  toolName: event.toolName,
+                  toolArgs: event.args,
+                  toolResult: event.result,
+                  vendor: event.vendor,
+                  stepNumber: event.stepNumber,
+                  error: event.error,
+                  timestamp: Date.now(),
+                  sequenceNumber,
+                }
+              );
+            } catch (dbError) {
+              // Log but don't fail the stream if DB save fails
+              console.error("Error saving discovery log entry:", dbError);
+            }
           } catch (error) {
             console.error("Error sending event:", error);
           }
         };
 
         try {
-          sendEvent({ type: "status", message: "Starting vendor discovery..." });
+          // Clear existing logs for this ticket before starting new discovery
+          try {
+            await ctx.runMutation(
+              (internal as any).functions.discoveryLogs.mutations.clearForTicket,
+              { ticketId: ticketId as any }
+            );
+          } catch (clearError) {
+            console.error("Error clearing existing logs:", clearError);
+            // Continue anyway
+          }
+
+          await sendEvent({ type: "status", message: "Starting vendor discovery..." });
 
           // Get ticket data
-          sendEvent({ type: "status", message: "Loading ticket information..." });
+          await sendEvent({ type: "status", message: "Loading ticket information..." });
           
           const ticket = await ctx.runQuery(
             (internal as any).functions.tickets.queries.getByIdInternal,
@@ -220,19 +256,19 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
           );
 
           if (!ticket) {
-            sendEvent({ type: "error", error: "Ticket not found" });
+            await sendEvent({ type: "error", error: "Ticket not found" });
             controller.close();
             return;
           }
 
           if (ticket.createdBy !== user.userId) {
-            sendEvent({ type: "error", error: "Not authorized" });
+            await sendEvent({ type: "error", error: "Not authorized" });
             controller.close();
             return;
           }
 
           // Get user location
-          sendEvent({ type: "status", message: "Getting user location..." });
+          await sendEvent({ type: "status", message: "Getting user location..." });
           
           const userData = await ctx.runQuery(
             (api as any).functions.auth.queries.getUserByIdInternal,
@@ -240,7 +276,7 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
           );
 
           if (!userData?.location) {
-            sendEvent({ 
+            await sendEvent({ 
               type: "error", 
               error: "User location is required. Please update your profile with a location." 
             });
@@ -251,7 +287,7 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
           const location: string = userData.location;
 
           // Search database first
-          sendEvent({ type: "status", message: "Searching database for existing vendors..." });
+          await sendEvent({ type: "status", message: "Searching database for existing vendors..." });
           
           let existingVendors: Array<any> = [];
           try {
@@ -266,13 +302,13 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
 
           // If found in database, stream them
           if (existingVendors.length > 0) {
-            sendEvent({ 
+            await sendEvent({ 
               type: "status", 
               message: `Found ${existingVendors.length} existing vendor(s) in database` 
             });
 
-            const vendorResults = existingVendors.map((vendor: any, index: number) => {
-              const result = {
+            const vendorResults = existingVendors.map((vendor: any) => {
+              return {
                 businessName: vendor.businessName,
                 email: vendor.email,
                 phone: vendor.phone,
@@ -281,19 +317,20 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
                 rating: vendor.rating,
                 vendorId: vendor._id,
               };
-              
-              sendEvent({
-                type: "vendor_found",
-                vendor: result,
-                index: index + 1,
-                total: existingVendors.length,
-              });
-              
-              return result;
             });
 
+            // Send vendor_found events for each vendor
+            for (let i = 0; i < vendorResults.length; i++) {
+              await sendEvent({
+                type: "vendor_found",
+                vendor: vendorResults[i],
+                index: i + 1,
+                total: existingVendors.length,
+              });
+            }
+
             // Store results
-            sendEvent({ type: "status", message: "Storing vendor results..." });
+            await sendEvent({ type: "status", message: "Storing vendor results..." });
             
             const firecrawlResultsId = await ctx.runMutation(
               (api as any).functions.firecrawlResults.mutations.store,
@@ -306,7 +343,7 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
             );
 
             // Send outreach emails
-            sendEvent({ type: "status", message: "Sending outreach emails..." });
+            await sendEvent({ type: "status", message: "Sending outreach emails..." });
             
             try {
               await ctx.runAction(
@@ -317,7 +354,7 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
               console.error("Error sending outreach emails:", error);
             }
 
-            sendEvent({
+            await sendEvent({
               type: "complete",
               vendors: vendorResults,
               source: "database",
@@ -329,7 +366,7 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
           }
 
           // No database vendors found, proceed with web search using agent
-          sendEvent({ type: "status", message: "No existing vendors found. Starting web search..." });
+          await sendEvent({ type: "status", message: "No existing vendors found. Starting web search..." });
 
           const searchVendors = createSearchVendorsTool();
           const updateTicket = createUpdateTicketTool(ctx, ticketId as any);
@@ -348,7 +385,7 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
             location,
           });
 
-          sendEvent({ type: "status", message: "Searching the web for vendors..." });
+          await sendEvent({ type: "status", message: "Searching the web for vendors..." });
 
           // Stream agent execution
           let stepNumber = 0;
@@ -369,7 +406,7 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
               // Handle different step types based on TextStreamPart structure
               if (step.type === 'start-step') {
                 stepNumber++;
-                sendEvent({ 
+                await sendEvent({ 
                   type: "step", 
                   stepNumber, 
                   description: `Processing step ${stepNumber}...` 
@@ -378,14 +415,14 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
                 const toolName = step.toolName;
                 const args = step.input;
                 
-                sendEvent({
+                await sendEvent({
                   type: "tool_call",
                   toolName,
                   args,
                 });
 
                 if (toolName === "searchVendors") {
-                  sendEvent({ 
+                  await sendEvent({ 
                     type: "status", 
                     message: `Searching for vendors in ${(args as any)?.location || location}...` 
                   });
@@ -394,7 +431,7 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
                 const toolName = step.toolName;
                 const result = step.output;
                 
-                sendEvent({
+                await sendEvent({
                   type: "tool_result",
                   toolName,
                   result,
@@ -425,7 +462,7 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
                   for (let i = 0; i < vendors.length; i++) {
                     const vendor = vendors[i];
                     allVendors.push(vendor);
-                    sendEvent({
+                    await sendEvent({
                       type: "vendor_found",
                       vendor,
                       index: allVendors.length,
@@ -433,7 +470,7 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
                     });
                   }
 
-                  sendEvent({ 
+                  await sendEvent({ 
                     type: "status", 
                     message: `Found ${vendors.length} vendor(s). Extracting details...` 
                   });
@@ -446,7 +483,7 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
           } catch (iterationError) {
             // Handle stream iteration errors
             console.error('Error iterating agent stream:', iterationError);
-            sendEvent({ 
+            await sendEvent({ 
               type: "error", 
               error: `Stream iteration error: ${iterationError instanceof Error ? iterationError.message : String(iterationError)}` 
             });
@@ -456,7 +493,7 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
 
           // Store results
           if (allVendors.length > 0) {
-            sendEvent({ type: "status", message: "Storing vendor results..." });
+            await sendEvent({ type: "status", message: "Storing vendor results..." });
             
             const firecrawlResultsId = await ctx.runMutation(
               (api as any).functions.firecrawlResults.mutations.store,
@@ -471,7 +508,7 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
 
           // Send outreach emails
           if (allVendors.length > 0) {
-            sendEvent({ type: "status", message: "Sending outreach emails..." });
+            await sendEvent({ type: "status", message: "Sending outreach emails..." });
             
             try {
               await ctx.runAction(
@@ -483,7 +520,7 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
             }
           }
 
-          sendEvent({
+          await sendEvent({
             type: "complete",
             vendors: allVendors,
             source: "web_search",
@@ -497,7 +534,7 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
             type: "error",
             error: error instanceof Error ? error.message : "Unknown error occurred",
           };
-          sendEvent(errorEvent);
+          await sendEvent(errorEvent);
           controller.close();
         }
       },

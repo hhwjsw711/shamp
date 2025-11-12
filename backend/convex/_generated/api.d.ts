@@ -34,6 +34,8 @@ import type * as functions_auth_mutations from "../functions/auth/mutations.js";
 import type * as functions_auth_queries from "../functions/auth/queries.js";
 import type * as functions_conversations_mutations from "../functions/conversations/mutations.js";
 import type * as functions_conversations_queries from "../functions/conversations/queries.js";
+import type * as functions_discoveryLogs_mutations from "../functions/discoveryLogs/mutations.js";
+import type * as functions_discoveryLogs_queries from "../functions/discoveryLogs/queries.js";
 import type * as functions_emailVerification_actions from "../functions/emailVerification/actions.js";
 import type * as functions_emailVerification_mutations from "../functions/emailVerification/mutations.js";
 import type * as functions_emailVerification_queries from "../functions/emailVerification/queries.js";
@@ -159,6 +161,8 @@ declare const fullApi: ApiFromModules<{
   "functions/auth/queries": typeof functions_auth_queries;
   "functions/conversations/mutations": typeof functions_conversations_mutations;
   "functions/conversations/queries": typeof functions_conversations_queries;
+  "functions/discoveryLogs/mutations": typeof functions_discoveryLogs_mutations;
+  "functions/discoveryLogs/queries": typeof functions_discoveryLogs_queries;
   "functions/emailVerification/actions": typeof functions_emailVerification_actions;
   "functions/emailVerification/mutations": typeof functions_emailVerification_mutations;
   "functions/emailVerification/queries": typeof functions_emailVerification_queries;

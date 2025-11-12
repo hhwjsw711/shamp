@@ -369,5 +369,45 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_status", ["status"])
     .index("by_userId_status", ["userId", "status"]),
+
+  // Discovery logs for vendor discovery streaming
+  discoveryLogs: defineTable({
+    ticketId: v.id("tickets"),
+    type: v.union(
+      v.literal("status"),
+      v.literal("tool_call"),
+      v.literal("tool_result"),
+      v.literal("vendor_found"),
+      v.literal("step"),
+      v.literal("complete"),
+      v.literal("error")
+    ),
+    message: v.optional(v.string()),
+    toolName: v.optional(v.string()),
+    toolArgs: v.optional(v.any()), // Store tool call arguments
+    toolResult: v.optional(v.any()), // Store tool result data
+    vendor: v.optional(
+      v.object({
+        businessName: v.string(),
+        email: v.optional(v.string()),
+        phone: v.optional(v.string()),
+        specialty: v.string(),
+        address: v.string(),
+        rating: v.optional(v.number()),
+        vendorId: v.optional(v.id("vendors")),
+        url: v.optional(v.string()),
+        description: v.optional(v.string()),
+        position: v.optional(v.number()),
+        services: v.optional(v.array(v.string())),
+      })
+    ),
+    stepNumber: v.optional(v.number()),
+    error: v.optional(v.string()),
+    timestamp: v.number(),
+    sequenceNumber: v.number(), // Order of events in the stream
+  })
+    .index("by_ticketId", ["ticketId"])
+    .index("by_ticketId_timestamp", ["ticketId", "timestamp"])
+    .index("by_ticketId_sequence", ["ticketId", "sequenceNumber"]),
 });
 
