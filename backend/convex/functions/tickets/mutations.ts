@@ -473,9 +473,11 @@ export const deletePhoto = mutation({
 export const markAsReviewed = mutation({
   args: {
     ticketId: v.id("tickets"),
+    userId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    const userId = await validateUserId(ctx);
+    // Validate userId exists
+    await validateUserId(ctx, args.userId);
     
     // Get ticket to verify ownership
     const ticket = await ctx.db.get(args.ticketId);
@@ -483,7 +485,7 @@ export const markAsReviewed = mutation({
       throw new Error("Ticket not found");
     }
     
-    if (ticket.createdBy !== userId) {
+    if (ticket.createdBy !== args.userId) {
       throw new Error("Not authorized to update this ticket");
     }
     

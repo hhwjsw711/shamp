@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useMutation, useQuery } from 'convex/react'
+import { useAction, useMutation, useQuery } from 'convex/react'
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Calendar, MapPin, MessageSquare, Pencil, Tag, Trash2, TriangleAlert, Users, X } from 'lucide-react'
@@ -131,6 +131,9 @@ function TicketDetailsPage() {
   // Mutations
   const markAsReviewed = useMutation(convexApi.functions.tickets.mutations.markAsReviewed)
   const deleteTicket = useMutation(convexApi.functions.tickets.mutations.deleteTicket)
+  
+  // Actions
+  const discoverVendors = useAction(convexApi.functions.agents.vendorDiscoveryAgent.discoverVendors)
 
   // Use Convex query for real-time ticket data
   const ticketResult = useQuery(
@@ -210,6 +213,7 @@ function TicketDetailsPage() {
     const canEdit = editableStatuses.includes(ticket.status)
     const canDelete = ['analyzed', 'reviewed', 'fixed', 'closed'].includes(ticket.status)
     const canMarkAsReviewed = ticket.status === 'analyzed'
+    const canProcessTicket = ticket.status === 'reviewed'
 
     const ctas = (
       <>
@@ -218,8 +222,12 @@ function TicketDetailsPage() {
             variant="default-glass"
             size="sm"
             onClick={async () => {
+              if (!user.id) return
               try {
-                await markAsReviewed({ ticketId: ticketId as any })
+                await markAsReviewed({ 
+                  ticketId: ticketId as any,
+                  userId: user.id as any,
+                })
                 toast.success('Ticket Marked as Reviewed', {
                   description: 'The ticket has been successfully marked as reviewed.',
                   duration: 3000,
@@ -233,6 +241,32 @@ function TicketDetailsPage() {
             }}
           >
             Mark As Reviewed
+          </Button>
+        )}
+        {canProcessTicket && (
+          <Button
+            variant="default-glass"
+            size="sm"
+            onClick={async () => {
+              if (!user.id) return
+              try {
+                await discoverVendors({
+                  ticketId: ticketId as any,
+                  userId: user.id as any,
+                })
+                toast.success('Ticket Processing Started', {
+                  description: 'Vendor discovery has been initiated. The ticket status will update automatically.',
+                  duration: 4000,
+                })
+              } catch (error) {
+                toast.error('Failed to Process Ticket', {
+                  description: error instanceof Error ? error.message : 'An error occurred while processing the ticket.',
+                  duration: 5000,
+                })
+              }
+            }}
+          >
+            Process Ticket
           </Button>
         )}
         {canEdit && (
@@ -264,7 +298,7 @@ function TicketDetailsPage() {
     return () => {
       setCTAs(null)
     }
-  }, [ticketResult, user, ticketId, markAsReviewed, navigate, setCTAs])
+  }, [ticketResult, user, ticketId, markAsReviewed, discoverVendors, navigate, setCTAs])
 
   const handleDeleteTicket = async () => {
     if (!ticket || !user?.id) return
