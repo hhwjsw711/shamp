@@ -16,6 +16,8 @@ Location: ${location}
 Issue Details: ${ticketDetails}
 ${imageUrl ? `Image available at: ${imageUrl}` : ''}
 
+IMPORTANT: The email body MUST be formatted as HTML. Use proper HTML tags like <p>, <br>, <strong>, <ul>, <li>, etc. Do NOT return plain text.
+
 The email should:
 - Be professional and courteous
 - Clearly describe the issue and location (mentioning it's for a hospitality business - hotel or restaurant)
@@ -28,6 +30,11 @@ The email should:
 - Explain that Shamp is a hospitality maintenance platform that helps connect service providers with maintenance needs for hotels and restaurants
 - Include that we're collecting quotes from multiple vendors to provide the best options to our hospitality client
 - Request a response within 48-72 hours
-- Include contact information for follow-up questions`
+- Include contact information for follow-up questions
+
+Format the email body as HTML with proper paragraph tags, line breaks, and formatting. Example structure:
+<p>Dear [Vendor Name],</p>
+<p>[Main content paragraphs]</p>
+<p>Best regards,<br>Shamp Team</p>`
 }
 

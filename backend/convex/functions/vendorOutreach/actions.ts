@@ -156,6 +156,36 @@ export const sendOutreachEmails = action({
           continue;
         }
 
+        // Ensure email body is properly formatted HTML
+        // If body is empty or not HTML, wrap it properly
+        let emailBody = emailContent.body || "";
+        
+        // If body doesn't contain HTML tags, wrap it in paragraphs
+        if (emailBody && !emailBody.includes("<") && !emailBody.includes(">")) {
+          // Convert plain text to HTML by splitting on newlines and wrapping in <p> tags
+          const paragraphs = emailBody.split(/\n\n+/).filter(p => p.trim());
+          emailBody = paragraphs.map(p => `<p>${p.trim().replace(/\n/g, "<br>")}</p>`).join("");
+        }
+        
+        // If body is still empty, provide a fallback
+        if (!emailBody || emailBody.trim() === "") {
+          emailBody = `<p>Dear ${vendor.businessName},</p>
+<p>We are reaching out regarding a maintenance issue at a hospitality business (hotel or restaurant) in ${location}.</p>
+<p><strong>Issue Details:</strong><br>
+${ticket.description || "Please see attached images for details."}</p>
+<p>We would appreciate a quote for this work, including:</p>
+<ul>
+<li>Total price/quote (please include currency)</li>
+<li>When you can come to fix this issue (specific date/time or date range)</li>
+<li>How many hours the fix will take once you arrive</li>
+</ul>
+<p>Please respond within 48-72 hours.</p>
+<p>Best regards,<br>Shamp Team</p>`;
+        }
+        
+        // Add photos after the body content
+        const photosHtml = photoUrl ? `<br><br><img src="${photoUrl}" alt="Issue photo" style="max-width: 100%; height: auto;">` : "";
+        
         const emailId = await resend.sendEmail(ctx, {
           from:
             process.env.RESEND_FROM_EMAIL ||
@@ -164,10 +194,8 @@ export const sendOutreachEmails = action({
           replyTo: [
             process.env.RESEND_REPLY_TO_EMAIL || "replies@updates.shamp.io",
           ],
-          subject: `[Ticket #${args.ticketId}] ${emailContent.subject}`,
-          html:
-            emailContent.body +
-            (photoUrl ? `<br><img src="${photoUrl}" alt="Issue photo">` : ""),
+          subject: `[Ticket #${args.ticketId}] ${emailContent.subject || "Maintenance Quote Request"}`,
+          html: emailBody + photosHtml,
         });
 
         await ctx.runMutation(

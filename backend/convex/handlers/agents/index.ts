@@ -7,6 +7,7 @@
 
 import { httpAction } from "../../_generated/server";
 import { api, internal } from "../../_generated/api";
+import type { Id } from "../../_generated/dataModel";
 import { getErrorMessage } from "../../utils/errors";
 import { authenticateUser } from "../../utils/httpAuth";
 import { Experimental_Agent as Agent, stepCountIs } from "ai";
@@ -247,6 +248,20 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
 
           await sendEvent({ type: "status", message: "Starting vendor discovery..." });
 
+          // Update ticket status to "processing" immediately when processing starts
+          try {
+            await ctx.runMutation(
+              (internal as any).functions.tickets.mutations.updateInternal,
+              {
+                ticketId: ticketId as any,
+                status: "processing",
+              }
+            );
+          } catch (statusError) {
+            console.error("Error updating ticket status:", statusError);
+            // Continue anyway
+          }
+
           // Get ticket data
           await sendEvent({ type: "status", message: "Loading ticket information..." });
           
@@ -343,16 +358,17 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
             );
 
             // Send outreach emails
-            await sendEvent({ type: "status", message: "Sending outreach emails..." });
-            
-            try {
-              await ctx.runAction(
-                (api as any).functions.vendorOutreach.actions.sendOutreachEmails,
-                { ticketId: ticketId as any, userId: user.userId as any }
-              );
-            } catch (error) {
-              console.error("Error sending outreach emails:", error);
-            }
+            // COMMENTED OUT FOR TESTING - Extract individual URLs first
+            // await sendEvent({ type: "status", message: "Sending outreach emails..." });
+            // 
+            // try {
+            //   await ctx.runAction(
+            //     (api as any).functions.vendorOutreach.actions.sendOutreachEmails,
+            //     { ticketId: ticketId as any, userId: user.userId as any }
+            //   );
+            // } catch (error) {
+            //   console.error("Error sending outreach emails:", error);
+            // }
 
             await sendEvent({
               type: "complete",
@@ -368,7 +384,44 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
           // No database vendors found, proceed with web search using agent
           await sendEvent({ type: "status", message: "No existing vendors found. Starting web search..." });
 
-          const searchVendors = createSearchVendorsTool();
+          // Track firecrawlResultsId for linking ticket
+          let firecrawlResultsId: Id<"firecrawlResults"> | undefined;
+          
+          // Create searchVendors tool with callback to save vendors incrementally
+          const searchVendors = createSearchVendorsTool({
+            onVendorExtracted: async (vendor: any) => {
+              // Save vendor incrementally to database
+              try {
+                const resultId = await ctx.runMutation(
+                  (internal as any).functions.firecrawlResults.mutations.appendVendor,
+                  { ticketId: ticketId as any, vendor }
+                );
+                
+                // Link ticket to firecrawlResults on first vendor save
+                if (!firecrawlResultsId) {
+                  firecrawlResultsId = resultId;
+                  await ctx.runMutation(
+                    (internal as any).functions.firecrawlResults.mutations.linkToTicket,
+                    { ticketId: ticketId as any, firecrawlResultsId: resultId }
+                  );
+                }
+                
+                // Send streaming event for this vendor
+                await sendEvent({
+                  type: "vendor_found",
+                  vendor,
+                  index: allVendors.length + 1,
+                  total: 0, // Will be updated when tool completes
+                });
+                
+                allVendors.push(vendor);
+              } catch (saveError) {
+                console.error(`Error saving vendor ${vendor.businessName} incrementally:`, saveError);
+                // Don't re-throw - let extraction continue even if save fails
+                // The vendor will still be returned by the tool and can be saved later
+              }
+            },
+          });
           const updateTicket = createUpdateTicketTool(ctx, ticketId as any);
 
           // Create agent
@@ -438,6 +491,8 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
                 });
 
                 // Extract vendors from searchVendors tool results
+                // Note: Vendors are already saved incrementally via the callback,
+                // but we still need to process the final result for consistency
                 if (
                   toolName === "searchVendors" &&
                   result &&
@@ -458,21 +513,17 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
                     services: vendor.services,
                   }));
 
-                  // Yield each vendor as it's discovered
-                  for (let i = 0; i < vendors.length; i++) {
-                    const vendor = vendors[i];
-                    allVendors.push(vendor);
-                    await sendEvent({
-                      type: "vendor_found",
-                      vendor,
-                      index: allVendors.length,
-                      total: vendors.length,
-                    });
+                  // Vendors are already saved incrementally via callback during extraction
+                  // Just ensure all vendors are in allVendors array (some may have been added via callback)
+                  for (const vendor of vendors) {
+                    if (!allVendors.find(v => v.url === vendor.url && v.businessName === vendor.businessName)) {
+                      allVendors.push(vendor);
+                    }
                   }
 
                   await sendEvent({ 
                     type: "status", 
-                    message: `Found ${vendors.length} vendor(s). Extracting details...` 
+                    message: `Found ${vendors.length} vendor(s). All vendors saved to database.` 
                   });
                 }
               } else if (step.type === 'text-delta') {
@@ -491,34 +542,39 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
             return;
           }
 
-          // Store results
+          // Results are already saved incrementally above, but ensure ticket is linked
+          // (This is a no-op if already linked, but ensures consistency)
           if (allVendors.length > 0) {
-            await sendEvent({ type: "status", message: "Storing vendor results..." });
+            await sendEvent({ type: "status", message: `Saved ${allVendors.length} vendor(s) to database` });
             
-            const firecrawlResultsId = await ctx.runMutation(
-              (api as any).functions.firecrawlResults.mutations.store,
-              { ticketId: ticketId as any, results: allVendors }
+            // Ensure ticket has firecrawlResultsId linked
+            const existingResults = await ctx.runQuery(
+              (internal as any).functions.firecrawlResults.queries.getByTicketIdInternal,
+              { ticketId: ticketId as any }
             );
-
-            await ctx.runMutation(
-              (internal as any).functions.tickets.mutations.updateInternal,
-              { ticketId: ticketId as any, firecrawlResultsId }
-            );
+            
+            if (existingResults && !ticket.firecrawlResultsId) {
+              await ctx.runMutation(
+                (internal as any).functions.tickets.mutations.updateInternal,
+                { ticketId: ticketId as any, firecrawlResultsId: existingResults._id }
+              );
+            }
           }
 
           // Send outreach emails
-          if (allVendors.length > 0) {
-            await sendEvent({ type: "status", message: "Sending outreach emails..." });
-            
-            try {
-              await ctx.runAction(
-                (api as any).functions.vendorOutreach.actions.sendOutreachEmails,
-                { ticketId: ticketId as any, userId: user.userId as any }
-              );
-            } catch (error) {
-              console.error("Error sending outreach emails:", error);
-            }
-          }
+          // COMMENTED OUT FOR TESTING - Extract individual URLs first
+          // if (allVendors.length > 0) {
+          //   await sendEvent({ type: "status", message: "Sending outreach emails..." });
+          //   
+          //   try {
+          //     await ctx.runAction(
+          //       (api as any).functions.vendorOutreach.actions.sendOutreachEmails,
+          //       { ticketId: ticketId as any, userId: user.userId as any }
+          //     );
+          //   } catch (error) {
+          //     console.error("Error sending outreach emails:", error);
+          //   }
+          // }
 
           await sendEvent({
             type: "complete",

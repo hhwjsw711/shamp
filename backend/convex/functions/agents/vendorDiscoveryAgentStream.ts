@@ -342,21 +342,22 @@ export const discoverVendorsStream = action({
       }
 
       // Automatically send outreach emails to discovered vendors
-      if (allVendors.length > 0) {
-        yield { type: "status", message: "Sending outreach emails to vendors..." };
-        
-        try {
-          await ctx.runAction(
-            (api as any).functions.vendorOutreach.actions.sendOutreachEmails,
-            {
-              ticketId: args.ticketId,
-              userId: args.userId,
-            }
-          );
-        } catch (error) {
-          console.error("Error sending outreach emails:", error);
-        }
-      }
+      // COMMENTED OUT FOR TESTING - Extract individual URLs first
+      // if (allVendors.length > 0) {
+      //   yield { type: "status", message: "Sending outreach emails to vendors..." };
+      //   
+      //   try {
+      //     await ctx.runAction(
+      //       (api as any).functions.vendorOutreach.actions.sendOutreachEmails,
+      //       {
+      //         ticketId: args.ticketId,
+      //         userId: args.userId,
+      //       }
+      //     );
+      //   } catch (error) {
+      //     console.error("Error sending outreach emails:", error);
+      //   }
+      // }
 
       yield {
         type: "complete",
