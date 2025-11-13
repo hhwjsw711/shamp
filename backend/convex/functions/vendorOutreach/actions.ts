@@ -227,12 +227,23 @@ Shamp is a hospitality maintenance platform that connects service providers like
           }
         );
 
+        // Save the actual email content to conversation (not just a notification)
+        // Strip HTML tags for cleaner conversation display, but keep the content
+        const emailTextContent = emailBody
+          .replace(/<[^>]*>/g, '') // Remove HTML tags
+          .replace(/&nbsp;/g, ' ') // Replace &nbsp; with spaces
+          .replace(/&amp;/g, '&') // Replace &amp; with &
+          .replace(/&lt;/g, '<') // Replace &lt; with <
+          .replace(/&gt;/g, '>') // Replace &gt; with >
+          .replace(/&quot;/g, '"') // Replace &quot; with "
+          .trim();
+
         await ctx.runMutation(
           (api as any).functions.conversations.mutations.addMessageInternal,
           {
             conversationId,
             sender: "agent",
-            message: `Quote request sent to ${vendor.businessName}`,
+            message: emailTextContent || `Quote request sent to ${vendor.businessName}`,
           }
         );
 

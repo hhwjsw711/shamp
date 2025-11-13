@@ -229,6 +229,7 @@ export const discoverVendors = action({
 
         // Send outreach emails
         // COMMENTED OUT FOR TESTING - Extract individual URLs first
+        // NOTE: When uncommented, this will send initial emails to vendors and update ticket status to "requested_for_information"
         // await saveLog({ type: "status", message: "Sending outreach emails..." });
         // 
         // try {
@@ -431,6 +432,7 @@ export const discoverVendors = action({
 
       // Send outreach emails
       // COMMENTED OUT FOR TESTING - Extract individual URLs first
+      // NOTE: When uncommented, this will send initial emails to vendors and update ticket status to "requested_for_information"
       // if (allVendors.length > 0) {
       //   await saveLog({ type: "status", message: "Sending outreach emails..." });
       //   

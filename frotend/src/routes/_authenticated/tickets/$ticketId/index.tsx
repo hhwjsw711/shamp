@@ -164,6 +164,14 @@ function TicketDetailsPage() {
       : 'skip'
   )
 
+  // Fetch discovered vendors from firecrawl results
+  const firecrawlResults = useQuery(
+    convexApi.functions.firecrawlResults.queries.getByTicketId,
+    user?.id && isAuthenticated && ticketId
+      ? { ticketId: ticketId as any, userId: user.id as any }
+      : 'skip'
+  )
+
   // Fetch vendors for each quote
   const vendorQuotes = vendorQuotesResult?.quotes || []
   const vendorIds = [...new Set(vendorQuotes.map(q => q.vendorId))]
@@ -183,6 +191,9 @@ function TicketDetailsPage() {
       vendorsMap.set(vendor._id, vendor)
     })
   }
+
+  // Get discovered vendors from firecrawl results (vendors found but not yet contacted)
+  const discoveredVendors = firecrawlResults?.results || []
 
   // Fetch conversation for this ticket
   const conversationResult = useQuery(
@@ -370,10 +381,10 @@ function TicketDetailsPage() {
             {isProcessing ? (
               <>
                 <Spinner className="size-4" />
-                Processing...
+                Finding Vendors...
               </>
             ) : (
-              'Process Ticket'
+              'Find Vendors'
             )}
           </Button>
         )}
@@ -707,7 +718,7 @@ function TicketDetailsPage() {
         <section className="flex items-center gap-2">
           <Users className="size-4" />
           <h2 className="font-semibold text-sm">Vendors</h2>
-          <Badge variant="secondary">{vendorQuotes.length}</Badge>
+          <Badge variant="secondary">{vendorQuotes.length + discoveredVendors.length}</Badge>
         </section>
         <Button
           variant="ghost"
@@ -720,26 +731,27 @@ function TicketDetailsPage() {
       </header>
 
       {/* Scrollable Content */}
-      <section className="flex-1 overflow-y-auto p-4 min-h-0">
-        {vendorQuotes.length === 0 ? (
+      <section className="flex-1 overflow-y-auto p-2 min-h-0">
+        {vendorQuotes.length === 0 && discoveredVendors.length === 0 ? (
           <Empty>
             <EmptyHeader>
               <EmptyMedia variant="icon">
                 <Users />
               </EmptyMedia>
               <EmptyTitle>No vendors</EmptyTitle>
-              <EmptyDescription>No vendors have been contacted for this ticket yet.</EmptyDescription>
+              <EmptyDescription>No vendors have been discovered for this ticket yet.</EmptyDescription>
             </EmptyHeader>
           </Empty>
         ) : (
-          <section className="space-y-4">
+          <section className="space-y-2">
+            {/* Display vendors with quotes first */}
             {vendorQuotes.map((quote) => {
               const vendor = vendorsMap.get(quote.vendorId)
               const vendorName = vendor?.businessName || 'Unknown Vendor'
               const priceInDollars = quote.price / 100 // Convert from cents to dollars
               
               return (
-                <section key={quote._id} className="p-4 border rounded-lg">
+                <section key={quote._id} className="p-4 rounded-2xl bg-zinc-100">
                   <section className="space-y-2">
                     <section className="flex items-center justify-between">
                       <h4 className="font-medium text-sm">{vendorName}</h4>
@@ -765,6 +777,51 @@ function TicketDetailsPage() {
                     <p className="text-xs text-muted-foreground">
                       {formatDate(quote.createdAt)}
                     </p>
+                  </section>
+                </section>
+              )
+            })}
+            
+            {/* Display discovered vendors (not yet contacted) */}
+            {discoveredVendors.map((vendor, index) => {
+              // Skip vendors that already have quotes
+              const hasQuote = vendorQuotes.some(q => q.vendorId === vendor.vendorId)
+              if (hasQuote) return null
+              
+              return (
+                <section key={`discovered-${index}`} className="p-4 rounded-2xl bg-zinc-100">
+                  <section className="space-y-2">
+                    <section className="flex items-center justify-between">
+                      <h4 className="font-medium text-sm">{vendor.businessName}</h4>
+                      <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
+                        Discovered
+                      </Badge>
+                    </section>
+                    {vendor.specialty && (
+                      <p className="text-xs text-muted-foreground">
+                        Specialty: {vendor.specialty}
+                      </p>
+                    )}
+                    {vendor.address && (
+                      <p className="text-xs text-muted-foreground">
+                        📍 {vendor.address}
+                      </p>
+                    )}
+                    {vendor.rating && (
+                      <p className="text-xs text-muted-foreground">
+                        ⭐ Rating: {vendor.rating}/5
+                      </p>
+                    )}
+                    {vendor.email && (
+                      <p className="text-xs text-muted-foreground">
+                        ✉️ {vendor.email}
+                      </p>
+                    )}
+                    {vendor.phone && (
+                      <p className="text-xs text-muted-foreground">
+                        📞 {vendor.phone}
+                      </p>
+                    )}
                   </section>
                 </section>
               )
