@@ -135,6 +135,30 @@ function TicketDetailsPage() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [isMarkingAsReviewed, setIsMarkingAsReviewed] = useState(false)
   const [isNavigatingAway, setIsNavigatingAway] = useState(false)
+  
+  // Track which completion logs we've shown toast for (persists across navigation)
+  const getShownCompletionLogs = (): Set<string> => {
+    try {
+      const stored = sessionStorage.getItem('vendorDiscoveryCompletionLogs')
+      return stored ? new Set(JSON.parse(stored)) : new Set()
+    } catch {
+      return new Set()
+    }
+  }
+  
+  const markCompletionLogAsShown = (logId: string) => {
+    try {
+      const shown = getShownCompletionLogs()
+      shown.add(logId)
+      sessionStorage.setItem('vendorDiscoveryCompletionLogs', JSON.stringify([...shown]))
+    } catch {
+      // Ignore storage errors
+    }
+  }
+  
+  const hasShownToastForCompletionLog = (logId: string): boolean => {
+    return getShownCompletionLogs().has(logId)
+  }
 
   // Mutations and Actions
   const markAsReviewed = useMutation(convexApi.functions.tickets.mutations.markAsReviewed)
@@ -243,13 +267,17 @@ function TicketDetailsPage() {
   // Check if processing is complete based on logs and ticket status
   useEffect(() => {
     if (discoveryLogsResult?.logs) {
-      const hasComplete = discoveryLogsResult.logs.some(log => log.type === 'complete')
+      const completeLog = discoveryLogsResult.logs.find(log => log.type === 'complete')
       const hasError = discoveryLogsResult.logs.some(log => log.type === 'error')
       
       // If we have complete or error logs, processing is done
-      if (hasComplete || hasError) {
+      if (completeLog || hasError) {
         setIsProcessing(false)
-        if (hasComplete) {
+        
+        // Only show toast if we haven't shown it for this completion log yet
+        // Check sessionStorage to persist across navigation
+        if (completeLog && !hasShownToastForCompletionLog(completeLog._id)) {
+          markCompletionLogAsShown(completeLog._id)
           toast.success('Vendor Discovery Complete', {
             description: 'Vendors have been discovered and saved.',
             duration: 4000,
@@ -598,7 +626,7 @@ function TicketDetailsPage() {
       {/* Scrollable Content */}
       <section 
         data-discovery-log
-        className="flex-1 overflow-y-auto p-4 min-h-0"
+        className="flex-1 overflow-y-auto p-2 min-h-0"
       >
         {!discoveryLogsResult?.logs || discoveryLogsResult.logs.length === 0 ? (
           <Empty>

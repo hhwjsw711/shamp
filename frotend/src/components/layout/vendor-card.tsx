@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { ExternalLink, Mail, MapPin, Phone, Star } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
 interface VendorCardProps {
   vendor: {
@@ -33,8 +35,9 @@ function formatDate(timestamp: number) {
   })
 }
 
-export function VendorCard({ vendor, quote, variant = 'discovered', className = '' }: VendorCardProps) {
+export function VendorCard({ vendor, quote, className = '' }: VendorCardProps) {
   const priceInDollars = quote ? quote.price / 100 : undefined
+  const [showMoreServices, setShowMoreServices] = useState(false)
 
   return (
     <section className={`p-4 rounded-2xl bg-zinc-100 ${className}`}>
@@ -139,9 +142,36 @@ export function VendorCard({ vendor, quote, variant = 'discovered', className = 
               </Badge>
             ))}
             {vendor.services.length > 3 && (
-              <Badge variant="outline" className="text-xs bg-zinc-200/70">
-                +{vendor.services.length - 3} more
-              </Badge>
+              <Popover open={showMoreServices} onOpenChange={setShowMoreServices}>
+                <PopoverTrigger asChild>
+                  <Badge 
+                    variant="outline" 
+                    className="text-xs bg-zinc-200/70 cursor-pointer hover:bg-zinc-300/70 transition-colors"
+                  >
+                    +{vendor.services.length - 3} more
+                  </Badge>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-0" align="start">
+                  <section className="p-3">
+                    <h5 className="text-xs font-semibold mb-2 text-muted-foreground uppercase tracking-wide">
+                      All Services
+                    </h5>
+                    <section className="max-h-48 overflow-y-auto">
+                      <section className="flex flex-col gap-1.5">
+                        {vendor.services.map((service, index) => (
+                          <Badge 
+                            key={index} 
+                            variant="outline" 
+                            className="text-xs bg-zinc-200/70 w-fit"
+                          >
+                            {service}
+                          </Badge>
+                        ))}
+                      </section>
+                    </section>
+                  </section>
+                </PopoverContent>
+              </Popover>
             )}
           </section>
         )}
