@@ -50,19 +50,43 @@ export const discoverVendors = action({
     // Set up timeout handler to catch action timeouts (fires 10 seconds before Convex timeout)
     const timeoutId = setTimeout(async () => {
       if (!isComplete) {
-        // Action is about to timeout - save error log
+        // Action is about to timeout - check if we found any vendors
         try {
-          const timeoutSequenceNumber = Date.now(); // Use timestamp as sequence number for timeout log
-          await ctx.runMutation(
-            (internal as any).functions.discoveryLogs.mutations.addEntry,
-            {
-              ticketId: args.ticketId,
-              type: "error",
-              error: "Vendor discovery timed out after 600 seconds. The process may have completed partially.",
-              timestamp: Date.now(),
-              sequenceNumber: timeoutSequenceNumber,
-            }
+          // Check if any vendors were discovered before timeout
+          const existingResults = await ctx.runQuery(
+            (internal as any).functions.firecrawlResults.queries.getByTicketIdInternal,
+            { ticketId: args.ticketId }
           );
+          
+          const vendorsFound = existingResults?.results?.length || 0;
+          
+          // If vendors were found, treat timeout as successful completion
+          if (vendorsFound > 0) {
+            const timeoutSequenceNumber = Date.now();
+            await ctx.runMutation(
+              (internal as any).functions.discoveryLogs.mutations.addEntry,
+              {
+                ticketId: args.ticketId,
+                type: "complete",
+                message: `Vendor discovery completed with ${vendorsFound} vendor(s) found. Process timed out but results were saved.`,
+                timestamp: Date.now(),
+                sequenceNumber: timeoutSequenceNumber,
+              }
+            );
+          } else {
+            // No vendors found - this is an actual error
+            const timeoutSequenceNumber = Date.now();
+            await ctx.runMutation(
+              (internal as any).functions.discoveryLogs.mutations.addEntry,
+              {
+                ticketId: args.ticketId,
+                type: "error",
+                error: "Vendor discovery timed out after 600 seconds. No vendors were discovered.",
+                timestamp: Date.now(),
+                sequenceNumber: timeoutSequenceNumber,
+              }
+            );
+          }
         } catch (logError) {
           console.error("Error saving timeout log:", logError);
         }
@@ -465,20 +489,75 @@ export const discoverVendors = action({
       const isTimeout = error instanceof Error && 
         (error.message.includes("timeout") || error.message.includes("timed out") || error.message.includes("600"));
       
-      await saveLog({
-        type: "error",
-        error: isTimeout 
-          ? "Vendor discovery timed out after 600 seconds. The process may have completed partially."
-          : (error instanceof Error ? error.message : "Unknown error occurred"),
-      });
-      
-      isComplete = true;
-      clearTimeout(timeoutId);
-      
-      return { 
-        success: false, 
-        message: error instanceof Error ? error.message : "Unknown error occurred" 
-      };
+      // If timeout, check if we found any vendors before the timeout
+      if (isTimeout) {
+        try {
+          const existingResults = await ctx.runQuery(
+            (internal as any).functions.firecrawlResults.queries.getByTicketIdInternal,
+            { ticketId: args.ticketId }
+          );
+          
+          const vendorsFound = existingResults?.results?.length || 0;
+          
+          // If vendors were found, treat timeout as successful completion
+          if (vendorsFound > 0) {
+            await saveLog({
+              type: "complete",
+              message: `Vendor discovery completed with ${vendorsFound} vendor(s) found. Process timed out but results were saved.`,
+            });
+            
+            isComplete = true;
+            clearTimeout(timeoutId);
+            
+            return { 
+              success: true, 
+              message: `Found ${vendorsFound} vendor(s) through web search. Process timed out but results were saved.`
+            };
+          } else {
+            // No vendors found - this is an actual error
+            await saveLog({
+              type: "error",
+              error: "Vendor discovery timed out after 600 seconds. No vendors were discovered.",
+            });
+            
+            isComplete = true;
+            clearTimeout(timeoutId);
+            
+            return { 
+              success: false, 
+              message: "Vendor discovery timed out. No vendors were discovered."
+            };
+          }
+        } catch (queryError) {
+          // If we can't check results, assume error
+          await saveLog({
+            type: "error",
+            error: "Vendor discovery timed out after 600 seconds. Unable to verify if vendors were discovered.",
+          });
+          
+          isComplete = true;
+          clearTimeout(timeoutId);
+          
+          return { 
+            success: false, 
+            message: "Vendor discovery timed out. Unable to verify results."
+          };
+        }
+      } else {
+        // Non-timeout error - handle normally
+        await saveLog({
+          type: "error",
+          error: error instanceof Error ? error.message : "Unknown error occurred",
+        });
+        
+        isComplete = true;
+        clearTimeout(timeoutId);
+        
+        return { 
+          success: false, 
+          message: error instanceof Error ? error.message : "Unknown error occurred"
+        };
+      }
     }
   },
 });
