@@ -39,6 +39,7 @@ type Ticket = {
   photoIds: Array<string>
   photoUrls?: Array<string | null>
   createdAt: number
+  updatedAt?: number
 }
 
 // Only show these statuses in the UI (analyzing is transient, not shown)
@@ -194,17 +195,22 @@ function TicketsPage() {
         if (aOrder !== bOrder) {
           return aOrder - bOrder
         }
-        // If same urgency, sort by date descending (latest first)
+        // If same urgency, sort by updatedAt descending (most recent activity first), fallback to createdAt
         // Use _id as tiebreaker for stable sorting when timestamps are equal
-        const dateDiff = b.createdAt - a.createdAt
+        const aTime = a.updatedAt ?? a.createdAt
+        const bTime = b.updatedAt ?? b.createdAt
+        const dateDiff = bTime - aTime
         if (dateDiff !== 0) return dateDiff
         return a._id.localeCompare(b._id)
       })
     } else {
-      // Sort by date descending (most recent first) - DEFAULT
+      // Sort by updatedAt descending (most recent activity first), fallback to createdAt - DEFAULT
       // Use _id as tiebreaker for stable sorting when timestamps are equal
       statusTickets.sort((a, b) => {
-        const dateDiff = b.createdAt - a.createdAt
+        // Use updatedAt if available, otherwise fallback to createdAt
+        const aTime = a.updatedAt ?? a.createdAt
+        const bTime = b.updatedAt ?? b.createdAt
+        const dateDiff = bTime - aTime
         if (dateDiff !== 0) return dateDiff
         // If timestamps are equal, sort by _id for consistent ordering
         return a._id.localeCompare(b._id)

@@ -69,6 +69,7 @@ export const createInternal = internalMutation({
       status: args.status || "analyzing",
       vendorStatus: "not_started", // Initialize vendor status
       createdAt: Date.now(),
+      updatedAt: Date.now(), // Set updatedAt on creation
       submittedViaPin: args.submittedViaPin || false,
       pinOwnerId: args.pinOwnerId,
       submittedByEmail: args.submittedByEmail,
@@ -181,6 +182,9 @@ export const updateInternal = internalMutation({
       return; // No updates to make
     }
 
+    // Always update updatedAt timestamp when any field changes
+    fieldsToUpdate.updatedAt = Date.now();
+
     await ctx.db.patch(ticketId, fieldsToUpdate);
   },
 });
@@ -236,6 +240,7 @@ export const updateStatusInternal = internalMutation({
 
     await ctx.db.patch(args.ticketId, {
       status: args.status,
+      updatedAt: Date.now(), // Update timestamp when status changes
     });
   },
 });

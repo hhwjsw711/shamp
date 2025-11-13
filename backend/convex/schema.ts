@@ -86,6 +86,7 @@ export default defineSchema({
     location: v.optional(v.string()),
     photoIds: v.array(v.id("_storage")), // Required array of photo IDs (max 5) - initial/before photos
     createdAt: v.number(),
+    updatedAt: v.optional(v.number()), // Timestamp when ticket was last updated (status change or field update)
     status: v.union(
       v.literal("analyzing"),
       v.literal("analyzed"),

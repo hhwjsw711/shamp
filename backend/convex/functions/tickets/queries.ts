@@ -89,10 +89,13 @@ export const list = query({
       .withIndex("by_createdBy", (q) => q.eq("createdBy", args.userId))
       .collect();
     
-    // Sort by createdAt descending (most recent first)
+    // Sort by updatedAt descending (most recent activity first), fallback to createdAt
     // Use _id as tiebreaker for stable sorting when timestamps are equal
     tickets.sort((a, b) => {
-      const dateDiff = b.createdAt - a.createdAt;
+      // Use updatedAt if available, otherwise fallback to createdAt
+      const aTime = a.updatedAt ?? a.createdAt;
+      const bTime = b.updatedAt ?? b.createdAt;
+      const dateDiff = bTime - aTime;
       if (dateDiff !== 0) return dateDiff;
       // If timestamps are equal, sort by _id for consistent ordering
       return a._id.localeCompare(b._id);
@@ -148,10 +151,13 @@ export const listByStatus = query({
       .filter((q) => q.eq(q.field("status"), args.status))
       .collect();
     
-    // Sort by createdAt descending (most recent first)
+    // Sort by updatedAt descending (most recent activity first), fallback to createdAt
     // Use _id as tiebreaker for stable sorting when timestamps are equal
     tickets.sort((a, b) => {
-      const dateDiff = b.createdAt - a.createdAt;
+      // Use updatedAt if available, otherwise fallback to createdAt
+      const aTime = a.updatedAt ?? a.createdAt;
+      const bTime = b.updatedAt ?? b.createdAt;
+      const dateDiff = bTime - aTime;
       if (dateDiff !== 0) return dateDiff;
       // If timestamps are equal, sort by _id for consistent ordering
       return a._id.localeCompare(b._id);
@@ -242,12 +248,18 @@ export const searchByStatus = query({
         if (aOrder !== bOrder) {
           return aOrder - bOrder;
         }
-        // If same urgency, sort by date descending
-        return b.createdAt - a.createdAt;
+        // If same urgency, sort by updatedAt descending (most recent activity first), fallback to createdAt
+        const aTime = a.updatedAt ?? a.createdAt;
+        const bTime = b.updatedAt ?? b.createdAt;
+        return bTime - aTime;
       });
     } else {
-      // Sort by date descending (most recent first)
-      tickets.sort((a, b) => b.createdAt - a.createdAt);
+      // Sort by updatedAt descending (most recent activity first), fallback to createdAt
+      tickets.sort((a, b) => {
+        const aTime = a.updatedAt ?? a.createdAt;
+        const bTime = b.updatedAt ?? b.createdAt;
+        return bTime - aTime;
+      });
     }
     
     // Get photo URLs for each ticket
@@ -316,10 +328,13 @@ export const listByCreatorInternal = internalQuery({
       .withIndex("by_createdBy", (q) => q.eq("createdBy", args.userId))
       .collect();
     
-    // Sort by createdAt descending (most recent first)
+    // Sort by updatedAt descending (most recent activity first), fallback to createdAt
     // Use _id as tiebreaker for stable sorting when timestamps are equal
     tickets.sort((a, b) => {
-      const dateDiff = b.createdAt - a.createdAt;
+      // Use updatedAt if available, otherwise fallback to createdAt
+      const aTime = a.updatedAt ?? a.createdAt;
+      const bTime = b.updatedAt ?? b.createdAt;
+      const dateDiff = bTime - aTime;
       if (dateDiff !== 0) return dateDiff;
       // If timestamps are equal, sort by _id for consistent ordering
       return a._id.localeCompare(b._id);
@@ -351,10 +366,13 @@ export const listByStatusInternal = internalQuery({
       .withIndex("by_status", (q) => q.eq("status", args.status))
       .collect();
     
-    // Sort by createdAt descending (most recent first)
+    // Sort by updatedAt descending (most recent activity first), fallback to createdAt
     // Use _id as tiebreaker for stable sorting when timestamps are equal
     tickets.sort((a, b) => {
-      const dateDiff = b.createdAt - a.createdAt;
+      // Use updatedAt if available, otherwise fallback to createdAt
+      const aTime = a.updatedAt ?? a.createdAt;
+      const bTime = b.updatedAt ?? b.createdAt;
+      const dateDiff = bTime - aTime;
       if (dateDiff !== 0) return dateDiff;
       // If timestamps are equal, sort by _id for consistent ordering
       return a._id.localeCompare(b._id);
@@ -375,10 +393,13 @@ export const listByVendorInternal = internalQuery({
       .withIndex("by_selectedVendorId", (q) => q.eq("selectedVendorId", args.vendorId))
       .collect();
     
-    // Sort by createdAt descending (most recent first)
+    // Sort by updatedAt descending (most recent activity first), fallback to createdAt
     // Use _id as tiebreaker for stable sorting when timestamps are equal
     tickets.sort((a, b) => {
-      const dateDiff = b.createdAt - a.createdAt;
+      // Use updatedAt if available, otherwise fallback to createdAt
+      const aTime = a.updatedAt ?? a.createdAt;
+      const bTime = b.updatedAt ?? b.createdAt;
+      const dateDiff = bTime - aTime;
       if (dateDiff !== 0) return dateDiff;
       // If timestamps are equal, sort by _id for consistent ordering
       return a._id.localeCompare(b._id);
