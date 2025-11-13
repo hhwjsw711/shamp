@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as functions_agents_actions_extractVendorUrl from "../functions/agents/actions/extractVendorUrl.js";
 import type * as functions_agents_emailDraftAgent from "../functions/agents/emailDraftAgent.js";
 import type * as functions_agents_ticketAnalysisAgent from "../functions/agents/ticketAnalysisAgent.js";
 import type * as functions_agents_tools_analyzeImage from "../functions/agents/tools/analyzeImage.js";
@@ -136,6 +137,7 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  "functions/agents/actions/extractVendorUrl": typeof functions_agents_actions_extractVendorUrl;
   "functions/agents/emailDraftAgent": typeof functions_agents_emailDraftAgent;
   "functions/agents/ticketAnalysisAgent": typeof functions_agents_ticketAnalysisAgent;
   "functions/agents/tools/analyzeImage": typeof functions_agents_tools_analyzeImage;

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Calendar, History, MapPin, MessageSquare, Pencil, Tag, Trash2, Users, X } from 'lucide-react'
 import { toast } from 'sonner'
+import { VendorCard } from '@/components/layout/vendor-card'
 import { Spinner } from '@/components/ui/spinner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -747,38 +748,24 @@ function TicketDetailsPage() {
             {/* Display vendors with quotes first */}
             {vendorQuotes.map((quote) => {
               const vendor = vendorsMap.get(quote.vendorId)
-              const vendorName = vendor?.businessName || 'Unknown Vendor'
-              const priceInDollars = quote.price / 100 // Convert from cents to dollars
+              if (!vendor) return null
               
               return (
-                <section key={quote._id} className="p-4 rounded-2xl bg-zinc-100">
-                  <section className="space-y-2">
-                    <section className="flex items-center justify-between">
-                      <h4 className="font-medium text-sm">{vendorName}</h4>
-                      <Badge variant="outline" className="text-xs">
-                        {quote.status}
-                      </Badge>
-                    </section>
-                    <section className="flex items-center gap-2">
-                      <p className="text-sm font-semibold">
-                        {quote.currency} ${priceInDollars.toFixed(2)}
-                      </p>
-                      {quote.estimatedDeliveryTime && (
-                        <span className="text-xs text-muted-foreground">
-                          • {quote.estimatedDeliveryTime}h
-                        </span>
-                      )}
-                    </section>
-                    {quote.responseText && (
-                      <p className="text-xs text-muted-foreground line-clamp-2">
-                        {quote.responseText}
-                      </p>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      {formatDate(quote.createdAt)}
-                    </p>
-                  </section>
-                </section>
+                <VendorCard
+                  key={quote._id}
+                  vendor={{
+                    businessName: vendor.businessName || 'Unknown Vendor',
+                    email: vendor.email,
+                    phone: vendor.phone,
+                    address: vendor.address,
+                    rating: vendor.rating,
+                    url: vendor.url,
+                    specialty: vendor.specialty,
+                    services: vendor.services,
+                  }}
+                  quote={quote}
+                  variant="quote"
+                />
               )
             })}
             
@@ -789,41 +776,20 @@ function TicketDetailsPage() {
               if (hasQuote) return null
               
               return (
-                <section key={`discovered-${index}`} className="p-4 rounded-2xl bg-zinc-100">
-                  <section className="space-y-2">
-                    <section className="flex items-center justify-between">
-                      <h4 className="font-medium text-sm">{vendor.businessName}</h4>
-                      <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
-                        Discovered
-                      </Badge>
-                    </section>
-                    {vendor.specialty && (
-                      <p className="text-xs text-muted-foreground">
-                        Specialty: {vendor.specialty}
-                      </p>
-                    )}
-                    {vendor.address && (
-                      <p className="text-xs text-muted-foreground">
-                        📍 {vendor.address}
-                      </p>
-                    )}
-                    {vendor.rating && (
-                      <p className="text-xs text-muted-foreground">
-                        ⭐ Rating: {vendor.rating}/5
-                      </p>
-                    )}
-                    {vendor.email && (
-                      <p className="text-xs text-muted-foreground">
-                        ✉️ {vendor.email}
-                      </p>
-                    )}
-                    {vendor.phone && (
-                      <p className="text-xs text-muted-foreground">
-                        📞 {vendor.phone}
-                      </p>
-                    )}
-                  </section>
-                </section>
+                <VendorCard
+                  key={`discovered-${index}`}
+                  vendor={{
+                    businessName: vendor.businessName,
+                    email: vendor.email,
+                    phone: vendor.phone,
+                    address: vendor.address,
+                    rating: vendor.rating,
+                    url: vendor.url,
+                    specialty: vendor.specialty,
+                    services: vendor.services,
+                  }}
+                  variant="discovered"
+                />
               )
             })}
           </section>

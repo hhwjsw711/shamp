@@ -260,36 +260,37 @@ export const discoverVendors = action({
 
       // Track firecrawlResultsId for linking ticket
       let firecrawlResultsId: Id<"firecrawlResults"> | undefined;
+      let urlSequenceNumber = 0;
       
-      // Create searchVendors tool with callback to save vendors incrementally
+      // Create searchVendors tool with callback to schedule extraction jobs
       const searchVendors = createSearchVendorsTool({
-        onVendorExtracted: async (vendor: any) => {
-          // Save vendor incrementally to database
-          try {
-            const resultId = await ctx.runMutation(
-              (internal as any).functions.firecrawlResults.mutations.appendVendor,
-              { ticketId: args.ticketId, vendor }
+        onUrlsFound: async (urls: Array<string>) => {
+          // Schedule extraction jobs for each URL (background processing to avoid timeout)
+          await saveLog({ 
+            type: "status", 
+            message: `Scheduling ${urls.length} extraction job(s) to run in background...` 
+          });
+          
+          for (let i = 0; i < urls.length; i++) {
+            const url = urls[i];
+            urlSequenceNumber++;
+            
+            // Schedule extraction job with small delay to stagger requests
+            // Each job runs independently and saves vendors incrementally
+            await ctx.scheduler.runAfter(
+              i * 1000, // Stagger by 1 second to avoid overwhelming Firecrawl API
+              (api as any).functions.agents.actions.extractVendorUrl.extractVendorUrl,
+              {
+                ticketId: args.ticketId,
+                url,
+                sequenceNumber: urlSequenceNumber,
+              }
             );
             
-            // Link ticket to firecrawlResults on first vendor save
-            if (!firecrawlResultsId) {
-              firecrawlResultsId = resultId;
-              await ctx.runMutation(
-                (internal as any).functions.firecrawlResults.mutations.linkToTicket,
-                { ticketId: args.ticketId, firecrawlResultsId: resultId }
-              );
-            }
-            
-            // Save log for this vendor
-            await saveLog({
-              type: "vendor_found",
-              vendor,
+            await saveLog({ 
+              type: "status", 
+              message: `Scheduled extraction job ${i + 1}/${urls.length} for ${url}` 
             });
-            
-            allVendors.push(vendor);
-          } catch (saveError) {
-            console.error(`Error saving vendor ${vendor.businessName} incrementally:`, saveError);
-            // Continue extraction even if save fails
           }
         },
       });
@@ -358,40 +359,19 @@ export const discoverVendors = action({
               toolResult: result,
             });
 
-            // Extract vendors from searchVendors tool results
-            // Note: Vendors are already saved incrementally via the callback,
-            // but we still need to process the final result for consistency
+            // Extract URLs from searchVendors tool results
+            // Extraction jobs are scheduled via callback, so we just log the URLs found
             if (
               toolName === "searchVendors" &&
               result &&
               typeof result === 'object' &&
-              'vendors' in result &&
-              Array.isArray((result as any).vendors)
+              'urls' in result &&
+              Array.isArray((result as any).urls)
             ) {
-              const vendors = (result as any).vendors.map((vendor: any) => ({
-                businessName: vendor.businessName || "Unknown",
-                email: vendor.email,
-                phone: vendor.phone,
-                specialty: vendor.specialty || "General",
-                address: vendor.address || "",
-                rating: vendor.rating,
-                url: vendor.url,
-                description: vendor.description,
-                position: vendor.position,
-                services: vendor.services,
-              }));
-
-              // Vendors are already saved incrementally via callback during extraction
-              // Just ensure all vendors are in allVendors array (some may have been added via callback)
-              for (const vendor of vendors) {
-                if (!allVendors.find(v => v.url === vendor.url && v.businessName === vendor.businessName)) {
-                  allVendors.push(vendor);
-                }
-              }
-
+              const urls = (result as any).urls;
               await saveLog({ 
                 type: "status", 
-                message: `Found ${vendors.length} vendor(s). All vendors saved to database.` 
+                message: `Found ${urls.length} vendor URL(s). Extraction jobs scheduled and running in background.` 
               });
             }
           } else if (step.type === 'text-delta') {
@@ -448,7 +428,7 @@ export const discoverVendors = action({
 
       await saveLog({
         type: "complete",
-        message: `Found ${allVendors.length} vendor(s) through web search.`,
+        message: `Vendor discovery search complete. Extraction jobs are running in background and vendors will appear as they are discovered.`,
       });
 
       isComplete = true;
@@ -456,7 +436,7 @@ export const discoverVendors = action({
       
       return { 
         success: true, 
-        message: `Found ${allVendors.length} vendor(s) through web search` 
+        message: `Vendor discovery search complete. Extraction jobs scheduled.` 
       };
     } catch (error) {
       console.error("Vendor discovery error:", error);
