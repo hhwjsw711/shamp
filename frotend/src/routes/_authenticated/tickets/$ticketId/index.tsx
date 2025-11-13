@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useMutation, useQuery } from 'convex/react'
+import { useAction, useMutation, useQuery } from 'convex/react'
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Calendar, History, MapPin, MessageSquare, Pencil, Tag, Trash2, TriangleAlert, Users, X } from 'lucide-react'
@@ -131,9 +131,10 @@ function TicketDetailsPage() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [isMarkingAsReviewed, setIsMarkingAsReviewed] = useState(false)
 
-  // Mutations
+  // Mutations and Actions
   const markAsReviewed = useMutation(convexApi.functions.tickets.mutations.markAsReviewed)
   const deleteTicket = useMutation(convexApi.functions.tickets.mutations.deleteTicket)
+  const discoverVendors = useAction(convexApi.functions.agents.vendorDiscoveryAction.discoverVendors)
 
   // Use Convex query for real-time ticket data
   const ticketResult = useQuery(
@@ -255,7 +256,7 @@ function TicketDetailsPage() {
     const canProcessTicket = ticket.status === 'reviewed'
 
     const ctas = (
-      <section>
+      <section className="flex items-center gap-2">
         {canMarkAsReviewed && (
           <Button
             variant="default-glass"
@@ -305,26 +306,15 @@ function TicketDetailsPage() {
               setShowDiscoveryLog(true)
               
               try {
-                // Get Convex URL from environment (convert .convex.cloud to .convex.site for HTTP routes)
-                const convexCloudUrl = import.meta.env.VITE_CONVEX_URL || 'https://good-gerbil-245.convex.cloud'
-                const convexUrl = convexCloudUrl.replace('.convex.cloud', '.convex.site')
-                const response = await fetch(`${convexUrl}/api/agents/discover-vendors/stream`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  credentials: 'include',
-                  body: JSON.stringify({ ticketId }),
+                // Call Convex action - it runs independently and saves logs to database
+                // The Convex query will automatically update when logs are saved
+                await discoverVendors({
+                  ticketId: ticketId as any,
+                  userId: user.id as any,
                 })
-
-                if (!response.ok) {
-                  throw new Error('Failed to start vendor discovery')
-                }
-
-                // Don't read the stream - just trigger it
-                // The Convex query will automatically update when logs are saved to the database
-                // Close the response to allow the backend to continue processing
-                response.body?.cancel()
+                
+                // Note: Processing completion is detected via the useEffect that watches discoveryLogsResult
+                // The action runs independently, so we don't wait for it to complete here
               } catch (error) {
                 setIsProcessing(false)
                 toast.error('Failed to Process Ticket', {
@@ -373,7 +363,7 @@ function TicketDetailsPage() {
     return () => {
       setCTAs(null)
     }
-  }, [ticketResult, user, ticketId, markAsReviewed, navigate, setCTAs, isMarkingAsReviewed, isProcessing])
+  }, [ticketResult, user, ticketId, markAsReviewed, navigate, setCTAs, isMarkingAsReviewed, isProcessing, discoverVendors])
 
   const handleDeleteTicket = async () => {
     if (!ticket || !user?.id) return

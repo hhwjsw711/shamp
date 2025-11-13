@@ -22,6 +22,7 @@ import type * as functions_agents_tools_searchVendors from "../functions/agents/
 import type * as functions_agents_tools_updateTicket from "../functions/agents/tools/updateTicket.js";
 import type * as functions_agents_userChatAgent from "../functions/agents/userChatAgent.js";
 import type * as functions_agents_vendorConversationAgent from "../functions/agents/vendorConversationAgent.js";
+import type * as functions_agents_vendorDiscoveryAction from "../functions/agents/vendorDiscoveryAction.js";
 import type * as functions_agents_vendorDiscoveryAgent from "../functions/agents/vendorDiscoveryAgent.js";
 import type * as functions_agents_vendorDiscoveryAgentStream from "../functions/agents/vendorDiscoveryAgentStream.js";
 import type * as functions_agents_vendorRankingAgent from "../functions/agents/vendorRankingAgent.js";
@@ -149,6 +150,7 @@ declare const fullApi: ApiFromModules<{
   "functions/agents/tools/updateTicket": typeof functions_agents_tools_updateTicket;
   "functions/agents/userChatAgent": typeof functions_agents_userChatAgent;
   "functions/agents/vendorConversationAgent": typeof functions_agents_vendorConversationAgent;
+  "functions/agents/vendorDiscoveryAction": typeof functions_agents_vendorDiscoveryAction;
   "functions/agents/vendorDiscoveryAgent": typeof functions_agents_vendorDiscoveryAgent;
   "functions/agents/vendorDiscoveryAgentStream": typeof functions_agents_vendorDiscoveryAgentStream;
   "functions/agents/vendorRankingAgent": typeof functions_agents_vendorRankingAgent;

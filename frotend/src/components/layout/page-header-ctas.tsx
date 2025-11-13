@@ -86,6 +86,7 @@ function processButton(child: React.ReactNode, index: number): React.ReactNode {
     }
     
     // Create new ghost button with text instead of cloning
+    // Only for mobile view - add labels to icon buttons
     if (buttonText && iconComponent) {
       const { children, size, variant, className, key, ...restProps } = originalProps
       
@@ -94,11 +95,11 @@ function processButton(child: React.ReactNode, index: number): React.ReactNode {
           key={key || `mobile-cta-${index}`}
           variant="ghost"
           size="default"
-          className={`w-full justify-start ${className || ''}`}
+          className={`w-full justify-start gap-2 ${className || ''}`}
           {...restProps}
         >
           {iconComponent}
-          {buttonText}
+          <span>{buttonText}</span>
         </Button>
       )
     }
@@ -138,11 +139,19 @@ export function PageHeaderCTAsContainer() {
           <DropdownMenuContent align="end" className="w-56">
             <div className="flex flex-col gap-1.5 p-1.5">
               {React.Children.map(React.Children.toArray(ctas), (child, index) => {
-                // Handle React fragments
+                // Handle React fragments (section wrapper)
                 if (React.isValidElement(child) && child.type === React.Fragment) {
                   const fragmentProps = child.props as { children?: React.ReactNode }
                   return React.Children.map(React.Children.toArray(fragmentProps.children || []), (fragmentChild, fragIndex) => {
                     return processButton(fragmentChild, fragIndex)
+                  })
+                }
+                
+                // Handle section wrapper
+                if (React.isValidElement(child) && typeof child.type === 'string' && child.type === 'section') {
+                  const sectionProps = child.props as { children?: React.ReactNode }
+                  return React.Children.map(React.Children.toArray(sectionProps.children || []), (sectionChild, sectionIndex) => {
+                    return processButton(sectionChild, sectionIndex)
                   })
                 }
                 
