@@ -212,6 +212,8 @@ export const discoverVendorsStream = action({
         issueType: ticket.issueType,
         tags: ticket.predictedTags,
         location,
+        description: ticket.description,
+        problemDescription: ticket.problemDescription,
       });
 
       yield { type: "status", message: "Searching the web for vendors..." };

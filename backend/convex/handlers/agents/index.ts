@@ -436,6 +436,8 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
             issueType: ticket.issueType,
             tags: ticket.predictedTags,
             location,
+            description: ticket.description,
+            problemDescription: ticket.problemDescription,
           });
 
           await sendEvent({ type: "status", message: "Searching the web for vendors..." });

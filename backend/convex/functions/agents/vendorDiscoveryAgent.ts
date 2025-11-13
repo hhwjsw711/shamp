@@ -182,6 +182,8 @@ export const discoverVendors = action({
       issueType: ticket.issueType,
       tags: ticket.predictedTags,
       location,
+      description: ticket.description,
+      problemDescription: ticket.problemDescription,
     });
 
     const result = await agent.generate({ prompt });

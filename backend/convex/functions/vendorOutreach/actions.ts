@@ -179,7 +179,9 @@ ${ticket.description || "Please see attached images for details."}</p>
 <li>When you can come to fix this issue (specific date/time or date range)</li>
 <li>How many hours the fix will take once you arrive</li>
 </ul>
-<p>Please respond within 48-72 hours.</p>
+<p><strong>About Shamp:</strong><br>
+Shamp is a hospitality maintenance platform that connects service providers like yourself with maintenance needs for hotels and restaurants. We help hospitality businesses streamline their maintenance operations by facilitating connections with qualified vendors and collecting competitive quotes to ensure our clients receive the best service options.</p>
+<p>We are collecting quotes from multiple vendors to provide the best options to our hospitality client. Please respond within 48-72 hours.</p>
 <p>Best regards,<br>Shamp Team</p>`;
         }
         
