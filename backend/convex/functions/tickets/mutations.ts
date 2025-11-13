@@ -187,6 +187,7 @@ export const updateInternal = internalMutation({
 
 /**
  * Update ticket status (internal)
+ * Prevents status from going backwards - status can only progress forward
  */
 export const updateStatusInternal = internalMutation({
   args: {
@@ -197,11 +198,42 @@ export const updateStatusInternal = internalMutation({
       v.literal("reviewed"),
       v.literal("processing"),
       v.literal("quotes_available"),
+      v.literal("quote_selected"),
       v.literal("fixed"),
       v.literal("closed")
     ),
   },
   handler: async (ctx, args) => {
+    // Get current ticket to check current status
+    const ticket = await ctx.db.get(args.ticketId);
+    if (!ticket) {
+      throw new Error("Ticket not found");
+    }
+
+    // Define status progression order
+    const statusOrder: Record<string, number> = {
+      analyzing: 0,
+      analyzed: 1,
+      reviewed: 2,
+      processing: 3,
+      quotes_available: 4,
+      quote_selected: 5,
+      fixed: 6,
+      closed: 7,
+    };
+
+    const currentStatusOrder = statusOrder[ticket.status] ?? -1;
+    const newStatusOrder = statusOrder[args.status] ?? -1;
+
+    // Only allow status to progress forward (or stay the same)
+    // Don't allow regression (e.g., from "processing" back to "analyzed")
+    if (newStatusOrder < currentStatusOrder) {
+      console.warn(
+        `Status regression prevented: Cannot change status from "${ticket.status}" to "${args.status}". Current status order: ${currentStatusOrder}, New status order: ${newStatusOrder}`
+      );
+      return; // Don't update if it would be a regression
+    }
+
     await ctx.db.patch(args.ticketId, {
       status: args.status,
     });

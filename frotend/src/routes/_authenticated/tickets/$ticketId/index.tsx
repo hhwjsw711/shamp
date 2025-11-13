@@ -224,13 +224,14 @@ function TicketDetailsPage() {
     }
   }, [discoveryLogsResult?.logs, showDiscoveryLog])
 
-  // Check if processing is complete based on logs
+  // Check if processing is complete based on logs and ticket status
   useEffect(() => {
     if (discoveryLogsResult?.logs) {
       const hasComplete = discoveryLogsResult.logs.some(log => log.type === 'complete')
       const hasError = discoveryLogsResult.logs.some(log => log.type === 'error')
       
-      if (isProcessing && (hasComplete || hasError)) {
+      // If we have complete or error logs, processing is done
+      if (hasComplete || hasError) {
         setIsProcessing(false)
         if (hasComplete) {
           toast.success('Vendor Discovery Complete', {
@@ -240,7 +241,23 @@ function TicketDetailsPage() {
         }
       }
     }
-  }, [discoveryLogsResult?.logs, isProcessing])
+    
+    // Also check ticket status - if status is "processing", we're still processing
+    // This ensures the indicator shows even after page reload
+    if (ticket && (ticket.status as string) === 'processing') {
+      // Check if we have completion logs - if not, still processing
+      const logs = discoveryLogsResult?.logs
+      const hasComplete = logs ? logs.some(log => log.type === 'complete') : false
+      const hasError = logs ? logs.some(log => log.type === 'error') : false
+      
+      if (!hasComplete && !hasError) {
+        setIsProcessing(true)
+      }
+    } else if (ticket && (ticket.status as string) !== 'processing' && isProcessing) {
+      // If status is no longer "processing", stop the indicator
+      setIsProcessing(false)
+    }
+  }, [discoveryLogsResult?.logs, ticket?.status, isProcessing])
 
   // Set up page header CTAs
   useEffect(() => {

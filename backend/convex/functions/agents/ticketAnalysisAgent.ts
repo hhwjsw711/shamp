@@ -87,15 +87,22 @@ export const analyzeTicket = action({
     const result = await agent.generate({ prompt });
 
     // After analysis completes, ensure status is set to "analyzed"
-    // The agent should have already updated the status via updateTicket tool,
-    // but we'll ensure it's set here as a safety measure
-    await ctx.runMutation(
-      (internal as any).functions.tickets.mutations.updateStatusInternal,
-      {
-        ticketId: args.ticketId,
-        status: "analyzed",
-      }
+    // BUT only if the ticket is still in "analyzing" status
+    // Don't override if status has progressed (e.g., to "reviewed" or "processing")
+    const currentTicket = await ctx.runQuery(
+      (internal as any).functions.tickets.queries.getByIdInternal,
+      { ticketId: args.ticketId }
     );
+    
+    if (currentTicket && currentTicket.status === "analyzing") {
+      await ctx.runMutation(
+        (internal as any).functions.tickets.mutations.updateStatusInternal,
+        {
+          ticketId: args.ticketId,
+          status: "analyzed",
+        }
+      );
+    }
 
     // Trigger embedding generation after analysis
     await ctx.scheduler.runAfter(

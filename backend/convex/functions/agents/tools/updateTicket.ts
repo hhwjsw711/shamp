@@ -42,6 +42,16 @@ export function createUpdateTicketTool(ctx: ActionCtx, ticketId: string) {
       urgency,
       status,
     }: Omit<UpdateTicketParams, "ticketId">) => {
+      // Get current ticket to check status before updating
+      const currentTicket: Doc<"tickets"> | null = await ctx.runQuery(
+        (internal as any).functions.tickets.queries.getByIdInternal,
+        { ticketId: ticketId as any }
+      );
+
+      if (!currentTicket) {
+        throw new Error("Ticket not found");
+      }
+
       // Use the ticket ID passed to the tool creation function
       await ctx.runMutation(
         (internal as any).functions.tickets.mutations.updateInternal,
@@ -55,14 +65,38 @@ export function createUpdateTicketTool(ctx: ActionCtx, ticketId: string) {
         }
       );
 
+      // Only update status if provided AND it's not a regression
       if (status) {
-        await ctx.runMutation(
-          (internal as any).functions.tickets.mutations.updateStatusInternal,
-          {
-            ticketId: ticketId as any,
-            status,
-          }
-        );
+        // Define status progression order
+        const statusOrder: Record<string, number> = {
+          analyzing: 0,
+          analyzed: 1,
+          reviewed: 2,
+          processing: 3,
+          quotes_available: 4,
+          quote_selected: 5,
+          fixed: 6,
+          closed: 7,
+        };
+
+        const currentStatusOrder = statusOrder[currentTicket.status] ?? -1;
+        const newStatusOrder = statusOrder[status] ?? -1;
+
+        // Only allow status to progress forward (or stay the same)
+        // Don't allow regression (e.g., from "processing" back to "analyzed")
+        if (newStatusOrder >= currentStatusOrder) {
+          await ctx.runMutation(
+            (internal as any).functions.tickets.mutations.updateStatusInternal,
+            {
+              ticketId: ticketId as any,
+              status,
+            }
+          );
+        } else {
+          console.warn(
+            `Status regression prevented in updateTicket tool: Cannot change status from "${currentTicket.status}" to "${status}". Skipping status update.`
+          );
+        }
       }
 
       const updated: Doc<"tickets"> | null = await ctx.runQuery(
