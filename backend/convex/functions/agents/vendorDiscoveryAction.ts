@@ -116,13 +116,13 @@ export const discoverVendors = action({
 
       await saveLog({ type: "status", message: "Starting vendor discovery..." });
 
-      // Update ticket status to "processing" immediately when processing starts
+      // Update ticket status to "find_vendors" immediately when vendor discovery starts
       try {
         await ctx.runMutation(
           (internal as any).functions.tickets.mutations.updateInternal,
           {
             ticketId: args.ticketId,
-            status: "processing",
+            status: "find_vendors",
           }
         );
       } catch (statusError) {

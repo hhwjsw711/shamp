@@ -72,11 +72,12 @@ export function createUpdateTicketTool(ctx: ActionCtx, ticketId: string) {
           analyzing: 0,
           analyzed: 1,
           reviewed: 2,
-          processing: 3,
-          quotes_available: 4,
-          quote_selected: 5,
-          fixed: 6,
-          closed: 7,
+          find_vendors: 3,
+          requested_for_information: 4,
+          quotes_available: 5,
+          quote_selected: 6,
+          fixed: 7,
+          closed: 8,
         };
 
         const currentStatusOrder = statusOrder[currentTicket.status] ?? -1;

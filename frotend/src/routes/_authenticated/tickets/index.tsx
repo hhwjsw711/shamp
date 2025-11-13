@@ -18,7 +18,8 @@ type TicketStatus =
   | 'analyzing'
   | 'analyzed'
   | 'reviewed'
-  | 'processing'
+  | 'find_vendors'
+  | 'requested_for_information'
   | 'quotes_available'
   | 'quote_selected'
   | 'fixed'
@@ -46,7 +47,8 @@ type Ticket = {
 const TICKET_STATUSES: Array<{ value: TicketStatus; label: string }> = [
   { value: 'analyzed', label: 'Analyzed' },
   { value: 'reviewed', label: 'Reviewed' },
-  { value: 'processing', label: 'Processing' },
+  { value: 'find_vendors', label: 'Finding Vendors' },
+  { value: 'requested_for_information', label: 'RFI' },
   { value: 'quotes_available', label: 'Quotes Available' },
   { value: 'quote_selected', label: 'Quote Selected' },
   { value: 'fixed', label: 'Fixed' },
@@ -72,7 +74,8 @@ function TicketsPage() {
     analyzing: '',
     analyzed: '',
     reviewed: '',
-    processing: '',
+    find_vendors: '',
+    requested_for_information: '',
     quotes_available: '',
     quote_selected: '',
     fixed: '',
@@ -83,7 +86,8 @@ function TicketsPage() {
     analyzing: 'date',
     analyzed: 'date',
     reviewed: 'date',
-    processing: 'date',
+    find_vendors: 'date',
+    requested_for_information: 'date',
     quotes_available: 'date',
     quote_selected: 'date',
     fixed: 'date',

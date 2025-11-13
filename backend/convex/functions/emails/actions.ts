@@ -120,12 +120,12 @@ export const sendVendorEmail = action({
       }
     );
 
-    // Update ticket status
+    // Update ticket status to requested_for_information when email is sent
     await ctx.runMutation(
       (api as any).functions.tickets.mutations.updateStatusInternal,
       {
         ticketId: args.ticketId,
-        status: "processing",
+        status: "requested_for_information",
       }
     );
 

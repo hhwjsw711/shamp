@@ -69,8 +69,10 @@ function getStatusLabel(status: string) {
       return 'Analyzed'
     case 'reviewed':
       return 'Reviewed'
-    case 'processing':
-      return 'Processing'
+    case 'find_vendors':
+      return 'Finding Vendors'
+    case 'requested_for_information':
+      return 'RFI'
     case 'quotes_available':
       return 'Quotes Available'
     case 'quote_selected':
@@ -92,8 +94,10 @@ function getStatusStyles(status: string) {
       return 'bg-blue-100 text-blue-700 border-blue-200'
     case 'reviewed':
       return 'bg-purple-100 text-purple-700 border-purple-200'
-    case 'processing':
+    case 'find_vendors':
       return 'bg-yellow-100 text-yellow-700 border-yellow-200'
+    case 'requested_for_information':
+      return 'bg-amber-100 text-amber-700 border-amber-200'
     case 'quotes_available':
       return 'bg-orange-100 text-orange-700 border-orange-200'
     case 'quote_selected':
@@ -242,9 +246,9 @@ function TicketDetailsPage() {
       }
     }
     
-    // Also check ticket status - if status is "processing", we're still processing
+    // Also check ticket status - if status is "find_vendors", we're still processing
     // This ensures the indicator shows even after page reload
-    if (ticket && (ticket.status as string) === 'processing') {
+    if (ticket && (ticket.status as string) === 'find_vendors') {
       // Check if we have completion logs - if not, still processing
       const logs = discoveryLogsResult?.logs
       const hasComplete = logs ? logs.some(log => log.type === 'complete') : false
@@ -253,8 +257,8 @@ function TicketDetailsPage() {
       if (!hasComplete && !hasError) {
         setIsProcessing(true)
       }
-    } else if (ticket && (ticket.status as string) !== 'processing' && isProcessing) {
-      // If status is no longer "processing", stop the indicator
+    } else if (ticket && (ticket.status as string) !== 'find_vendors' && isProcessing) {
+      // If status is no longer "find_vendors", stop the indicator
       setIsProcessing(false)
     }
   }, [discoveryLogsResult?.logs, ticket?.status, isProcessing])
@@ -288,7 +292,7 @@ function TicketDetailsPage() {
 
     // Edit allowed only for analyzed and reviewed (backend restriction)
     const canEdit = ['analyzed', 'reviewed'].includes(ticket.status)
-    // Delete allowed for analyzed, reviewed, fixed, closed (NOT processing - vendor engagement stage)
+    // Delete allowed for analyzed, reviewed, fixed, closed (NOT find_vendors, requested_for_information - vendor engagement stages)
     const canDelete = ['analyzed', 'reviewed', 'fixed', 'closed'].includes(ticket.status)
     const canMarkAsReviewed = ticket.status === 'analyzed'
     // Show process button if status is 'reviewed' OR if currently processing (to show loading state)

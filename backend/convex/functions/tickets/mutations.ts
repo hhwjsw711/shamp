@@ -34,7 +34,8 @@ export const createInternal = internalMutation({
         v.literal("analyzing"),
         v.literal("analyzed"),
         v.literal("reviewed"),
-        v.literal("processing"),
+        v.literal("find_vendors"),
+        v.literal("requested_for_information"),
         v.literal("quotes_available"),
         v.literal("quote_selected"),
         v.literal("fixed"),
@@ -121,7 +122,8 @@ export const updateInternal = internalMutation({
         v.literal("analyzing"),
         v.literal("analyzed"),
         v.literal("reviewed"),
-        v.literal("processing"),
+        v.literal("find_vendors"),
+        v.literal("requested_for_information"),
         v.literal("quotes_available"),
         v.literal("quote_selected"),
         v.literal("fixed"),
@@ -219,11 +221,12 @@ export const updateStatusInternal = internalMutation({
       analyzing: 0,
       analyzed: 1,
       reviewed: 2,
-      processing: 3,
-      quotes_available: 4,
-      quote_selected: 5,
-      fixed: 6,
-      closed: 7,
+      find_vendors: 3,
+      requested_for_information: 4,
+      quotes_available: 5,
+      quote_selected: 6,
+      fixed: 7,
+      closed: 8,
     };
 
     const currentStatusOrder = statusOrder[ticket.status] ?? -1;
@@ -400,7 +403,7 @@ export const deleteTicket = mutation({
     
     // Check if ticket can be deleted
     // Can delete: analyzed, reviewed OR fixed/closed
-    // Cannot delete: processing, quotes_available, quote_selected (vendor engagement stages)
+    // Cannot delete: find_vendors, requested_for_information, quotes_available, quote_selected (vendor engagement stages)
     const deletableStatuses = [
       "analyzed",
       "reviewed",
@@ -410,7 +413,7 @@ export const deleteTicket = mutation({
     
     if (!deletableStatuses.includes(ticket.status)) {
       throw new Error(
-        `Ticket cannot be deleted. Current status: ${ticket.status}. Cannot delete tickets with vendor engagement (processing, quotes_available, quote_selected).`
+        `Ticket cannot be deleted. Current status: ${ticket.status}. Cannot delete tickets with vendor engagement (find_vendors, requested_for_information, quotes_available, quote_selected).`
       );
     }
     

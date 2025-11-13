@@ -255,11 +255,13 @@ Shamp is a hospitality maintenance platform that connects service providers like
     const successfulSends: number = outreachResults.filter((r) => r.emailId).length;
 
     if (successfulSends > 0) {
-      // Update quoteStatus to awaiting_quotes (status is already set to "processing" by discoverVendors)
+      // Update status to "requested_for_information" when initial emails are sent
+      // Update quoteStatus to awaiting_quotes
       await ctx.runMutation(
         (internal as any).functions.tickets.mutations.updateInternal,
         {
           ticketId: args.ticketId,
+          status: "requested_for_information",
           quoteStatus: "awaiting_quotes",
         }
       );

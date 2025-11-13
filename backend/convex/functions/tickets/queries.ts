@@ -131,8 +131,9 @@ export const listByStatus = query({
     status: v.union(
       v.literal("analyzing"),
       v.literal("analyzed"),
-      v.literal("processing"),
       v.literal("reviewed"),
+      v.literal("find_vendors"),
+      v.literal("requested_for_information"),
       v.literal("quotes_available"),
       v.literal("quote_selected"),
       v.literal("fixed"),

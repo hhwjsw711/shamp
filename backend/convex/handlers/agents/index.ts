@@ -248,13 +248,13 @@ export const discoverVendorsStreamHandler = httpAction(async (ctx, request) => {
 
           await sendEvent({ type: "status", message: "Starting vendor discovery..." });
 
-          // Update ticket status to "processing" immediately when processing starts
+          // Update ticket status to "find_vendors" immediately when vendor discovery starts
           try {
             await ctx.runMutation(
               (internal as any).functions.tickets.mutations.updateInternal,
               {
                 ticketId: ticketId as any,
-                status: "processing",
+                status: "find_vendors",
               }
             );
           } catch (statusError) {
