@@ -130,15 +130,6 @@ function TicketDetailsPage() {
   const [showDiscoveryLog, setShowDiscoveryLog] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [isMarkingAsReviewed, setIsMarkingAsReviewed] = useState(false)
-  const [discoveryMessages, setDiscoveryMessages] = useState<Array<{
-    type: 'status' | 'tool_call' | 'tool_result' | 'vendor_found' | 'step' | 'complete' | 'error'
-    message?: string
-    toolName?: string
-    vendor?: any
-    stepNumber?: number
-    error?: string
-    timestamp: number
-  }>>([])
 
   // Mutations
   const markAsReviewed = useMutation(convexApi.functions.tickets.mutations.markAsReviewed)
@@ -219,34 +210,36 @@ function TicketDetailsPage() {
     }
   }, [isMobile, selectedTab])
 
-  // Load persisted discovery logs when component mounts or logs are fetched
+  // Auto-scroll discovery log to bottom when new logs arrive
   useEffect(() => {
-    if (discoveryLogsResult?.logs && discoveryLogsResult.logs.length > 0 && discoveryMessages.length === 0) {
-      // Convert persisted logs to the format expected by the UI
-      const persistedMessages = discoveryLogsResult.logs.map((log) => ({
-        type: log.type as 'status' | 'tool_call' | 'tool_result' | 'vendor_found' | 'step' | 'complete' | 'error',
-        message: log.message,
-        toolName: log.toolName,
-        vendor: log.vendor,
-        stepNumber: log.stepNumber,
-        error: log.error,
-        timestamp: log.timestamp,
-      }))
-      
-      // Only set if we don't have any messages yet (to avoid overwriting active stream)
-      setDiscoveryMessages(persistedMessages)
-    }
-  }, [discoveryLogsResult?.logs, discoveryMessages.length])
-
-  // Auto-scroll discovery log to bottom when new messages arrive
-  useEffect(() => {
-    if (showDiscoveryLog && discoveryMessages.length > 0) {
+    if (showDiscoveryLog && discoveryLogsResult?.logs && discoveryLogsResult.logs.length > 0) {
       const logContainer = document.querySelector('[data-discovery-log]')
       if (logContainer) {
-        logContainer.scrollTop = logContainer.scrollHeight
+        // Small delay to ensure DOM is updated
+        setTimeout(() => {
+          logContainer.scrollTop = logContainer.scrollHeight
+        }, 100)
       }
     }
-  }, [discoveryMessages, showDiscoveryLog])
+  }, [discoveryLogsResult?.logs, showDiscoveryLog])
+
+  // Check if processing is complete based on logs
+  useEffect(() => {
+    if (discoveryLogsResult?.logs) {
+      const hasComplete = discoveryLogsResult.logs.some(log => log.type === 'complete')
+      const hasError = discoveryLogsResult.logs.some(log => log.type === 'error')
+      
+      if (isProcessing && (hasComplete || hasError)) {
+        setIsProcessing(false)
+        if (hasComplete) {
+          toast.success('Vendor Discovery Complete', {
+            description: 'Vendors have been discovered and saved.',
+            duration: 4000,
+          })
+        }
+      }
+    }
+  }, [discoveryLogsResult?.logs, isProcessing])
 
   // Set up page header CTAs
   useEffect(() => {
@@ -310,7 +303,6 @@ function TicketDetailsPage() {
               
               setIsProcessing(true)
               setShowDiscoveryLog(true)
-              setDiscoveryMessages([])
               
               try {
                 // Get Convex URL from environment (convert .convex.cloud to .convex.site for HTTP routes)
@@ -329,54 +321,12 @@ function TicketDetailsPage() {
                   throw new Error('Failed to start vendor discovery')
                 }
 
-                if (!response.body) {
-                  throw new Error('No response body')
-                }
-
-                const reader = response.body.getReader()
-                const decoder = new TextDecoder()
-
-                for (;;) {
-                  const result = await reader.read()
-                  
-                  if (result.done) {
-                    break
-                  }
-
-                  const chunk = decoder.decode(result.value)
-                  const lines = chunk.split('\n')
-
-                  for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                      try {
-                        const data = JSON.parse(line.slice(6))
-                        setDiscoveryMessages(prev => [...prev, {
-                          ...data,
-                          timestamp: Date.now(),
-                        }])
-
-                        if (data.type === 'complete' || data.type === 'error') {
-                          setIsProcessing(false)
-                          if (data.type === 'complete') {
-                            toast.success('Vendor Discovery Complete', {
-                              description: data.text || 'Vendors have been discovered and contacted.',
-                              duration: 4000,
-                            })
-                          }
-                        }
-                      } catch (e) {
-                        // Ignore JSON parse errors
-                      }
-                    }
-                  }
-                }
+                // Don't read the stream - just trigger it
+                // The Convex query will automatically update when logs are saved to the database
+                // Close the response to allow the backend to continue processing
+                response.body?.cancel()
               } catch (error) {
                 setIsProcessing(false)
-                setDiscoveryMessages(prev => [...prev, {
-                  type: 'error',
-                  error: error instanceof Error ? error.message : 'An error occurred',
-                  timestamp: Date.now(),
-                }])
                 toast.error('Failed to Process Ticket', {
                   description: error instanceof Error ? error.message : 'An error occurred while processing the ticket.',
                   duration: 5000,
@@ -602,7 +552,7 @@ function TicketDetailsPage() {
         data-discovery-log
         className="flex-1 overflow-y-auto p-4 min-h-0"
       >
-        {discoveryMessages.length === 0 ? (
+        {!discoveryLogsResult?.logs || discoveryLogsResult.logs.length === 0 ? (
           <Empty>
             <EmptyHeader>
               <EmptyMedia variant="icon">
@@ -614,85 +564,85 @@ function TicketDetailsPage() {
           </Empty>
         ) : (
           <section className="space-y-2">
-            {discoveryMessages.map((msg, index) => (
+            {discoveryLogsResult.logs.map((log) => (
               <motion.section
-                key={index}
+                key={log._id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2 }}
                 className={`p-3 rounded-lg transition-all ${
-                  msg.type === 'error'
+                  log.type === 'error'
                     ? 'bg-red-50/50 border border-red-200/50'
-                    : msg.type === 'complete'
+                    : log.type === 'complete'
                     ? 'bg-green-50/50 border border-green-200/50'
-                    : msg.type === 'vendor_found'
+                    : log.type === 'vendor_found'
                     ? 'bg-blue-50/50 border border-blue-200/50'
-                    : msg.type === 'tool_call'
+                    : log.type === 'tool_call'
                     ? 'bg-purple-50/50 border border-purple-200/50'
                     : 'bg-zinc-50/50 border border-zinc-200/50'
                 }`}
               >
-                {msg.type === 'status' && (
-                  <p className="text-sm text-foreground leading-relaxed">{msg.message}</p>
+                {log.type === 'status' && (
+                  <p className="text-sm text-foreground leading-relaxed">{log.message}</p>
                 )}
-                {msg.type === 'tool_call' && (
+                {log.type === 'tool_call' && (
                   <section className="space-y-1.5">
                     <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Tool Call</p>
                     <p className="text-sm text-foreground leading-relaxed">
-                      <span className="font-medium text-purple-900">{msg.toolName}</span>
-                      {msg.message && (
-                        <span className="text-muted-foreground">: {msg.message}</span>
+                      <span className="font-medium text-purple-900">{log.toolName}</span>
+                      {log.message && (
+                        <span className="text-muted-foreground">: {log.message}</span>
                       )}
                     </p>
                   </section>
                 )}
-                {msg.type === 'tool_result' && (
+                {log.type === 'tool_result' && (
                   <section className="space-y-1.5">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tool Result</p>
                     <p className="text-sm text-foreground leading-relaxed">
-                      <span className="font-medium">{msg.toolName}</span> completed successfully
+                      <span className="font-medium">{log.toolName}</span> completed successfully
                     </p>
                   </section>
                 )}
-                {msg.type === 'vendor_found' && msg.vendor && (
+                {log.type === 'vendor_found' && log.vendor && (
                   <section className="space-y-2">
                     <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Vendor Found</p>
-                    <p className="text-sm font-semibold text-foreground">{msg.vendor.businessName}</p>
-                    {msg.vendor.specialty && (
-                      <p className="text-xs text-muted-foreground">Specialty: {msg.vendor.specialty}</p>
+                    <p className="text-sm font-semibold text-foreground">{log.vendor.businessName}</p>
+                    {log.vendor.specialty && (
+                      <p className="text-xs text-muted-foreground">Specialty: {log.vendor.specialty}</p>
                     )}
-                    {msg.vendor.address && (
-                      <p className="text-xs text-muted-foreground">📍 {msg.vendor.address}</p>
+                    {log.vendor.address && (
+                      <p className="text-xs text-muted-foreground">📍 {log.vendor.address}</p>
                     )}
-                    {msg.vendor.rating && (
-                      <p className="text-xs text-muted-foreground">⭐ Rating: {msg.vendor.rating}/5</p>
+                    {log.vendor.rating && (
+                      <p className="text-xs text-muted-foreground">⭐ Rating: {log.vendor.rating}/5</p>
                     )}
                   </section>
                 )}
-                {msg.type === 'step' && (
+                {log.type === 'step' && (
                   <section className="space-y-1.5">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      Step {msg.stepNumber}
+                      Step {log.stepNumber}
                     </p>
-                    <p className="text-sm text-foreground leading-relaxed">{msg.message}</p>
+                    <p className="text-sm text-foreground leading-relaxed">{log.message}</p>
                   </section>
                 )}
-                {msg.type === 'complete' && (
+                {log.type === 'complete' && (
                   <section className="space-y-1.5">
                     <p className="text-sm font-semibold text-green-700 flex items-center gap-2">
                       <span>✓</span>
                       <span>Discovery Complete</span>
                     </p>
-                    <p className="text-sm text-foreground leading-relaxed">{msg.message}</p>
+                    <p className="text-sm text-foreground leading-relaxed">{log.message}</p>
                   </section>
                 )}
-                {msg.type === 'error' && (
+                {log.type === 'error' && (
                   <section className="space-y-1.5">
                     <p className="text-sm font-semibold text-red-700 flex items-center gap-2">
                       <span>✗</span>
                       <span>Error</span>
                     </p>
-                    <p className="text-sm text-foreground leading-relaxed">{msg.error}</p>
+                    <p className="text-sm text-foreground leading-relaxed">{log.error}</p>
                   </section>
                 )}
               </motion.section>
