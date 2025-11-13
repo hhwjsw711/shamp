@@ -449,6 +449,17 @@ export const deleteTicketInternal = internalMutation({
       }
     }
     
+    // Delete all discovery logs for this ticket
+    try {
+      await ctx.runMutation(
+        (internal as any).functions.discoveryLogs.mutations.clearForTicket,
+        { ticketId: args.ticketId }
+      );
+    } catch (error) {
+      // Log error but don't fail if log deletion fails
+      console.error(`Failed to delete discovery logs for ticket ${args.ticketId}:`, error);
+    }
+    
     // Delete ticket from database
     await ctx.db.delete(args.ticketId);
   },

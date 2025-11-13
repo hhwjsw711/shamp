@@ -45,6 +45,29 @@ export const discoverVendors = action({
   },
   handler: async (ctx, args): Promise<{ success: boolean; message: string }> => {
     let sequenceNumber = 0;
+    let isComplete = false;
+    
+    // Set up timeout handler to catch action timeouts (fires 10 seconds before Convex timeout)
+    const timeoutId = setTimeout(async () => {
+      if (!isComplete) {
+        // Action is about to timeout - save error log
+        try {
+          const timeoutSequenceNumber = Date.now(); // Use timestamp as sequence number for timeout log
+          await ctx.runMutation(
+            (internal as any).functions.discoveryLogs.mutations.addEntry,
+            {
+              ticketId: args.ticketId,
+              type: "error",
+              error: "Vendor discovery timed out after 600 seconds. The process may have completed partially.",
+              timestamp: Date.now(),
+              sequenceNumber: timeoutSequenceNumber,
+            }
+          );
+        } catch (logError) {
+          console.error("Error saving timeout log:", logError);
+        }
+      }
+    }, 590000); // 590 seconds (10 seconds before 600s timeout)
 
     const saveLog = async (event: {
       type: "status" | "tool_call" | "tool_result" | "vendor_found" | "step" | "complete" | "error";
@@ -117,11 +140,15 @@ export const discoverVendors = action({
 
       if (!ticket) {
         await saveLog({ type: "error", error: "Ticket not found" });
+        isComplete = true;
+        clearTimeout(timeoutId);
         return { success: false, message: "Ticket not found" };
       }
 
       if (ticket.createdBy !== args.userId) {
         await saveLog({ type: "error", error: "Not authorized" });
+        isComplete = true;
+        clearTimeout(timeoutId);
         return { success: false, message: "Not authorized" };
       }
 
@@ -138,6 +165,8 @@ export const discoverVendors = action({
           type: "error", 
           error: "User location is required. Please update your profile with a location." 
         });
+        isComplete = true;
+        clearTimeout(timeoutId);
         return { success: false, message: "User location is required" };
       }
 
@@ -216,6 +245,9 @@ export const discoverVendors = action({
           message: `Found ${existingVendors.length} existing vendor(s) in database matching this ticket.`,
         });
 
+        isComplete = true;
+        clearTimeout(timeoutId);
+        
         return { 
           success: true, 
           message: `Found ${existingVendors.length} existing vendor(s) in database` 
@@ -417,16 +449,30 @@ export const discoverVendors = action({
         message: `Found ${allVendors.length} vendor(s) through web search.`,
       });
 
+      isComplete = true;
+      clearTimeout(timeoutId);
+      
       return { 
         success: true, 
         message: `Found ${allVendors.length} vendor(s) through web search` 
       };
     } catch (error) {
       console.error("Vendor discovery error:", error);
+      
+      // Check if error is due to timeout
+      const isTimeout = error instanceof Error && 
+        (error.message.includes("timeout") || error.message.includes("timed out") || error.message.includes("600"));
+      
       await saveLog({
         type: "error",
-        error: error instanceof Error ? error.message : "Unknown error occurred",
+        error: isTimeout 
+          ? "Vendor discovery timed out after 600 seconds. The process may have completed partially."
+          : (error instanceof Error ? error.message : "Unknown error occurred"),
       });
+      
+      isComplete = true;
+      clearTimeout(timeoutId);
+      
       return { 
         success: false, 
         message: error instanceof Error ? error.message : "Unknown error occurred" 

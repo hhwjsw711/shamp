@@ -180,7 +180,7 @@ function TicketsPage() {
       })
     }
     
-    // Apply sorting
+    // Apply sorting - always default to date descending (latest first)
     if (sortBy[status] === 'urgency') {
       const urgencyOrder: Record<string, number> = {
         emergency: 0,
@@ -194,12 +194,21 @@ function TicketsPage() {
         if (aOrder !== bOrder) {
           return aOrder - bOrder
         }
-        // If same urgency, sort by date descending
-        return b.createdAt - a.createdAt
+        // If same urgency, sort by date descending (latest first)
+        // Use _id as tiebreaker for stable sorting when timestamps are equal
+        const dateDiff = b.createdAt - a.createdAt
+        if (dateDiff !== 0) return dateDiff
+        return a._id.localeCompare(b._id)
       })
     } else {
-      // Sort by date descending (most recent first)
-      statusTickets.sort((a, b) => b.createdAt - a.createdAt)
+      // Sort by date descending (most recent first) - DEFAULT
+      // Use _id as tiebreaker for stable sorting when timestamps are equal
+      statusTickets.sort((a, b) => {
+        const dateDiff = b.createdAt - a.createdAt
+        if (dateDiff !== 0) return dateDiff
+        // If timestamps are equal, sort by _id for consistent ordering
+        return a._id.localeCompare(b._id)
+      })
     }
     
     return statusTickets

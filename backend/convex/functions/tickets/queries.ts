@@ -90,7 +90,13 @@ export const list = query({
       .collect();
     
     // Sort by createdAt descending (most recent first)
-    tickets.sort((a, b) => b.createdAt - a.createdAt);
+    // Use _id as tiebreaker for stable sorting when timestamps are equal
+    tickets.sort((a, b) => {
+      const dateDiff = b.createdAt - a.createdAt;
+      if (dateDiff !== 0) return dateDiff;
+      // If timestamps are equal, sort by _id for consistent ordering
+      return a._id.localeCompare(b._id);
+    });
     
     // Get photo URLs for each ticket
     const ticketsWithUrls = await Promise.all(
@@ -143,7 +149,13 @@ export const listByStatus = query({
       .collect();
     
     // Sort by createdAt descending (most recent first)
-    tickets.sort((a, b) => b.createdAt - a.createdAt);
+    // Use _id as tiebreaker for stable sorting when timestamps are equal
+    tickets.sort((a, b) => {
+      const dateDiff = b.createdAt - a.createdAt;
+      if (dateDiff !== 0) return dateDiff;
+      // If timestamps are equal, sort by _id for consistent ordering
+      return a._id.localeCompare(b._id);
+    });
     
     // Get photo URLs
     const ticketsWithUrls = await Promise.all(
@@ -305,7 +317,13 @@ export const listByCreatorInternal = internalQuery({
       .collect();
     
     // Sort by createdAt descending (most recent first)
-    tickets.sort((a, b) => b.createdAt - a.createdAt);
+    // Use _id as tiebreaker for stable sorting when timestamps are equal
+    tickets.sort((a, b) => {
+      const dateDiff = b.createdAt - a.createdAt;
+      if (dateDiff !== 0) return dateDiff;
+      // If timestamps are equal, sort by _id for consistent ordering
+      return a._id.localeCompare(b._id);
+    });
     
     return tickets;
   },
@@ -334,7 +352,13 @@ export const listByStatusInternal = internalQuery({
       .collect();
     
     // Sort by createdAt descending (most recent first)
-    tickets.sort((a, b) => b.createdAt - a.createdAt);
+    // Use _id as tiebreaker for stable sorting when timestamps are equal
+    tickets.sort((a, b) => {
+      const dateDiff = b.createdAt - a.createdAt;
+      if (dateDiff !== 0) return dateDiff;
+      // If timestamps are equal, sort by _id for consistent ordering
+      return a._id.localeCompare(b._id);
+    });
     
     return tickets;
   },
@@ -352,7 +376,13 @@ export const listByVendorInternal = internalQuery({
       .collect();
     
     // Sort by createdAt descending (most recent first)
-    tickets.sort((a, b) => b.createdAt - a.createdAt);
+    // Use _id as tiebreaker for stable sorting when timestamps are equal
+    tickets.sort((a, b) => {
+      const dateDiff = b.createdAt - a.createdAt;
+      if (dateDiff !== 0) return dateDiff;
+      // If timestamps are equal, sort by _id for consistent ordering
+      return a._id.localeCompare(b._id);
+    });
     
     return tickets;
   },

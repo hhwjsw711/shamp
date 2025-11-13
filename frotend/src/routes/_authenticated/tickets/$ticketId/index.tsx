@@ -261,12 +261,23 @@ function TicketDetailsPage() {
 
   // Handle navigation if ticket was deleted (e.g., from another tab/window)
   // This must be before any conditional returns (React hooks rule)
+  // Only navigate if ticket was explicitly deleted (null result) AND not loading
   useEffect(() => {
-    if ((ticketResult === null || !ticket) && !isNavigatingAway) {
+    // Only navigate if:
+    // 1. We're authenticated (not loading)
+    // 2. Query has completed (ticketResult is not undefined)
+    // 3. Ticket doesn't exist (ticketResult === null)
+    // 4. We're not already navigating away
+    if (
+      isAuthenticated &&
+      ticketResult !== undefined &&
+      ticketResult === null &&
+      !isNavigatingAway
+    ) {
       setIsNavigatingAway(true)
       navigate({ to: '/tickets' })
     }
-  }, [ticketResult, ticket, isNavigatingAway, navigate])
+  }, [ticketResult, isAuthenticated, isNavigatingAway, navigate])
 
   // Set up page header CTAs
   useEffect(() => {
@@ -275,11 +286,13 @@ function TicketDetailsPage() {
       return
     }
 
-    const editableStatuses = ['analyzed', 'reviewed']
-    const canEdit = editableStatuses.includes(ticket.status)
+    // Edit allowed only for analyzed and reviewed (backend restriction)
+    const canEdit = ['analyzed', 'reviewed'].includes(ticket.status)
+    // Delete allowed for analyzed, reviewed, fixed, closed (NOT processing - vendor engagement stage)
     const canDelete = ['analyzed', 'reviewed', 'fixed', 'closed'].includes(ticket.status)
     const canMarkAsReviewed = ticket.status === 'analyzed'
-    const canProcessTicket = ticket.status === 'reviewed'
+    // Show process button if status is 'reviewed' OR if currently processing (to show loading state)
+    const canProcessTicket = ticket.status === 'reviewed' || isProcessing
 
     const ctas = (
       <section className="flex items-center gap-2">
