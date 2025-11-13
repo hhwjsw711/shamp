@@ -2,10 +2,9 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useAction, useMutation, useQuery } from 'convex/react'
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Calendar, History, MapPin, MessageSquare, Pencil, Tag, Trash2, TriangleAlert, Users, X } from 'lucide-react'
+import { Calendar, History, MapPin, MessageSquare, Pencil, Tag, Trash2, Users, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Spinner } from '@/components/ui/spinner'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -130,6 +129,7 @@ function TicketDetailsPage() {
   const [showDiscoveryLog, setShowDiscoveryLog] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [isMarkingAsReviewed, setIsMarkingAsReviewed] = useState(false)
+  const [isNavigatingAway, setIsNavigatingAway] = useState(false)
 
   // Mutations and Actions
   const markAsReviewed = useMutation(convexApi.functions.tickets.mutations.markAsReviewed)
@@ -259,6 +259,15 @@ function TicketDetailsPage() {
     }
   }, [discoveryLogsResult?.logs, ticket?.status, isProcessing])
 
+  // Handle navigation if ticket was deleted (e.g., from another tab/window)
+  // This must be before any conditional returns (React hooks rule)
+  useEffect(() => {
+    if ((ticketResult === null || !ticket) && !isNavigatingAway) {
+      setIsNavigatingAway(true)
+      navigate({ to: '/tickets' })
+    }
+  }, [ticketResult, ticket, isNavigatingAway, navigate])
+
   // Set up page header CTAs
   useEffect(() => {
     if (!ticket || !user) {
@@ -386,6 +395,12 @@ function TicketDetailsPage() {
     if (!ticket || !user?.id) return
 
     try {
+      // Navigate immediately to prevent error page from showing
+      setShowDeleteDialog(false)
+      setIsNavigatingAway(true)
+      navigate({ to: '/tickets' })
+      
+      // Delete ticket after navigation
       await deleteTicket({
         ticketId: ticketId as any,
         userId: user.id as any,
@@ -395,10 +410,8 @@ function TicketDetailsPage() {
         description: 'The ticket has been successfully deleted.',
         duration: 3000,
       })
-
-      setShowDeleteDialog(false)
-      navigate({ to: '/tickets' })
     } catch (error) {
+      setIsNavigatingAway(false)
       toast.error('Failed to Delete Ticket', {
         description: error instanceof Error ? error.message : 'An error occurred while deleting the ticket.',
         duration: 5000,
@@ -415,17 +428,16 @@ function TicketDetailsPage() {
     )
   }
 
-  // Show error state
+  // Don't render anything if navigating away
+  if (isNavigatingAway) {
+    return null
+  }
+
+  // Show error state - but navigate away instead of showing error
   if (ticketResult === null || !ticket) {
     return (
       <main className="flex items-center justify-center h-full p-4">
-        <Alert variant="destructive" className="max-w-md">
-          <TriangleAlert className="size-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>
-            {ticketResult === null ? 'Failed to load ticket' : 'Ticket not found'}
-          </AlertDescription>
-        </Alert>
+        <Spinner className="size-8" />
       </main>
     )
   }
