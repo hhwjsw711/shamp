@@ -94,6 +94,9 @@ export const sendOutreachEmails = action({
 
     const expiresAt: number = Date.now() + 72 * 60 * 60 * 1000;
 
+    // Track if any calls were made (to update status)
+    let callsMade = false;
+
     for (const vendorResult of firecrawlResults.results) {
       try {
         if (!vendorResult.email) {
@@ -120,6 +123,38 @@ export const sendOutreachEmails = action({
             }
           );
         }
+
+        // Call vendor first to verify email (if phone number exists)
+        let verifiedEmail: string | null = null;
+        if (vendorResult.phone) {
+          try {
+            callsMade = true;
+            const orgName = userData?.orgName || "our hospitality business";
+            const callResult = await ctx.runAction(
+              (api as any).functions.vendorOutreach.callVendor,
+              {
+                ticketId: args.ticketId,
+                vendorId,
+                phoneNumber: vendorResult.phone,
+                originalEmail: vendorResult.email,
+                orgName,
+              }
+            );
+
+            if (callResult.success && callResult.verifiedEmail) {
+              verifiedEmail = callResult.verifiedEmail;
+            }
+          } catch (callError) {
+            // Continue with original email if call fails
+            console.error(
+              `Call failed for ${vendorResult.businessName}, using original email:`,
+              callError
+            );
+          }
+        }
+
+        // Use verified email if available, otherwise use original
+        const emailToUse = verifiedEmail || vendorResult.email;
 
         const emailContent = await ctx.runAction(
           (api as any).functions.agents.emailDraftAgent.draftVendorEmail,
@@ -163,8 +198,8 @@ export const sendOutreachEmails = action({
         // If body doesn't contain HTML tags, wrap it in paragraphs
         if (emailBody && !emailBody.includes("<") && !emailBody.includes(">")) {
           // Convert plain text to HTML by splitting on newlines and wrapping in <p> tags
-          const paragraphs = emailBody.split(/\n\n+/).filter(p => p.trim());
-          emailBody = paragraphs.map(p => `<p>${p.trim().replace(/\n/g, "<br>")}</p>`).join("");
+          const paragraphs = emailBody.split(/\n\n+/).filter((p: string) => p.trim());
+          emailBody = paragraphs.map((p: string) => `<p>${p.trim().replace(/\n/g, "<br>")}</p>`).join("");
         }
         
         // If body is still empty, provide a fallback
@@ -188,11 +223,22 @@ Shamp is a hospitality maintenance platform that connects service providers like
         // Add photos after the body content
         const photosHtml = photoUrl ? `<br><br><img src="${photoUrl}" alt="Issue photo" style="max-width: 100%; height: auto;">` : "";
         
+        // Update vendor email if we got a verified one from the call
+        if (verifiedEmail && verifiedEmail !== vendor.email) {
+          await ctx.runMutation(
+            (api as any).functions.vendors.mutations.updateInternal,
+            {
+              vendorId,
+              email: verifiedEmail,
+            }
+          );
+        }
+
         const emailId = await resend.sendEmail(ctx, {
           from:
             process.env.RESEND_FROM_EMAIL ||
             "Shamp Notifications <notifications@updates.shamp.io>",
-          to: vendor.email,
+          to: emailToUse,
           replyTo: [
             process.env.RESEND_REPLY_TO_EMAIL || "replies@updates.shamp.io",
           ],
@@ -265,8 +311,10 @@ Shamp is a hospitality maintenance platform that connects service providers like
 
     const successfulSends: number = outreachResults.filter((r) => r.emailId).length;
 
-    if (successfulSends > 0) {
-      // Update status to "requested_for_information" when initial emails are sent
+    // Update status to "requested_for_information" when calls are made OR emails are sent
+    // This ensures status is updated even if calls fail but emails succeed
+    if (callsMade || successfulSends > 0) {
+      // Update status to "requested_for_information" when initial outreach is made
       // Update quoteStatus to awaiting_quotes
       await ctx.runMutation(
         (internal as any).functions.tickets.mutations.updateInternal,
@@ -278,7 +326,7 @@ Shamp is a hospitality maintenance platform that connects service providers like
       );
     } else {
       console.error(
-        `Failed to send any outreach emails for ticket ${args.ticketId}`
+        `Failed to make any calls or send any outreach emails for ticket ${args.ticketId}`
       );
     }
 

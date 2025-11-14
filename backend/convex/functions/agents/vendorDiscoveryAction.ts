@@ -251,19 +251,21 @@ export const discoverVendors = action({
           { ticketId: args.ticketId, firecrawlResultsId }
         );
 
-        // Send outreach emails
-        // COMMENTED OUT FOR TESTING - Extract individual URLs first
-        // NOTE: When uncommented, this will send initial emails to vendors and update ticket status to "requested_for_information"
-        // await saveLog({ type: "status", message: "Sending outreach emails..." });
-        // 
-        // try {
-        //   await ctx.runAction(
-        //     (api as any).functions.vendorOutreach.actions.sendOutreachEmails,
-        //     { ticketId: args.ticketId, userId: args.userId }
-        //   );
-        // } catch (error) {
-        //   console.error("Error sending outreach emails:", error);
-        // }
+        // Send outreach emails (calls vendors first, then sends emails)
+        await saveLog({ type: "status", message: "Sending outreach emails..." });
+        
+        try {
+          await ctx.runAction(
+            (api as any).functions.vendorOutreach.actions.sendOutreachEmails,
+            { ticketId: args.ticketId, userId: args.userId }
+          );
+        } catch (error) {
+          console.error("Error sending outreach emails:", error);
+          await saveLog({ 
+            type: "error", 
+            error: error instanceof Error ? error.message : "Failed to send outreach emails" 
+          });
+        }
 
         await saveLog({
           type: "complete",
@@ -454,21 +456,23 @@ export const discoverVendors = action({
         }
       }
 
-      // Send outreach emails
-      // COMMENTED OUT FOR TESTING - Extract individual URLs first
-      // NOTE: When uncommented, this will send initial emails to vendors and update ticket status to "requested_for_information"
-      // if (allVendors.length > 0) {
-      //   await saveLog({ type: "status", message: "Sending outreach emails..." });
-      //   
-      //   try {
-      //     await ctx.runAction(
-      //       (api as any).functions.vendorOutreach.actions.sendOutreachEmails,
-      //       { ticketId: args.ticketId, userId: args.userId }
-      //     );
-      //   } catch (error) {
-      //     console.error("Error sending outreach emails:", error);
-      //   }
-      // }
+      // Send outreach emails (calls vendors first, then sends emails)
+      if (allVendors.length > 0) {
+        await saveLog({ type: "status", message: "Sending outreach emails..." });
+        
+        try {
+          await ctx.runAction(
+            (api as any).functions.vendorOutreach.actions.sendOutreachEmails,
+            { ticketId: args.ticketId, userId: args.userId }
+          );
+        } catch (error) {
+          console.error("Error sending outreach emails:", error);
+          await saveLog({ 
+            type: "error", 
+            error: error instanceof Error ? error.message : "Failed to send outreach emails" 
+          });
+        }
+      }
 
       await saveLog({
         type: "complete",

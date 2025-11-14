@@ -199,7 +199,7 @@ function TicketDetailsPage() {
 
   // Fetch vendors for each quote
   const vendorQuotes = vendorQuotesResult?.quotes || []
-  const vendorIds = [...new Set(vendorQuotes.map(q => q.vendorId))]
+  const vendorIds = [...new Set(vendorQuotes.map((q: any) => q.vendorId))]
   
   // Fetch vendor details for each unique vendor ID
   const vendorsResult = useQuery(
@@ -212,7 +212,7 @@ function TicketDetailsPage() {
   // Create a map of vendorId to vendor details
   const vendorsMap = new Map()
   if (vendorsResult) {
-    vendorsResult.forEach(vendor => {
+    vendorsResult.forEach((vendor: any) => {
       vendorsMap.set(vendor._id, vendor)
     })
   }
@@ -291,8 +291,8 @@ function TicketDetailsPage() {
     if (ticket && (ticket.status as string) === 'find_vendors') {
       // Check if we have completion logs - if not, still processing
       const logs = discoveryLogsResult?.logs
-      const hasComplete = logs ? logs.some(log => log.type === 'complete') : false
-      const hasError = logs ? logs.some(log => log.type === 'error') : false
+      const hasComplete = logs ? logs.some((log: any) => log.type === 'complete') : false
+      const hasError = logs ? logs.some((log: any) => log.type === 'error') : false
       
       if (!hasComplete && !hasError) {
         setIsProcessing(true)
@@ -500,7 +500,7 @@ function TicketDetailsPage() {
   }
 
   // Filter out null/undefined photoUrls
-  const validPhotoUrls = ticket.photoUrls.filter((url): url is string => Boolean(url))
+  const validPhotoUrls = ticket.photoUrls.filter((url: string | null | undefined): url is string => Boolean(url))
 
   // Render Ticket Details Section
   const renderTicketDetails = () => (
@@ -524,7 +524,7 @@ function TicketDetailsPage() {
           <section className="bg-zinc-100 rounded-2xl p-4">
             <h3 className="text-xs font-normal text-muted-foreground/70 mb-3 uppercase tracking-wide">Photos</h3>
             <section className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-              {validPhotoUrls.map((url, index) => (
+              {validPhotoUrls.map((url: string, index: number) => (
                 <section
                   key={index}
                   className="group relative flex-none w-20 h-20 cursor-pointer"
@@ -640,7 +640,7 @@ function TicketDetailsPage() {
           </Empty>
         ) : (
           <section className="space-y-2">
-            {discoveryLogsResult.logs.map((log) => (
+            {discoveryLogsResult.logs.map((log: any) => (
               <motion.section
                 key={log._id}
                 initial={{ opacity: 0, y: 10 }}
@@ -774,7 +774,7 @@ function TicketDetailsPage() {
         ) : (
           <section className="space-y-2">
             {/* Display vendors with quotes first */}
-            {vendorQuotes.map((quote) => {
+            {vendorQuotes.map((quote: any) => {
               const vendor = vendorsMap.get(quote.vendorId)
               if (!vendor) return null
               
@@ -798,9 +798,9 @@ function TicketDetailsPage() {
             })}
             
             {/* Display discovered vendors (not yet contacted) */}
-            {discoveredVendors.map((vendor, index) => {
+            {discoveredVendors.map((vendor: any, index: number) => {
               // Skip vendors that already have quotes
-              const hasQuote = vendorQuotes.some(q => q.vendorId === vendor.vendorId)
+              const hasQuote = vendorQuotes.some((q: any) => q.vendorId === vendor.vendorId)
               if (hasQuote) return null
               
               return (
@@ -854,7 +854,7 @@ function TicketDetailsPage() {
           </Empty>
         ) : (
           <section className="space-y-4">
-            {conversation.messages.map((message, index) => (
+            {conversation.messages.map((message: any, index: number) => (
               <section
                 key={index}
                 className={`p-3 rounded-lg ${

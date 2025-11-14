@@ -415,5 +415,38 @@ export default defineSchema({
     .index("by_ticketId", ["ticketId"])
     .index("by_ticketId_timestamp", ["ticketId", "timestamp"])
     .index("by_ticketId_sequence", ["ticketId", "sequenceNumber"]),
+
+  // Vendor call logs for tracking Vapi calls to vendors
+  vendorCallLogs: defineTable({
+    vapiCallId: v.string(), // Vapi call ID
+    ticketId: v.id("tickets"),
+    vendorId: v.id("vendors"),
+    vendorName: v.string(),
+    phoneNumber: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("ringing"),
+      v.literal("in-progress"),
+      v.literal("ended"),
+      v.literal("failed"),
+      v.literal("poll_error")
+    ),
+    transcript: v.optional(v.string()),
+    verifiedEmail: v.optional(v.string()), // Better email extracted from call
+    originalEmail: v.string(), // Original email from discovery (info@, etc.)
+    contactName: v.optional(v.string()), // Name of contact person mentioned
+    department: v.optional(v.string()), // Department (sales, estimates, etc.)
+    endedReason: v.optional(v.string()),
+    recordingUrl: v.optional(v.string()),
+    analysis: v.optional(v.any()), // Vapi analysis data
+    metadata: v.optional(v.any()), // Additional metadata
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_vapiCallId", ["vapiCallId"])
+    .index("by_ticketId", ["ticketId"])
+    .index("by_vendorId", ["vendorId"])
+    .index("by_status", ["status"])
+    .index("by_ticketId_status", ["ticketId", "status"]),
 });
 
