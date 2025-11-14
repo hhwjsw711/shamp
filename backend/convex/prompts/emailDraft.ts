@@ -14,11 +14,12 @@ export function getEmailDraftPrompt(params: {
   location: string | undefined
   tags: Array<string>
   imageUrl: string | null
+  imageUrls?: string[] | undefined
   vendorBusinessName: string
   vendorEmail: string | undefined
   orgName: string | null
 }) {
-  const { description, issueType, location, tags, imageUrl, vendorBusinessName, vendorEmail, orgName } = params
+  const { description, issueType, location, tags, imageUrl, imageUrls, vendorBusinessName, vendorEmail, orgName } = params
 
   // Build ticket details string for the tool
   const ticketDetails = `Issue: ${description}
@@ -35,9 +36,9 @@ Use the draftEmail tool with the following information:
 - Ticket Details: ${ticketDetails}
 - Vendor Info: ${vendorInfo}
 - Location: ${location || 'Not specified'}
-${imageUrl ? `- Image URL: ${imageUrl}` : ''}
+${imageUrls && imageUrls.length > 0 ? `- Image URLs: ${imageUrls.join(', ')}` : imageUrl ? `- Image URL: ${imageUrl}` : ''}
 ${orgName ? `- Organization Name: ${orgName}` : ''}
 
-Call the draftEmail tool to generate the email subject and body.`
+Call the draftEmail tool to generate the email subject and body.${imageUrls && imageUrls.length > 1 ? ' Note: There are multiple images - include all of them in the email.' : ''}`
 }
 

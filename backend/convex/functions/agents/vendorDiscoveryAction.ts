@@ -47,52 +47,6 @@ export const discoverVendors = action({
     let sequenceNumber = 0;
     let isComplete = false;
     
-    // Set up timeout handler to catch action timeouts (fires 10 seconds before Convex timeout)
-    const timeoutId = setTimeout(async () => {
-      if (!isComplete) {
-        // Action is about to timeout - check if we found any vendors
-        try {
-          // Check if any vendors were discovered before timeout
-          const existingResults = await ctx.runQuery(
-            (internal as any).functions.firecrawlResults.queries.getByTicketIdInternal,
-            { ticketId: args.ticketId }
-          );
-          
-          const vendorsFound = existingResults?.results?.length || 0;
-          
-          // If vendors were found, treat timeout as successful completion
-          if (vendorsFound > 0) {
-            const timeoutSequenceNumber = Date.now();
-            await ctx.runMutation(
-              (internal as any).functions.discoveryLogs.mutations.addEntry,
-              {
-                ticketId: args.ticketId,
-                type: "complete",
-                message: `Vendor discovery completed with ${vendorsFound} vendor(s) found. Process timed out but results were saved.`,
-                timestamp: Date.now(),
-                sequenceNumber: timeoutSequenceNumber,
-              }
-            );
-          } else {
-            // No vendors found - this is an actual error
-            const timeoutSequenceNumber = Date.now();
-            await ctx.runMutation(
-              (internal as any).functions.discoveryLogs.mutations.addEntry,
-              {
-                ticketId: args.ticketId,
-                type: "error",
-                error: "Vendor discovery timed out after 600 seconds. No vendors were discovered.",
-                timestamp: Date.now(),
-                sequenceNumber: timeoutSequenceNumber,
-              }
-            );
-          }
-        } catch (logError) {
-          console.error("Error saving timeout log:", logError);
-        }
-      }
-    }, 590000); // 590 seconds (10 seconds before 600s timeout)
-
     const saveLog = async (event: {
       type: "status" | "tool_call" | "tool_result" | "vendor_found" | "step" | "complete" | "error";
       message?: string;
@@ -125,6 +79,92 @@ export const discoverVendors = action({
         console.error("Error saving discovery log entry:", dbError);
       }
     };
+    
+    // Helper function to call vendors and send emails
+    const continueWithOutreach = async () => {
+      try {
+        await saveLog({ type: "status", message: "Calling vendors to verify email addresses..." });
+        
+        try {
+          await ctx.runAction(
+            (api as any).functions.vendorOutreach.actions.callVendors,
+            { ticketId: args.ticketId, userId: args.userId }
+          );
+        } catch (error) {
+          console.error("Error calling vendors:", error);
+          await saveLog({ 
+            type: "error", 
+            error: error instanceof Error ? error.message : "Failed to call vendors" 
+          });
+        }
+
+        await saveLog({ type: "status", message: "Sending outreach emails..." });
+        
+        try {
+          await ctx.runAction(
+            (api as any).functions.vendorOutreach.actions.sendOutreachEmails,
+            { ticketId: args.ticketId, userId: args.userId }
+          );
+        } catch (error) {
+          console.error("Error sending outreach emails:", error);
+          await saveLog({ 
+            type: "error", 
+            error: error instanceof Error ? error.message : "Failed to send outreach emails" 
+          });
+        }
+      } catch (outreachError) {
+        console.error("Error in outreach continuation:", outreachError);
+      }
+    };
+    
+    // Set up timeout handler to catch action timeouts (fires 10 seconds before Convex timeout)
+    const timeoutId = setTimeout(async () => {
+      if (!isComplete) {
+        // Action is about to timeout - check if we found any vendors
+        try {
+          // Check if any vendors were discovered before timeout
+          const existingResults = await ctx.runQuery(
+            (internal as any).functions.firecrawlResults.queries.getByTicketIdInternal,
+            { ticketId: args.ticketId }
+          );
+          
+          const vendorsFound = existingResults?.results?.length || 0;
+          
+          // If vendors were found, treat timeout as successful completion and continue with outreach
+          if (vendorsFound > 0) {
+            const timeoutSequenceNumber = Date.now();
+            await ctx.runMutation(
+              (internal as any).functions.discoveryLogs.mutations.addEntry,
+              {
+                ticketId: args.ticketId,
+                type: "complete",
+                message: `Vendor discovery completed with ${vendorsFound} vendor(s) found. Process timed out but results were saved.`,
+                timestamp: Date.now(),
+                sequenceNumber: timeoutSequenceNumber,
+              }
+            );
+            
+            // Continue with calling vendors and sending emails even on timeout
+            await continueWithOutreach();
+          } else {
+            // No vendors found - this is an actual error
+            const timeoutSequenceNumber = Date.now();
+            await ctx.runMutation(
+              (internal as any).functions.discoveryLogs.mutations.addEntry,
+              {
+                ticketId: args.ticketId,
+                type: "error",
+                error: "Vendor discovery timed out after 600 seconds. No vendors were discovered.",
+                timestamp: Date.now(),
+                sequenceNumber: timeoutSequenceNumber,
+              }
+            );
+          }
+        } catch (logError) {
+          console.error("Error saving timeout log:", logError);
+        }
+      }
+    }, 590000); // 590 seconds (10 seconds before 600s timeout)
 
     try {
       // Clear existing logs for this ticket before starting new discovery
@@ -251,7 +291,22 @@ export const discoverVendors = action({
           { ticketId: args.ticketId, firecrawlResultsId }
         );
 
-        // Send outreach emails (calls vendors first, then sends emails)
+        // Call vendors first to verify emails, then send outreach emails
+        await saveLog({ type: "status", message: "Calling vendors to verify email addresses..." });
+        
+        try {
+          await ctx.runAction(
+            (api as any).functions.vendorOutreach.actions.callVendors,
+            { ticketId: args.ticketId, userId: args.userId }
+          );
+        } catch (error) {
+          console.error("Error calling vendors:", error);
+          await saveLog({ 
+            type: "error", 
+            error: error instanceof Error ? error.message : "Failed to call vendors" 
+          });
+        }
+
         await saveLog({ type: "status", message: "Sending outreach emails..." });
         
         try {
@@ -456,8 +511,23 @@ export const discoverVendors = action({
         }
       }
 
-      // Send outreach emails (calls vendors first, then sends emails)
+      // Call vendors first to verify emails, then send outreach emails
       if (allVendors.length > 0) {
+        await saveLog({ type: "status", message: "Calling vendors to verify email addresses..." });
+        
+        try {
+          await ctx.runAction(
+            (api as any).functions.vendorOutreach.actions.callVendors,
+            { ticketId: args.ticketId, userId: args.userId }
+          );
+        } catch (error) {
+          console.error("Error calling vendors:", error);
+          await saveLog({ 
+            type: "error", 
+            error: error instanceof Error ? error.message : "Failed to call vendors" 
+          });
+        }
+
         await saveLog({ type: "status", message: "Sending outreach emails..." });
         
         try {
@@ -503,16 +573,20 @@ export const discoverVendors = action({
           
           const vendorsFound = existingResults?.results?.length || 0;
           
-          // If vendors were found, treat timeout as successful completion
+          // If vendors were found, treat timeout as successful completion and continue with outreach
           if (vendorsFound > 0) {
             await saveLog({
               type: "complete",
               message: `Vendor discovery completed with ${vendorsFound} vendor(s) found. Process timed out but results were saved.`,
             });
             
+            // Continue with calling vendors and sending emails even on timeout
+            await continueWithOutreach();
+            
             isComplete = true;
             clearTimeout(timeoutId);
             
+            // Return success: true so no error toast is shown
             return { 
               success: true, 
               message: `Found ${vendorsFound} vendor(s) through web search. Process timed out but results were saved.`

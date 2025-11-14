@@ -6,9 +6,10 @@ export function getDraftEmailPrompt(params: {
   location: string
   ticketDetails: string
   imageUrl?: string
+  imageUrls?: string[]
   orgName?: string | null
 }) {
-  const { vendorInfo, location, ticketDetails, imageUrl, orgName } = params
+  const { vendorInfo, location, ticketDetails, imageUrl, imageUrls, orgName } = params
   
   // Use orgName if provided, otherwise use generic description
   const businessDescription = orgName 
@@ -20,7 +21,9 @@ export function getDraftEmailPrompt(params: {
 Vendor: ${vendorInfo}
 Location: ${location}
 Issue Details: ${ticketDetails}
-${imageUrl ? `Image available at: ${imageUrl}` : ''}
+${imageUrls && imageUrls.length > 0 
+  ? `Images available at: ${imageUrls.join(', ')}${imageUrls.length > 1 ? ' (include ALL images in the email body using <img> tags)' : ''}` 
+  : imageUrl ? `Image available at: ${imageUrl}` : ''}
 
 IMPORTANT: The email body MUST be formatted as HTML. Use proper HTML tags like <p>, <br>, <strong>, <ul>, <li>, etc. Do NOT return plain text.
 

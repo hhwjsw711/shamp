@@ -24,6 +24,7 @@ export const draftVendorEmail = action({
     vendorId: v.id("vendors"),
     userId: v.id("users"), // User ID passed from HTTP handler after auth
     orgName: v.optional(v.string()), // Organization name for email personalization
+    photoUrls: v.optional(v.array(v.string())), // All photo URLs for email attachments
   },
   handler: async (
     ctx,
@@ -62,10 +63,32 @@ export const draftVendorEmail = action({
       throw new Error("Vendor not found");
     }
 
-    // Get first photo URL for email draft (use first photo if available)
-    let imageUrl: string | null = null;
-    if (ticket.photoIds && ticket.photoIds.length > 0) {
-      imageUrl = await ctx.storage.getUrl(ticket.photoIds[0]);
+    // Get photo URLs for email draft (use provided URLs or fetch from ticket)
+    let imageUrls: string[] = [];
+    if (args.photoUrls && args.photoUrls.length > 0) {
+      // Use provided photo URLs
+      imageUrls = args.photoUrls;
+    } else if (ticket.photoIds && ticket.photoIds.length > 0) {
+      // Fetch all photo URLs from ticket
+      for (const photoId of ticket.photoIds) {
+        const url = await ctx.storage.getUrl(photoId);
+        if (url) {
+          imageUrls.push(url);
+        }
+      }
+    }
+    
+    // For backward compatibility with draftEmail tool, use first image URL
+    const imageUrl = imageUrls.length > 0 ? imageUrls[0] : null;
+
+    // Get user data for orgName if not provided (must be done before creating tools)
+    let orgName = args.orgName;
+    if (!orgName) {
+      const userData = await ctx.runQuery(
+        (internal as any).functions.auth.queries.getUserByIdInternal,
+        { userId: ticket.createdBy }
+      );
+      orgName = userData?.orgName || null;
     }
 
     // Create tools (pass orgName to draftEmail tool)
@@ -83,16 +106,6 @@ export const draftVendorEmail = action({
       stopWhen: stepCountIs(3),
     });
 
-    // Get user data for orgName if not provided
-    let orgName = args.orgName;
-    if (!orgName) {
-      const userData = await ctx.runQuery(
-        (internal as any).functions.auth.queries.getUserByIdInternal,
-        { userId: ticket.createdBy }
-      );
-      orgName = userData?.orgName || null;
-    }
-
     // Generate email draft
     const prompt = getEmailDraftPrompt({
       description: ticket.description,
@@ -100,6 +113,7 @@ export const draftVendorEmail = action({
       location: ticket.location,
       tags: ticket.predictedTags,
       imageUrl,
+      imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
       vendorBusinessName: vendor.businessName,
       vendorEmail: vendor.email,
       orgName,

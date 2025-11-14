@@ -52,6 +52,21 @@ export function createUpdateTicketTool(ctx: ActionCtx, ticketId: string) {
         throw new Error("Ticket not found");
       }
 
+      // Prevent updating problemDescription during vendor discovery stage
+      // problemDescription should only be set during ticket analysis, not during vendor discovery
+      // Once ticket is "reviewed" or beyond, problemDescription should not be changed
+      const isVendorDiscoveryStage = currentTicket.status === "reviewed" ||
+                                      currentTicket.status === "find_vendors" || 
+                                      currentTicket.status === "requested_for_information" ||
+                                      currentTicket.status === "quotes_available" ||
+                                      currentTicket.status === "quote_selected";
+      
+      // If we're in vendor discovery stage and problemDescription is being updated, ignore it
+      // Also prevent updates if problemDescription already exists (it was set during analysis)
+      const finalProblemDescription = (isVendorDiscoveryStage || currentTicket.problemDescription) 
+        ? undefined 
+        : problemDescription;
+
       // Use the ticket ID passed to the tool creation function
       await ctx.runMutation(
         (internal as any).functions.tickets.mutations.updateInternal,
@@ -60,7 +75,7 @@ export function createUpdateTicketTool(ctx: ActionCtx, ticketId: string) {
           ticketName,
           issueType,
           predictedTags,
-          problemDescription,
+          problemDescription: finalProblemDescription,
           urgency,
         }
       );
