@@ -70,6 +70,7 @@ import type * as functions_vendorOutreach_callVendor from "../functions/vendorOu
 import type * as functions_vendorOutreach_mutations from "../functions/vendorOutreach/mutations.js";
 import type * as functions_vendorOutreach_queries from "../functions/vendorOutreach/queries.js";
 import type * as functions_vendorOutreach_utils_extractEmailFromTranscript from "../functions/vendorOutreach/utils/extractEmailFromTranscript.js";
+import type * as functions_vendorOutreach_utils_formatPhoneNumber from "../functions/vendorOutreach/utils/formatPhoneNumber.js";
 import type * as functions_vendorQuotes_actions from "../functions/vendorQuotes/actions.js";
 import type * as functions_vendorQuotes_mutations from "../functions/vendorQuotes/mutations.js";
 import type * as functions_vendorQuotes_queries from "../functions/vendorQuotes/queries.js";
@@ -203,6 +204,7 @@ declare const fullApi: ApiFromModules<{
   "functions/vendorOutreach/mutations": typeof functions_vendorOutreach_mutations;
   "functions/vendorOutreach/queries": typeof functions_vendorOutreach_queries;
   "functions/vendorOutreach/utils/extractEmailFromTranscript": typeof functions_vendorOutreach_utils_extractEmailFromTranscript;
+  "functions/vendorOutreach/utils/formatPhoneNumber": typeof functions_vendorOutreach_utils_formatPhoneNumber;
   "functions/vendorQuotes/actions": typeof functions_vendorQuotes_actions;
   "functions/vendorQuotes/mutations": typeof functions_vendorQuotes_mutations;
   "functions/vendorQuotes/queries": typeof functions_vendorQuotes_queries;

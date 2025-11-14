@@ -267,8 +267,8 @@ function TicketDetailsPage() {
   // Check if processing is complete based on logs and ticket status
   useEffect(() => {
     if (discoveryLogsResult?.logs) {
-      const completeLog = discoveryLogsResult.logs.find(log => log.type === 'complete')
-      const hasError = discoveryLogsResult.logs.some(log => log.type === 'error')
+      const completeLog = discoveryLogsResult.logs.find((log: any) => log.type === 'complete')
+      const hasError = discoveryLogsResult.logs.some((log: any) => log.type === 'error')
       
       // If we have complete or error logs, processing is done
       if (completeLog || hasError) {

@@ -10,6 +10,7 @@ import { v } from "convex/values";
 import { action } from "../../_generated/server";
 import { api, components, internal } from "../../_generated/api";
 import type { Doc, Id } from "../../_generated/dataModel";
+import { formatPhoneNumber, isValidPhoneNumber } from "./utils/formatPhoneNumber";
 
 const resend = new Resend((components as any).resend, {
   testMode: false, // Set to false to allow sending to real email addresses
@@ -97,7 +98,23 @@ export const sendOutreachEmails = action({
     // Track if any calls were made (to update status)
     let callsMade = false;
 
-    for (const vendorResult of firecrawlResults.results) {
+    // Limit to 1 vendor for testing
+    const vendorsToProcess = firecrawlResults.results.slice(0, 1);
+
+    // Update status to "requested_for_information" when outreach starts
+    // This happens before the loop so status is updated immediately when we begin outreach
+    if (vendorsToProcess.length > 0) {
+      await ctx.runMutation(
+        (internal as any).functions.tickets.mutations.updateInternal,
+        {
+          ticketId: args.ticketId,
+          status: "requested_for_information",
+          quoteStatus: "awaiting_quotes",
+        }
+      );
+    }
+
+    for (const vendorResult of vendorsToProcess) {
       try {
         if (!vendorResult.email) {
           outreachResults.push({
@@ -124,34 +141,113 @@ export const sendOutreachEmails = action({
           );
         }
 
-        // Call vendor first to verify email (if phone number exists)
+        // Call vendor first to verify email (if phone number exists and is valid)
         let verifiedEmail: string | null = null;
         if (vendorResult.phone) {
-          try {
-            callsMade = true;
-            const orgName = userData?.orgName || "our hospitality business";
-            const callResult = await ctx.runAction(
-              (api as any).functions.vendorOutreach.callVendor,
-              {
-                ticketId: args.ticketId,
-                vendorId,
-                phoneNumber: vendorResult.phone,
-                originalEmail: vendorResult.email,
-                orgName,
-              }
-            );
+          // Format phone number for Vapi (E.164 format)
+          const formattedPhone = formatPhoneNumber(vendorResult.phone);
+          
+          if (formattedPhone && isValidPhoneNumber(vendorResult.phone)) {
+            try {
+              callsMade = true;
+              
+              // Log call start to discovery logs
+              await ctx.runMutation(
+                (internal as any).functions.discoveryLogs.mutations.addEntry,
+                {
+                  ticketId: args.ticketId,
+                  type: "tool_call",
+                  toolName: "callVendor",
+                  message: `Calling ${vendorResult.businessName} to verify email address`,
+                  toolArgs: {
+                    vendorName: vendorResult.businessName,
+                    phoneNumber: formattedPhone,
+                    originalEmail: vendorResult.email,
+                  },
+                  timestamp: Date.now(),
+                  sequenceNumber: Date.now(), // Use timestamp as sequence for ordering
+                }
+              );
+              
+              const orgName = userData?.orgName || "our hospitality business";
+              const callResult = await ctx.runAction(
+                (api as any).functions.vendorOutreach.callVendor,
+                {
+                  ticketId: args.ticketId,
+                  vendorId,
+                  phoneNumber: formattedPhone,
+                  originalEmail: vendorResult.email,
+                  orgName,
+                }
+              );
 
-            if (callResult.success && callResult.verifiedEmail) {
-              verifiedEmail = callResult.verifiedEmail;
+              // Log call result
+              if (callResult.success) {
+                await ctx.runMutation(
+                  (internal as any).functions.discoveryLogs.mutations.addEntry,
+                  {
+                    ticketId: args.ticketId,
+                    type: "tool_result",
+                    toolName: "callVendor",
+                    message: callResult.verifiedEmail 
+                      ? `Call completed. Verified email: ${callResult.verifiedEmail}`
+                      : `Call completed. Using original email: ${vendorResult.email}`,
+                    toolResult: {
+                      success: true,
+                      verifiedEmail: callResult.verifiedEmail,
+                      vapiCallId: callResult.vapiCallId,
+                    },
+                    timestamp: Date.now(),
+                    sequenceNumber: Date.now() + 1,
+                  }
+                );
+                
+                if (callResult.verifiedEmail) {
+                  verifiedEmail = callResult.verifiedEmail;
+                }
+              } else {
+                await ctx.runMutation(
+                  (internal as any).functions.discoveryLogs.mutations.addEntry,
+                  {
+                    ticketId: args.ticketId,
+                    type: "tool_result",
+                    toolName: "callVendor",
+                    message: `Call failed: ${callResult.error || "Unknown error"}. Using original email.`,
+                    toolResult: {
+                      success: false,
+                      error: callResult.error,
+                    },
+                    timestamp: Date.now(),
+                    sequenceNumber: Date.now() + 1,
+                  }
+                );
+              }
+            } catch (callError) {
+              // Continue with original email if call fails
+              console.error(
+                `Call failed for ${vendorResult.businessName}, using original email:`,
+                callError
+              );
+              
+              // Log call error
+              await ctx.runMutation(
+                (internal as any).functions.discoveryLogs.mutations.addEntry,
+                {
+                  ticketId: args.ticketId,
+                  type: "error",
+                  error: `Call failed for ${vendorResult.businessName}: ${callError instanceof Error ? callError.message : String(callError)}`,
+                  timestamp: Date.now(),
+                  sequenceNumber: Date.now() + 1,
+                }
+              );
             }
-          } catch (callError) {
-            // Continue with original email if call fails
-            console.error(
-              `Call failed for ${vendorResult.businessName}, using original email:`,
-              callError
+          } else {
+            console.warn(
+              `Invalid phone number format for ${vendorResult.businessName}: ${vendorResult.phone}. Skipping call.`
             );
           }
         }
+
 
         // Use verified email if available, otherwise use original
         const emailToUse = verifiedEmail || vendorResult.email;
@@ -311,20 +407,9 @@ Shamp is a hospitality maintenance platform that connects service providers like
 
     const successfulSends: number = outreachResults.filter((r) => r.emailId).length;
 
-    // Update status to "requested_for_information" when calls are made OR emails are sent
-    // This ensures status is updated even if calls fail but emails succeed
-    if (callsMade || successfulSends > 0) {
-      // Update status to "requested_for_information" when initial outreach is made
-      // Update quoteStatus to awaiting_quotes
-      await ctx.runMutation(
-        (internal as any).functions.tickets.mutations.updateInternal,
-        {
-          ticketId: args.ticketId,
-          status: "requested_for_information",
-          quoteStatus: "awaiting_quotes",
-        }
-      );
-    } else {
+    // Status is already updated when outreach starts (line 104-115)
+    // Log if no successful sends occurred
+    if (successfulSends === 0 && !callsMade) {
       console.error(
         `Failed to make any calls or send any outreach emails for ticket ${args.ticketId}`
       );
