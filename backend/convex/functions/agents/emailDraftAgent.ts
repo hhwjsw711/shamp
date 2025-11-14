@@ -23,6 +23,7 @@ export const draftVendorEmail = action({
     ticketId: v.id("tickets"),
     vendorId: v.id("vendors"),
     userId: v.id("users"), // User ID passed from HTTP handler after auth
+    orgName: v.optional(v.string()), // Organization name for email personalization
   },
   handler: async (
     ctx,
@@ -67,8 +68,8 @@ export const draftVendorEmail = action({
       imageUrl = await ctx.storage.getUrl(ticket.photoIds[0]);
     }
 
-    // Create tools
-    const draftEmail = createDraftEmailTool();
+    // Create tools (pass orgName to draftEmail tool)
+    const draftEmail = createDraftEmailTool(orgName);
     const updateTicket = createUpdateTicketTool(ctx, args.ticketId);
 
     // Create agent
@@ -82,6 +83,16 @@ export const draftVendorEmail = action({
       stopWhen: stepCountIs(3),
     });
 
+    // Get user data for orgName if not provided
+    let orgName = args.orgName;
+    if (!orgName) {
+      const userData = await ctx.runQuery(
+        (internal as any).functions.auth.queries.getUserByIdInternal,
+        { userId: ticket.createdBy }
+      );
+      orgName = userData?.orgName || null;
+    }
+
     // Generate email draft
     const prompt = getEmailDraftPrompt({
       description: ticket.description,
@@ -91,6 +102,7 @@ export const draftVendorEmail = action({
       imageUrl,
       vendorBusinessName: vendor.businessName,
       vendorEmail: vendor.email,
+      orgName,
     });
 
     const result = await agent.generate({ prompt });

@@ -16,8 +16,9 @@ export function getEmailDraftPrompt(params: {
   imageUrl: string | null
   vendorBusinessName: string
   vendorEmail: string | undefined
+  orgName: string | null
 }) {
-  const { description, issueType, location, tags, imageUrl, vendorBusinessName, vendorEmail } = params
+  const { description, issueType, location, tags, imageUrl, vendorBusinessName, vendorEmail, orgName } = params
 
   // Build ticket details string for the tool
   const ticketDetails = `Issue: ${description}
@@ -35,6 +36,7 @@ Use the draftEmail tool with the following information:
 - Vendor Info: ${vendorInfo}
 - Location: ${location || 'Not specified'}
 ${imageUrl ? `- Image URL: ${imageUrl}` : ''}
+${orgName ? `- Organization Name: ${orgName}` : ''}
 
 Call the draftEmail tool to generate the email subject and body.`
 }

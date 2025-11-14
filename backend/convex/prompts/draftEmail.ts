@@ -6,10 +6,16 @@ export function getDraftEmailPrompt(params: {
   location: string
   ticketDetails: string
   imageUrl?: string
+  orgName?: string | null
 }) {
-  const { vendorInfo, location, ticketDetails, imageUrl } = params
+  const { vendorInfo, location, ticketDetails, imageUrl, orgName } = params
+  
+  // Use orgName if provided, otherwise use generic description
+  const businessDescription = orgName 
+    ? `${orgName}, a hospitality business`
+    : "a hospitality business (hotel or restaurant)";
 
-  return `Draft a professional maintenance request email to a vendor requesting a quote for a hospitality business (hotel or restaurant).
+  return `Draft a professional maintenance request email to a vendor requesting a quote for ${businessDescription}.
 
 Vendor: ${vendorInfo}
 Location: ${location}
@@ -21,7 +27,7 @@ IMPORTANT: The email body MUST be formatted as HTML. Use proper HTML tags like <
 The email should:
 - Be professional and courteous
 - Start with a greeting addressing the vendor by their business name
-- Clearly describe the issue and location (mentioning it's for a hospitality business - hotel or restaurant)
+- Clearly describe the issue and location${orgName ? ` (mentioning it's for ${orgName})` : " (mentioning it's for a hospitality business - hotel or restaurant)"}
 - Request a detailed quote with the following information:
   1. **Price**: Please provide your total price/quote for this work (include currency)
   2. **Scheduling**: Please let us know:

@@ -252,12 +252,16 @@ export const sendOutreachEmails = action({
         // Use verified email if available, otherwise use original
         const emailToUse = verifiedEmail || vendorResult.email;
 
+        // Get orgName for email draft
+        const orgNameForEmail = userData?.orgName || null;
+        
         const emailContent = await ctx.runAction(
           (api as any).functions.agents.emailDraftAgent.draftVendorEmail,
           {
             ticketId: args.ticketId,
             vendorId,
             userId: args.userId,
+            orgName: orgNameForEmail,
           }
         );
 
