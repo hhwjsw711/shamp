@@ -112,8 +112,19 @@ export const discoverVendors = action({
             error: error instanceof Error ? error.message : "Failed to send outreach emails" 
           });
         }
+
+        // Log completion only after both calling and emailing are done
+        await saveLog({
+          type: "complete",
+          message: "Vendor discovery and outreach process completed successfully.",
+        });
       } catch (outreachError) {
         console.error("Error in outreach continuation:", outreachError);
+        // Log error but don't mark as complete
+        await saveLog({
+          type: "error",
+          error: `Outreach process error: ${outreachError instanceof Error ? outreachError.message : String(outreachError)}`,
+        });
       }
     };
     
@@ -137,14 +148,15 @@ export const discoverVendors = action({
               (internal as any).functions.discoveryLogs.mutations.addEntry,
               {
                 ticketId: args.ticketId,
-                type: "complete",
-                message: `Vendor discovery completed with ${vendorsFound} vendor(s) found. Process timed out but results were saved.`,
+                type: "status",
+                message: `Vendor discovery completed with ${vendorsFound} vendor(s) found. Process timed out but results were saved. Continuing with outreach...`,
                 timestamp: Date.now(),
                 sequenceNumber: timeoutSequenceNumber,
               }
             );
             
             // Continue with calling vendors and sending emails even on timeout
+            // continueWithOutreach will log "complete" when done
             await continueWithOutreach();
           } else {
             // No vendors found - this is an actual error
@@ -322,9 +334,10 @@ export const discoverVendors = action({
           });
         }
 
+        // Log completion only after outreach is done
         await saveLog({
           type: "complete",
-          message: `Found ${existingVendors.length} existing vendor(s) in database matching this ticket.`,
+          message: `Found ${existingVendors.length} existing vendor(s) in database. Outreach process completed.`,
         });
 
         isComplete = true;
@@ -542,12 +555,13 @@ export const discoverVendors = action({
             error: error instanceof Error ? error.message : "Failed to send outreach emails" 
           });
         }
-      }
 
-      await saveLog({
-        type: "complete",
-        message: `Found ${allVendors.length} vendor(s) through web search.`,
-      });
+        // Log completion only after outreach is done
+        await saveLog({
+          type: "complete",
+          message: `Found ${allVendors.length} vendor(s) through web search. Outreach process completed.`,
+        });
+      }
 
       isComplete = true;
       clearTimeout(timeoutId);
@@ -576,11 +590,12 @@ export const discoverVendors = action({
           // If vendors were found, treat timeout as successful completion and continue with outreach
           if (vendorsFound > 0) {
             await saveLog({
-              type: "complete",
-              message: `Vendor discovery completed with ${vendorsFound} vendor(s) found. Process timed out but results were saved.`,
+              type: "status",
+              message: `Vendor discovery completed with ${vendorsFound} vendor(s) found. Process timed out but results were saved. Continuing with outreach...`,
             });
             
             // Continue with calling vendors and sending emails even on timeout
+            // continueWithOutreach will log "complete" when done
             await continueWithOutreach();
             
             isComplete = true;
