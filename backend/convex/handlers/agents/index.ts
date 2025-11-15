@@ -121,21 +121,78 @@ export const discoverVendorsHandler = httpAction(async (ctx, request) => {
       );
     }
 
-    const result = await ctx.runAction(
-      (api as any).functions.agents.vendorDiscoveryAgent.discoverVendors,
-      {
-        ticketId: ticketId as any,
-        userId: user.userId as any,
-      }
-    );
+    try {
+      const result = await ctx.runAction(
+        (api as any).functions.agents.vendorDiscoveryAgent.discoverVendors,
+        {
+          ticketId: ticketId as any,
+          userId: user.userId as any,
+        }
+      );
 
-    return new Response(JSON.stringify({ success: true, ...result }), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-    });
+      return new Response(JSON.stringify({ success: true, ...result }), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+      });
+    } catch (error) {
+      // Check if error is due to timeout
+      const isTimeout = error instanceof Error && 
+        (error.message.includes("timeout") || error.message.includes("timed out") || error.message.includes("600"));
+      
+      if (isTimeout) {
+        // Check if vendors were found before timeout
+        try {
+          const ticket = await ctx.runQuery(
+            (internal as any).functions.tickets.queries.getByIdInternal,
+            { ticketId: ticketId as any }
+          );
+          
+          if (ticket?.firecrawlResultsId) {
+            const firecrawlResults = await ctx.runQuery(
+              (internal as any).functions.firecrawlResults.queries.getByIdInternal,
+              { resultId: ticket.firecrawlResultsId }
+            );
+            
+            const vendorsFound = firecrawlResults?.results?.length || 0;
+            
+            // If vendors were found, treat timeout as success (no error toast)
+            if (vendorsFound > 0) {
+              return new Response(
+                JSON.stringify({ 
+                  success: true, 
+                  message: `Found ${vendorsFound} vendor(s). Process timed out but results were saved.` 
+                }),
+                {
+                  status: 200,
+                  headers: {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*",
+                  },
+                }
+              );
+            }
+          }
+        } catch (checkError) {
+          console.error("Error checking vendors on timeout:", checkError);
+        }
+      }
+      
+      // If timeout but no vendors found, or other error, return error response
+      console.error("Discover vendors error:", error);
+      return new Response(
+        JSON.stringify({ error: getErrorMessage(error) }),
+        {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+          },
+        }
+      );
+    }
   } catch (error) {
     console.error("Discover vendors error:", error);
     return new Response(

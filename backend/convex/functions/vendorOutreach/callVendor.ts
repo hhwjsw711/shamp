@@ -214,22 +214,13 @@ export const callVendor = action({
             {
               name: "extractEmail",
               description:
-                "Extract and record email address, contact name, and department from the conversation.",
+                "Extract and record the verified email address from the conversation.",
               parameters: {
                 type: "object",
                 properties: {
                   email: {
                     type: "string",
-                    description: "Email address mentioned",
-                  },
-                  contactName: {
-                    type: "string",
-                    description: "Name of contact person (optional)",
-                  },
-                  department: {
-                    type: "string",
-                    description:
-                      "Department (sales, estimates, service, etc.) (optional)",
+                    description: "Verified email address mentioned in the conversation",
                   },
                 },
                 required: ["email"],
@@ -267,30 +258,39 @@ export const callVendor = action({
 
         // Extract email from transcript
         let verifiedEmail: string | null = null;
-        let contactName: string | null = null;
-        let department: string | null = null;
 
         if (callResult.transcript) {
           const extracted = extractEmailFromTranscript(callResult.transcript);
           verifiedEmail = extracted.email;
-          contactName = extracted.contactName;
-          department = extracted.department;
         }
 
         // Update call log with results
+        // Only include fields that are defined and not null (Convex best practice)
+        const updateData: any = {
+          vapiCallId,
+          status: "ended",
+        };
+
+        if (callResult.transcript !== undefined && callResult.transcript !== null) {
+          updateData.transcript = callResult.transcript;
+        }
+        // Only include verifiedEmail if we actually found one (not null)
+        if (verifiedEmail !== null && verifiedEmail !== undefined) {
+          updateData.verifiedEmail = verifiedEmail;
+        }
+        if (callResult.endedReason !== undefined && callResult.endedReason !== null) {
+          updateData.endedReason = callResult.endedReason;
+        }
+        if (callResult.recordingUrl !== undefined && callResult.recordingUrl !== null) {
+          updateData.recordingUrl = callResult.recordingUrl;
+        }
+        if (callResult.analysis !== undefined && callResult.analysis !== null) {
+          updateData.analysis = callResult.analysis;
+        }
+
         await ctx.runMutation(
           (internal as any).functions.vendorCallLogs.mutations.update,
-          {
-            vapiCallId,
-            status: "ended",
-            transcript: callResult.transcript,
-            verifiedEmail,
-            contactName,
-            department,
-            endedReason: callResult.endedReason,
-            recordingUrl: callResult.recordingUrl,
-            analysis: callResult.analysis,
-          }
+          updateData
         );
 
         // Update vendor record with verified email if found
@@ -300,8 +300,6 @@ export const callVendor = action({
             {
               vendorId: args.vendorId,
               email: verifiedEmail,
-              contactName,
-              department,
             }
           );
         }

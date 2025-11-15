@@ -61,8 +61,6 @@ export const update = internalMutation({
     ),
     transcript: v.optional(v.string()),
     verifiedEmail: v.optional(v.string()),
-    contactName: v.optional(v.string()),
-    department: v.optional(v.string()),
     endedReason: v.optional(v.string()),
     recordingUrl: v.optional(v.string()),
     analysis: v.optional(v.any()),
@@ -86,8 +84,6 @@ export const update = internalMutation({
     if (args.transcript !== undefined) updates.transcript = args.transcript;
     if (args.verifiedEmail !== undefined)
       updates.verifiedEmail = args.verifiedEmail;
-    if (args.contactName !== undefined) updates.contactName = args.contactName;
-    if (args.department !== undefined) updates.department = args.department;
     if (args.endedReason !== undefined) updates.endedReason = args.endedReason;
     if (args.recordingUrl !== undefined) updates.recordingUrl = args.recordingUrl;
     if (args.analysis !== undefined) updates.analysis = args.analysis;
@@ -104,8 +100,6 @@ export const updateExtractedEmail = internalMutation({
   args: {
     vapiCallId: v.string(),
     email: v.string(),
-    contactName: v.optional(v.string()),
-    department: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
@@ -117,15 +111,10 @@ export const updateExtractedEmail = internalMutation({
       throw new Error(`Call log not found for vapiCallId: ${args.vapiCallId}`);
     }
 
-    const updates: any = {
+    await ctx.db.patch(existing._id, {
       verifiedEmail: args.email,
       updatedAt: Date.now(),
-    };
-
-    if (args.contactName !== undefined) updates.contactName = args.contactName;
-    if (args.department !== undefined) updates.department = args.department;
-
-    await ctx.db.patch(existing._id, updates);
+    });
   },
 });
 

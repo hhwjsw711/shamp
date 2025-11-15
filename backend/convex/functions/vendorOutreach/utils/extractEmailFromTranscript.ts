@@ -5,13 +5,12 @@
 
 export interface ExtractedEmailInfo {
   email: string | null;
-  contactName: string | null;
-  department: string | null;
   confidence: "high" | "medium" | "low";
 }
 
 /**
- * Extract email address and contact information from call transcript
+ * Extract email address from call transcript
+ * Returns the best email found (preferring non-generic emails like sales@ over info@)
  */
 export function extractEmailFromTranscript(
   transcript: string
@@ -19,8 +18,6 @@ export function extractEmailFromTranscript(
   if (!transcript || transcript.trim().length === 0) {
     return {
       email: null,
-      contactName: null,
-      department: null,
       confidence: "low",
     };
   }
@@ -36,8 +33,6 @@ export function extractEmailFromTranscript(
   if (uniqueEmails.length === 0) {
     return {
       email: null,
-      contactName: null,
-      department: null,
       confidence: "low",
     };
   }
@@ -51,40 +46,8 @@ export function extractEmailFromTranscript(
         e.includes("quote") ||
         e.includes("service") ||
         e.includes("contact") ||
-        e.includes("@") && !e.includes("info"))
+        (e.includes("@") && !e.includes("info")))
   );
-
-  // Extract contact name patterns
-  // Look for: "speak with [Name]", "contact [Name]", "name is [Name]", etc.
-  const namePatterns = [
-    /(?:speak with|contact|talk to|name is|call|email)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i,
-    /(?:it's|this is)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i,
-    /(?:you can reach|reach out to)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i,
-  ];
-
-  let contactName: string | null = null;
-  for (const pattern of namePatterns) {
-    const match = transcript.match(pattern);
-    if (match && match[1]) {
-      contactName = match[1].trim();
-      break;
-    }
-  }
-
-  // Extract department
-  const deptPatterns = [
-    /(sales|estimates?|quotes?|service|operations?|customer\s+service)\s+(?:department|team|person|email)/i,
-    /(?:in|from)\s+(?:the\s+)?(sales|estimates?|quotes?|service|operations?)\s+(?:department|team)/i,
-  ];
-
-  let department: string | null = null;
-  for (const pattern of deptPatterns) {
-    const match = transcript.match(pattern);
-    if (match && match[1]) {
-      department = match[1].toLowerCase();
-      break;
-    }
-  }
 
   // Determine confidence and select best email
   let selectedEmail: string | null = null;
@@ -102,8 +65,6 @@ export function extractEmailFromTranscript(
 
   return {
     email: selectedEmail,
-    contactName,
-    department,
     confidence,
   };
 }

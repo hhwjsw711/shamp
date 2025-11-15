@@ -434,8 +434,6 @@ export default defineSchema({
     transcript: v.optional(v.string()),
     verifiedEmail: v.optional(v.string()), // Better email extracted from call
     originalEmail: v.string(), // Original email from discovery (info@, etc.)
-    contactName: v.optional(v.string()), // Name of contact person mentioned
-    department: v.optional(v.string()), // Department (sales, estimates, etc.)
     endedReason: v.optional(v.string()),
     recordingUrl: v.optional(v.string()),
     analysis: v.optional(v.any()), // Vapi analysis data
