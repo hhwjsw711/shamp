@@ -1004,9 +1004,11 @@ function TicketDetailsPage() {
         if (parts.length >= 3) {
           // parts[0] = "quote", parts[1] = quoteId, parts[2] = vendorId
           const quoteId = parts[1]
-          // Find the quote
+          // Find the quote to get the correct vendorId
           const quote = vendorQuotes.find((q: any) => q._id === quoteId)
-          if (quote) {
+          if (quote && quote.vendorId) {
+            // Use the vendorId from the quote, not from parsing the string
+            // Ensure vendorId exists before using it
             actualVendorId = quote.vendorId
             selectedVendor = vendorsMap.get(quote.vendorId)
           }
@@ -1019,11 +1021,13 @@ function TicketDetailsPage() {
           const index = parseInt(vendorIdPart, 10)
           if (index >= 0 && index < discoveredVendors.length) {
             const discoveredVendor = discoveredVendors[index]
+            // Only set actualVendorId if the discovered vendor has a vendorId
+            // If it doesn't, we can't filter messages for it
             actualVendorId = discoveredVendor.vendorId || null
             selectedVendor = discoveredVendor
           }
         } else {
-          // It's a vendor ID
+          // It's a vendor ID - use it directly
           actualVendorId = vendorIdPart
           selectedVendor = discoveredVendors.find((v: any) => v.vendorId === vendorIdPart) ||
                           vendorsMap.get(vendorIdPart)
@@ -1036,21 +1040,91 @@ function TicketDetailsPage() {
       }
     }
 
+    // Helper function to extract business name from message content
+    // Looks for patterns like "Dear {BusinessName}," or "Dear {BusinessName} Team,"
+    const extractBusinessNameFromMessage = (messageText: string): string | null => {
+      // Match patterns like "Dear Air Group," or "Dear Air Group Team," or "Dear Air Group,"
+      const match = messageText.match(/Dear\s+([^,\n]+?)(?:\s+Team)?[,:]/i)
+      if (match && match[1]) {
+        return match[1].trim()
+      }
+      return null
+    }
+
+    // Helper function to check if message matches selected vendor by business name or email
+    const messageMatchesVendor = (message: any, vendor: any): boolean => {
+      if (!vendor) return false
+
+      // Try to extract business name from message
+      const messageBusinessName = extractBusinessNameFromMessage(message.message)
+      
+      // Match by business name (case-insensitive, partial match)
+      if (messageBusinessName && vendor.businessName) {
+        const vendorNameLower = vendor.businessName.toLowerCase()
+        const messageNameLower = messageBusinessName.toLowerCase()
+        // Check if message business name matches vendor business name (exact or contains)
+        if (vendorNameLower === messageNameLower || 
+            vendorNameLower.includes(messageNameLower) || 
+            messageNameLower.includes(vendorNameLower)) {
+          return true
+        }
+      }
+
+      // Match by email if available (for future messages that might include email)
+      if (message.message && vendor.email) {
+        const emailRegex = new RegExp(vendor.email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+        if (emailRegex.test(message.message)) {
+          return true
+        }
+      }
+
+      return false
+    }
+
     // Filter messages by selected vendor
-    // Show all messages if no vendor is selected, or filter by vendorId
+    // CRITICAL: If a vendor is selected but has no vendorId, show empty state (not all messages)
     const filteredMessages = conversation?.messages.filter((message: any) => {
-      if (!actualVendorId) {
-        // If no vendor selected, show all messages
+      // If no vendor selected, show all messages
+      if (!selectedVendorId) {
         return true
       }
-      // Show messages that are:
-      // 1. User messages (always show user messages)
-      // 2. Messages from the selected vendor (vendorId matches)
-      // 3. Agent messages sent to the selected vendor (vendorId matches)
-      return (
-        message.sender === 'user' ||
-        (message.vendorId && message.vendorId === actualVendorId)
-      )
+      
+      // If vendor is selected but actualVendorId is null (discovered vendor without vendorId),
+      // try to match by business name/email, otherwise show empty state
+      if (!actualVendorId) {
+        // Try fallback matching by business name/email for messages without vendorId
+        if (message.sender === 'user') {
+          return true // User messages always shown
+        }
+        // Try to match message to selected vendor by business name/email
+        return messageMatchesVendor(message, selectedVendor)
+      }
+      
+      // User messages are always shown
+      if (message.sender === 'user') {
+        return true
+      }
+      
+      // For agent/vendor messages, check vendorId match first
+      if (message.vendorId) {
+        // Convert both to strings for reliable comparison (handles Convex ID objects/strings)
+        const messageVendorIdStr = String(message.vendorId).trim()
+        const selectedVendorIdStr = String(actualVendorId).trim()
+        
+        // Exact vendorId match
+        if (messageVendorIdStr === selectedVendorIdStr) {
+          return true
+        }
+      }
+      
+      // Fallback: If message has no vendorId, try to match by business name/email
+      // This handles old messages created before vendorId was added
+      if (!message.vendorId && selectedVendor) {
+        return messageMatchesVendor(message, selectedVendor)
+      }
+      
+      // No match found
+      return false
     }) || []
 
     return (
