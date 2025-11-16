@@ -3,8 +3,7 @@ import { useMutation, useQuery } from 'convex/react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Spinner } from '@/components/ui/spinner'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Skeleton } from '@/components/ui/skeleton'
 import { TicketStatusColumn } from '@/components/layout/ticket-status-column'
 import { TicketCard } from '@/components/layout/ticket-card'
 import { useAuth } from '@/hooks/useAuth'
@@ -112,6 +111,8 @@ function TicketsPage() {
   // useQuery returns undefined while loading, array when loaded
   const isLoading = ticketsResult === undefined && isAuthenticated
   const tickets = ticketsResult as Array<Ticket> | undefined
+  // Use empty array if tickets is undefined or null - allows columns to render with empty states
+  const ticketsArray = tickets || []
 
   // Detect mobile screen size
   useEffect(() => {
@@ -134,12 +135,12 @@ function TicketsPage() {
   // Set initial selected status to highest count on mobile only
   useEffect(() => {
     // Only run on mobile, when tickets are loaded, and selectedStatus is still 'all'
-    if (!tickets || tickets.length === 0 || !isMobile || selectedStatus !== 'all') return
+    if (!ticketsArray || ticketsArray.length === 0 || !isMobile || selectedStatus !== 'all') return
     
     // Calculate raw counts for each status (without search/sort filters)
     const statusCounts = TICKET_STATUSES.map((status) => ({
       status: status.value,
-      count: tickets.filter((ticket) => ticket.status === status.value).length,
+      count: ticketsArray.filter((ticket) => ticket.status === status.value).length,
     }))
     
     // Find status with highest count
@@ -162,9 +163,9 @@ function TicketsPage() {
   }
 
   const getTicketsByStatus = (status: TicketStatus) => {
-    if (!tickets) return []
+    if (!ticketsArray || ticketsArray.length === 0) return []
     
-    let statusTickets = tickets.filter((ticket: Ticket) => ticket.status === status)
+    let statusTickets = ticketsArray.filter((ticket: Ticket) => ticket.status === status)
     
     // Apply search filter (text matching on description, problemDescription, etc.)
     const searchQuery = searchQueries[status]
@@ -224,22 +225,68 @@ function TicketsPage() {
     return statusTickets
   }
 
-  // Show loading state
+  // Show loading state with skeleton loaders
   if (isLoading) {
     return (
-      <main className="flex items-center justify-center h-full">
-        <Spinner className="size-8" />
-      </main>
-    )
-  }
+      <main className="flex flex-col flex-1 overflow-hidden min-h-0">
+        {/* Tabs Section - Mobile Only (< md) */}
+        <section className="md:hidden w-full border-b p-4 shrink-0">
+          <Tabs value="all">
+            <TabsList className="w-full justify-start overflow-x-auto scrollbar-hide">
+              {TICKET_STATUSES.map((status) => (
+                <TabsTrigger key={status.value} value={status.value} className="shrink-0">
+                  <Skeleton className="h-5 w-24" />
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </section>
 
-  // Show empty state if no tickets
-  if (!tickets || tickets.length === 0) {
-    return (
-      <main className="flex items-center justify-center h-full p-4">
-        <Alert className="max-w-md">
-          <AlertDescription>No tickets found. Create your first ticket to get started.</AlertDescription>
-        </Alert>
+        {/* Kanban Board Section with Skeletons */}
+        <section className="flex-1 overflow-x-auto overflow-y-hidden min-h-0">
+          <section className="flex flex-row gap-4 h-full p-4 w-full md:min-w-max md:w-auto">
+            {TICKET_STATUSES.map((status) => (
+              <section
+                key={status.value}
+                className="flex flex-col w-full md:w-80 shrink-0 bg-background rounded-3xl"
+              >
+                {/* Column Header Skeleton */}
+                <header className="p-4 shrink-0">
+                  <section className="flex items-center justify-between">
+                    <section className="flex items-center gap-4">
+                      <Skeleton className="h-5 w-32" />
+                      <Skeleton className="h-5 w-8 rounded-full" />
+                    </section>
+                    <section className="flex items-center gap-2">
+                      <Skeleton className="h-8 w-8 rounded" />
+                      <Skeleton className="h-8 w-8 rounded" />
+                    </section>
+                  </section>
+                </header>
+
+                {/* Column Content Skeleton */}
+                <section className="flex-1 overflow-y-auto p-2 flex flex-col gap-2 min-h-0">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <section
+                      key={i}
+                      className="p-4 bg-card rounded-lg border border-border"
+                    >
+                      <section className="flex flex-col gap-2">
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-3 w-full" />
+                        <Skeleton className="h-3 w-2/3" />
+                        <section className="flex items-center gap-2 mt-2">
+                          <Skeleton className="h-4 w-16 rounded-full" />
+                          <Skeleton className="h-4 w-20 rounded-full" />
+                        </section>
+                      </section>
+                    </section>
+                  ))}
+                </section>
+              </section>
+            ))}
+          </section>
+        </section>
       </main>
     )
   }
