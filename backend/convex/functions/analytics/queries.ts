@@ -28,7 +28,18 @@ export const getDashboardStats = query({
       .collect();
 
     // Calculate ticket counts by status
-    const ticketCountsByStatus: Record<string, number> = {};
+    // Initialize all possible statuses to 0 to ensure all are shown
+    const ticketCountsByStatus: Record<string, number> = {
+      analyzing: 0,
+      analyzed: 0,
+      reviewed: 0,
+      find_vendors: 0,
+      requested_for_information: 0,
+      quotes_available: 0,
+      quote_selected: 0,
+      fixed: 0,
+      closed: 0,
+    };
     tickets.forEach((ticket) => {
       ticketCountsByStatus[ticket.status] =
         (ticketCountsByStatus[ticket.status] || 0) + 1;
@@ -49,7 +60,7 @@ export const getDashboardStats = query({
     // Calculate quote statistics
     const newQuotesCount = quotes.filter((q) => q.status === "received").length;
     const pendingQuotesCount = quotes.filter(
-      (q) => q.status === "analyzing",
+      (q) => q.status === "pending",
     ).length;
     const selectedQuotesCount = quotes.filter(
       (q) => q.status === "selected",
@@ -204,7 +215,18 @@ export const getDashboardStatsInternal = internalQuery({
       .collect();
 
     // Calculate ticket counts by status
-    const ticketCountsByStatus: Record<string, number> = {};
+    // Initialize all possible statuses to 0 to ensure all are shown
+    const ticketCountsByStatus: Record<string, number> = {
+      analyzing: 0,
+      analyzed: 0,
+      reviewed: 0,
+      find_vendors: 0,
+      requested_for_information: 0,
+      quotes_available: 0,
+      quote_selected: 0,
+      fixed: 0,
+      closed: 0,
+    };
     tickets.forEach((ticket) => {
       ticketCountsByStatus[ticket.status] =
         (ticketCountsByStatus[ticket.status] || 0) + 1;
@@ -225,7 +247,7 @@ export const getDashboardStatsInternal = internalQuery({
     // Calculate quote statistics
     const newQuotesCount = quotes.filter((q) => q.status === "received").length;
     const pendingQuotesCount = quotes.filter(
-      (q) => q.status === "analyzing",
+      (q) => q.status === "pending",
     ).length;
     const selectedQuotesCount = quotes.filter(
       (q) => q.status === "selected",
