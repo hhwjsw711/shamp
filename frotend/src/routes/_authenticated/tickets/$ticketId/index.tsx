@@ -1120,26 +1120,52 @@ function TicketDetailsPage() {
             </Empty>
           ) : (
             <section className="space-y-4">
-              {filteredMessages.map((message: any, index: number) => (
-                <section
-                  key={index}
-                  className={`p-3 rounded-lg ${
-                    message.sender === 'user'
-                      ? 'bg-primary/10 ml-auto max-w-[80%]'
-                      : message.sender === 'agent'
-                      ? 'bg-muted mr-auto max-w-[80%]'
-                      : 'bg-secondary/50 mr-auto max-w-[80%]'
-                  }`}
-                >
-                  <section className="flex items-center gap-2 mb-1">
-                    <section className="text-xs font-medium capitalize">{message.sender}</section>
-                    <section className="text-xs text-muted-foreground">
-                      {formatDate(message.date)}
+              {filteredMessages.map((message: any, index: number) => {
+                // Format message content for email readability
+                // Preserve line breaks and format as email content
+                const formatEmailContent = (text: string) => {
+                  // Split by double line breaks (paragraphs) and single line breaks
+                  return text.split(/\n\n+/).map((paragraph, pIndex) => (
+                    <p key={pIndex} className={pIndex > 0 ? 'mt-4' : ''}>
+                      {paragraph.split('\n').map((line, lIndex, lines) => (
+                        <span key={lIndex}>
+                          {line}
+                          {lIndex < lines.length - 1 && <br />}
+                        </span>
+                      ))}
+                    </p>
+                  ))
+                }
+
+                const isEmailMessage = message.sender === 'agent' || message.sender === 'vendor'
+                
+                return (
+                  <section
+                    key={index}
+                    className={`p-4 rounded-lg ${
+                      message.sender === 'user'
+                        ? 'bg-primary/10 ml-auto max-w-[80%]'
+                        : message.sender === 'agent'
+                        ? 'bg-muted ml-auto max-w-[80%]'
+                        : 'bg-secondary/50 mr-auto max-w-[80%]'
+                    }`}
+                  >
+                    <section className="flex flex-col gap-1 mb-3 pb-3 border-b border-border/50">
+                      <section className="text-xs font-medium capitalize">{message.sender}</section>
+                      <section className="text-xs text-muted-foreground">
+                        {formatDate(message.date)}
+                      </section>
                     </section>
+                    {isEmailMessage ? (
+                      <section className="text-sm leading-relaxed whitespace-pre-wrap wrap-break-word">
+                        {formatEmailContent(message.message)}
+                      </section>
+                    ) : (
+                      <p className="text-sm">{message.message}</p>
+                    )}
                   </section>
-                  <p className="text-sm">{message.message}</p>
-                </section>
-              ))}
+                )
+              })}
             </section>
           )}
         </section>
