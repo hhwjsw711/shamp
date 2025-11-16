@@ -167,6 +167,90 @@ export const getDashboardStats = query({
       ? await ctx.db.get(mostUsedVendorId)
       : null;
 
+    // Calculate vendor performance metrics
+    const vendorPerformance: Array<{
+      vendorId: Id<"vendors">;
+      businessName: string;
+      ticketCount: number;
+      averageResponseTimeHours: number | null;
+      averageFixTimeHours: number | null;
+    }> = [];
+
+    // Get all vendors that have been selected for tickets
+    const vendorIds = new Set<Id<"vendors">>();
+    tickets.forEach((ticket) => {
+      if (ticket.selectedVendorId) {
+        vendorIds.add(ticket.selectedVendorId);
+      }
+    });
+
+    // Calculate metrics for each vendor
+    for (const vendorId of vendorIds) {
+      const vendor = await ctx.db.get(vendorId);
+      if (!vendor) continue;
+
+      const vendorTickets = tickets.filter((t) => t.selectedVendorId === vendorId);
+      const ticketCount = vendorTickets.length;
+
+      // Calculate average response time for this vendor
+      const vendorResponseTimes: Array<number> = [];
+      for (const ticket of vendorTickets) {
+        if (ticket.conversationId) {
+          const conversation = await ctx.db.get(ticket.conversationId);
+          if (conversation) {
+            const firstVendorMessage = conversation.messages.find(
+              (msg) => msg.sender === "vendor",
+            );
+            if (firstVendorMessage) {
+              const responseTime = firstVendorMessage.date - ticket.createdAt;
+              if (responseTime > 0) {
+                vendorResponseTimes.push(responseTime);
+              }
+            }
+          }
+        }
+      }
+
+      const averageResponseTimeHours =
+        vendorResponseTimes.length > 0
+          ? Math.round(
+              (vendorResponseTimes.reduce((a, b) => a + b, 0) /
+                vendorResponseTimes.length /
+                (1000 * 60 * 60)) *
+                100,
+            ) / 100
+          : null;
+
+      // Calculate average fix time for this vendor
+      const closedVendorTickets = vendorTickets.filter(
+        (t) => t.status === "fixed" && t.closedAt,
+      );
+      const vendorFixTimes = closedVendorTickets
+        .map((ticket) => ticket.closedAt! - ticket.createdAt)
+        .filter((time) => time > 0);
+
+      const averageFixTimeHours =
+        vendorFixTimes.length > 0
+          ? Math.round(
+              (vendorFixTimes.reduce((a, b) => a + b, 0) /
+                vendorFixTimes.length /
+                (1000 * 60 * 60)) *
+                100,
+            ) / 100
+          : null;
+
+      vendorPerformance.push({
+        vendorId,
+        businessName: vendor.businessName,
+        ticketCount,
+        averageResponseTimeHours,
+        averageFixTimeHours,
+      });
+    }
+
+    // Sort by ticket count (most used first)
+    vendorPerformance.sort((a, b) => b.ticketCount - a.ticketCount);
+
     return {
       totalTickets: tickets.length,
       ticketCountsByStatus,
@@ -195,6 +279,7 @@ export const getDashboardStats = query({
       ticketsAwaitingSelection, // Tickets with quotes but no vendor selected yet
       averageQuotePrice, // Average price in smallest currency unit (e.g., cents for USD)
       averageQuoteDeliveryTimeHours, // Average delivery time in hours
+      vendorPerformance, // Vendor performance metrics for charts
     };
   },
 });
@@ -354,6 +439,90 @@ export const getDashboardStatsInternal = internalQuery({
       ? await ctx.db.get(mostUsedVendorId)
       : null;
 
+    // Calculate vendor performance metrics
+    const vendorPerformance: Array<{
+      vendorId: Id<"vendors">;
+      businessName: string;
+      ticketCount: number;
+      averageResponseTimeHours: number | null;
+      averageFixTimeHours: number | null;
+    }> = [];
+
+    // Get all vendors that have been selected for tickets
+    const vendorIds = new Set<Id<"vendors">>();
+    tickets.forEach((ticket) => {
+      if (ticket.selectedVendorId) {
+        vendorIds.add(ticket.selectedVendorId);
+      }
+    });
+
+    // Calculate metrics for each vendor
+    for (const vendorId of vendorIds) {
+      const vendor = await ctx.db.get(vendorId);
+      if (!vendor) continue;
+
+      const vendorTickets = tickets.filter((t) => t.selectedVendorId === vendorId);
+      const ticketCount = vendorTickets.length;
+
+      // Calculate average response time for this vendor
+      const vendorResponseTimes: Array<number> = [];
+      for (const ticket of vendorTickets) {
+        if (ticket.conversationId) {
+          const conversation = await ctx.db.get(ticket.conversationId);
+          if (conversation) {
+            const firstVendorMessage = conversation.messages.find(
+              (msg) => msg.sender === "vendor",
+            );
+            if (firstVendorMessage) {
+              const responseTime = firstVendorMessage.date - ticket.createdAt;
+              if (responseTime > 0) {
+                vendorResponseTimes.push(responseTime);
+              }
+            }
+          }
+        }
+      }
+
+      const averageResponseTimeHours =
+        vendorResponseTimes.length > 0
+          ? Math.round(
+              (vendorResponseTimes.reduce((a, b) => a + b, 0) /
+                vendorResponseTimes.length /
+                (1000 * 60 * 60)) *
+                100,
+            ) / 100
+          : null;
+
+      // Calculate average fix time for this vendor
+      const closedVendorTickets = vendorTickets.filter(
+        (t) => t.status === "fixed" && t.closedAt,
+      );
+      const vendorFixTimes = closedVendorTickets
+        .map((ticket) => ticket.closedAt! - ticket.createdAt)
+        .filter((time) => time > 0);
+
+      const averageFixTimeHours =
+        vendorFixTimes.length > 0
+          ? Math.round(
+              (vendorFixTimes.reduce((a, b) => a + b, 0) /
+                vendorFixTimes.length /
+                (1000 * 60 * 60)) *
+                100,
+            ) / 100
+          : null;
+
+      vendorPerformance.push({
+        vendorId,
+        businessName: vendor.businessName,
+        ticketCount,
+        averageResponseTimeHours,
+        averageFixTimeHours,
+      });
+    }
+
+    // Sort by ticket count (most used first)
+    vendorPerformance.sort((a, b) => b.ticketCount - a.ticketCount);
+
     return {
       totalTickets: tickets.length,
       ticketCountsByStatus,
@@ -382,6 +551,7 @@ export const getDashboardStatsInternal = internalQuery({
       ticketsAwaitingSelection, // Tickets with quotes but no vendor selected yet
       averageQuotePrice, // Average price in smallest currency unit (e.g., cents for USD)
       averageQuoteDeliveryTimeHours, // Average delivery time in hours
+      vendorPerformance, // Vendor performance metrics for charts
     };
   },
 });

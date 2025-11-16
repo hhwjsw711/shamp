@@ -12,6 +12,7 @@ import {
   Wrench
 } from 'lucide-react'
 import AnalyticsCard from '@/components/layout/analytics-card'
+import VendorPerformanceChart from '@/components/layout/vendor-performance-chart'
 import { Spinner } from '@/components/ui/spinner'
 import { useAuth } from '@/hooks/useAuth'
 import { api } from '@/lib/convex-api'
@@ -67,6 +68,13 @@ interface DashboardStats {
   ticketsAwaitingSelection: number
   averageQuotePrice: number | null
   averageQuoteDeliveryTimeHours: number | null
+  vendorPerformance: Array<{
+    vendorId: string
+    businessName: string
+    ticketCount: number
+    averageResponseTimeHours: number | null
+    averageFixTimeHours: number | null
+  }>
 }
 
 function App() {
@@ -133,7 +141,7 @@ function App() {
       {/* Content - Scrollable */}
       <section className="flex-1 overflow-y-auto p-4 pt-2 flex flex-col gap-6 min-h-0">
         {/* Ticket Statistics */}
-        <section className="flex flex-col gap-4">
+        <section className="flex flex-col gap-2">
           <h2 className="text-lg font-semibold">Ticket Statistics</h2>
           <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <AnalyticsCard
@@ -154,7 +162,7 @@ function App() {
         </section>
 
         {/* Quote Statistics */}
-        <section className="flex flex-col gap-4">
+        <section className="flex flex-col gap-2">
           <h2 className="text-lg font-semibold">Quote Statistics</h2>
           <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <AnalyticsCard
@@ -196,56 +204,59 @@ function App() {
         <section className="flex flex-col gap-4">
           <h2 className="text-lg font-semibold">Performance Metrics</h2>
           <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {stats.averageResponseTimeHours !== null && (
-          <AnalyticsCard
-            icon={<Clock className="w-5 h-5" />}
-            name="Average Response Time"
-            value={
-              <section className="flex flex-col gap-1">
-                <p className="text-2xl font-semibold">
-                  {stats.averageResponseTimeHours.toFixed(2)} hours
-                </p>
-                <p className="text-sm text-muted-foreground">Time from ticket creation to first vendor reply</p>
-              </section>
-            }
-          />
-        )}
+        <AnalyticsCard
+          icon={<Clock className="w-5 h-5" />}
+          name="Average Response Time"
+          value={
+            <section className="flex flex-col gap-1">
+              <p className="text-2xl font-semibold">
+                {stats.averageResponseTimeHours !== null 
+                  ? `${stats.averageResponseTimeHours.toFixed(2)} hours`
+                  : '0 hours'}
+              </p>
+              <p className="text-sm text-muted-foreground">Time from ticket creation to first vendor reply</p>
+            </section>
+          }
+        />
 
-        {stats.averageFixTimeHours !== null && (
-          <AnalyticsCard
-            icon={<Wrench className="w-5 h-5" />}
-            name="Average Fix Time"
-            value={
-              <section className="flex flex-col gap-1">
-                <p className="text-2xl font-semibold">
-                  {stats.averageFixTimeHours.toFixed(2)} hours
-                </p>
-                <p className="text-sm text-muted-foreground">Time from ticket creation to closure</p>
-              </section>
-            }
-          />
-        )}
+        <AnalyticsCard
+          icon={<Wrench className="w-5 h-5" />}
+          name="Average Fix Time"
+          value={
+            <section className="flex flex-col gap-1">
+              <p className="text-2xl font-semibold">
+                {stats.averageFixTimeHours !== null 
+                  ? `${stats.averageFixTimeHours.toFixed(2)} hours`
+                  : '0 hours'}
+              </p>
+              <p className="text-sm text-muted-foreground">Time from ticket creation to closure</p>
+            </section>
+          }
+        />
 
-        {stats.mostUsedVendor && (
-          <AnalyticsCard
-            icon={<Building2 className="w-5 h-5" />}
-            name="Most Used Vendor"
-            value={
-              <section className="flex flex-col gap-1">
-                <p className="text-lg font-semibold">{stats.mostUsedVendor.businessName}</p>
-                <p className="text-sm text-muted-foreground">
-                  {stats.mostUsedVendor.usageCount} ticket{stats.mostUsedVendor.usageCount !== 1 ? 's' : ''}
-                </p>
-              </section>
-            }
-          />
-        )}
+        <AnalyticsCard
+          icon={<Building2 className="w-5 h-5" />}
+          name="Most Used Vendor"
+          value={
+            <section className="flex flex-col gap-1">
+              <p className="text-lg font-semibold">
+                {stats.mostUsedVendor?.businessName || 'No vendor yet'}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {stats.mostUsedVendor?.usageCount || 0} ticket{(stats.mostUsedVendor?.usageCount || 0) !== 1 ? 's' : ''}
+              </p>
+            </section>
+          }
+        />
           </section>
+
+          {/* Vendor Performance Chart */}
+          <VendorPerformanceChart data={stats.vendorPerformance} />
         </section>
 
         {/* Quote Averages */}
         {(stats.averageQuotePrice !== null || stats.averageQuoteDeliveryTimeHours !== null) && (
-          <section className="flex flex-col gap-4">
+          <section className="flex flex-col gap-2">
             <h2 className="text-lg font-semibold">Quote Averages</h2>
             <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {stats.averageQuotePrice !== null && (
