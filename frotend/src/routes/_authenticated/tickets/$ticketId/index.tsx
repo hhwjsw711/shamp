@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useAction, useMutation, useQuery } from 'convex/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Calendar, History, MapPin, MessageSquare, Pencil, Tag, Trash2, Users, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -139,9 +139,28 @@ function TicketDetailsPage() {
   const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null)
   
   // Track which completion logs we've shown toast for (persists across navigation)
+  // Use ticket-specific storage key to avoid conflicts between tickets
+  const getStorageKey = () => `vendorDiscoveryCompletionLogs_${ticketId}`
+  
+  // Use ref to track logs we've processed in this render cycle to prevent duplicate toasts
+  // Initialize from sessionStorage on mount
+  const processedLogsRef = useRef<Set<string>>(new Set())
+  
+  // Initialize ref from sessionStorage on mount
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem(getStorageKey())
+      if (stored) {
+        processedLogsRef.current = new Set(JSON.parse(stored))
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  }, [ticketId])
+  
   const getShownCompletionLogs = (): Set<string> => {
     try {
-      const stored = sessionStorage.getItem('vendorDiscoveryCompletionLogs')
+      const stored = sessionStorage.getItem(getStorageKey())
       return stored ? new Set(JSON.parse(stored)) : new Set()
     } catch {
       return new Set()
@@ -150,16 +169,19 @@ function TicketDetailsPage() {
   
   const markCompletionLogAsShown = (logId: string) => {
     try {
+      // Mark in both sessionStorage (persists) and ref (prevents duplicates in same session)
       const shown = getShownCompletionLogs()
       shown.add(logId)
-      sessionStorage.setItem('vendorDiscoveryCompletionLogs', JSON.stringify([...shown]))
+      sessionStorage.setItem(getStorageKey(), JSON.stringify([...shown]))
+      processedLogsRef.current.add(logId)
     } catch {
       // Ignore storage errors
     }
   }
   
   const hasShownToastForCompletionLog = (logId: string): boolean => {
-    return getShownCompletionLogs().has(logId)
+    // Check both sessionStorage and ref
+    return getShownCompletionLogs().has(logId) || processedLogsRef.current.has(logId)
   }
 
   // Mutations and Actions
@@ -268,18 +290,25 @@ function TicketDetailsPage() {
 
   // Check if processing is complete based on logs and ticket status
   useEffect(() => {
-    if (discoveryLogsResult?.logs) {
-      const completeLog = discoveryLogsResult.logs.find((log: any) => log.type === 'complete')
-      const hasError = discoveryLogsResult.logs.some((log: any) => log.type === 'error')
+    if (!discoveryLogsResult?.logs) return
+    
+    const completeLog = discoveryLogsResult.logs.find((log: any) => log.type === 'complete')
+    const hasError = discoveryLogsResult.logs.some((log: any) => log.type === 'error')
+    const hasComplete = !!completeLog
+    
+    // If we have complete or error logs, processing is done
+    if (completeLog || hasError) {
+      setIsProcessing(false)
       
-      // If we have complete or error logs, processing is done
-      if (completeLog || hasError) {
-        setIsProcessing(false)
+      // Only show toast if we haven't shown it for this completion log yet
+      // Check synchronously BEFORE showing to prevent race conditions
+      if (completeLog && completeLog._id) {
+        const logId = completeLog._id as string
+        const alreadyShown = hasShownToastForCompletionLog(logId)
         
-        // Only show toast if we haven't shown it for this completion log yet
-        // Check sessionStorage to persist across navigation
-        if (completeLog && !hasShownToastForCompletionLog(completeLog._id)) {
-          markCompletionLogAsShown(completeLog._id)
+        if (!alreadyShown) {
+          // Mark as shown IMMEDIATELY (synchronously) before showing toast
+          markCompletionLogAsShown(logId)
           toast.success('Vendor Discovery Complete', {
             description: 'Vendors have been discovered and saved.',
             duration: 4000,
@@ -292,10 +321,7 @@ function TicketDetailsPage() {
     // This ensures the indicator shows even after page reload
     if (ticket && (ticket.status as string) === 'find_vendors') {
       // Check if we have completion logs - if not, still processing
-      const logs = discoveryLogsResult?.logs
-      const hasComplete = logs ? logs.some((log: any) => log.type === 'complete') : false
-      const hasError = logs ? logs.some((log: any) => log.type === 'error') : false
-      
+      // discoveryLogsResult.logs is guaranteed to exist here due to early return above
       if (!hasComplete && !hasError) {
         setIsProcessing(true)
       }
@@ -303,7 +329,7 @@ function TicketDetailsPage() {
       // If status is no longer "find_vendors", stop the indicator
       setIsProcessing(false)
     }
-  }, [discoveryLogsResult?.logs, ticket?.status, isProcessing])
+  }, [discoveryLogsResult?.logs, ticket?.status, hasShownToastForCompletionLog, markCompletionLogAsShown, setIsProcessing, isProcessing])
 
   // Handle navigation if ticket was deleted (e.g., from another tab/window)
   // This must be before any conditional returns (React hooks rule)
