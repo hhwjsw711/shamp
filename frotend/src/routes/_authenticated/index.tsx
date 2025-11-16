@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import AnalyticsCard from '@/components/layout/analytics-card'
 import VendorPerformanceChart from '@/components/layout/vendor-performance-chart'
-import { Spinner } from '@/components/ui/spinner'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useAuth } from '@/hooks/useAuth'
 import { api } from '@/lib/convex-api'
 
@@ -78,7 +78,7 @@ interface DashboardStats {
 }
 
 function App() {
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth()
 
   // Use Convex query for real-time dashboard stats
   // SECURITY: userId is validated on the backend - users can only see their own stats
@@ -94,16 +94,105 @@ function App() {
   // When loading, statsResult is undefined  
   // When error, statsResult is null
   // When success, statsResult is DashboardStats
-  const isLoading = statsResult === undefined && isAuthenticated
+  // Show loading if:
+  // 1. Auth is loading (includes getCurrentUser and Convex query loading)
+  // 2. Query is loading (when authenticated and user exists)
+  const isLoading = authLoading || (statsResult === undefined && isAuthenticated && user)
   const hasError = statsResult === null
   const stats: DashboardStats | undefined = statsResult ?? undefined
 
   if (isLoading) {
     return (
-      <section className="flex flex-col gap-2 p-4">
-        <div className="flex items-center justify-center h-64">
-          <Spinner className="w-8 h-8" />
-        </div>
+      <section className="flex flex-col h-full overflow-hidden">
+        {/* Header - Fixed */}
+        <header className="shrink-0 p-4 pb-2">
+          <section className="flex flex-col gap-1">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-80 mt-1" />
+          </section>
+        </header>
+
+        {/* Content - Scrollable */}
+        <section className="flex-1 overflow-y-auto p-4 pt-2 flex flex-col gap-6 min-h-0">
+          {/* Ticket Statistics Skeleton */}
+          <section className="flex flex-col gap-2">
+            <Skeleton className="h-7 w-40" />
+            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <section key={i} className="flex flex-col gap-0 p-0 rounded-[24px] border-0 shadow-none bg-card">
+                  <section className="flex flex-row items-center gap-4 py-2 px-4">
+                    <Skeleton className="w-5 h-5 rounded" />
+                    <Skeleton className="h-4 w-32" />
+                  </section>
+                  <section className="p-2">
+                    <section className="p-2 bg-zinc-100 rounded-2xl">
+                      <Skeleton className="h-8 w-16" />
+                    </section>
+                  </section>
+                </section>
+              ))}
+            </section>
+          </section>
+
+          {/* Quote Statistics Skeleton */}
+          <section className="flex flex-col gap-2">
+            <Skeleton className="h-7 w-40" />
+            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <section key={i} className="flex flex-col gap-0 p-0 rounded-[24px] border-0 shadow-none bg-card">
+                  <section className="flex flex-row items-center gap-4 py-2 px-4">
+                    <Skeleton className="w-5 h-5 rounded" />
+                    <Skeleton className="h-4 w-32" />
+                  </section>
+                  <section className="p-2">
+                    <section className="p-2 bg-zinc-100 rounded-2xl">
+                      <section className="flex flex-col gap-1">
+                        <Skeleton className="h-8 w-16" />
+                        <Skeleton className="h-3 w-24" />
+                      </section>
+                    </section>
+                  </section>
+                </section>
+              ))}
+            </section>
+          </section>
+
+          {/* Performance Metrics Skeleton */}
+          <section className="flex flex-col gap-4">
+            <Skeleton className="h-7 w-48" />
+            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <section key={i} className="flex flex-col gap-0 p-0 rounded-[24px] border-0 shadow-none bg-card">
+                  <section className="flex flex-row items-center gap-4 py-2 px-4">
+                    <Skeleton className="w-5 h-5 rounded" />
+                    <Skeleton className="h-4 w-36" />
+                  </section>
+                  <section className="p-2">
+                    <section className="p-2 bg-zinc-100 rounded-2xl">
+                      <section className="flex flex-col gap-1">
+                        <Skeleton className="h-7 w-32" />
+                        <Skeleton className="h-4 w-48" />
+                      </section>
+                    </section>
+                  </section>
+                </section>
+              ))}
+            </section>
+
+            {/* Vendor Performance Chart Skeleton */}
+            <section className="flex flex-col gap-0 p-0 rounded-[24px] border-0 shadow-none bg-card">
+              <section className="flex flex-col gap-1 py-2 px-4">
+                <Skeleton className="h-5 w-64" />
+                <Skeleton className="h-3 w-80" />
+              </section>
+              <section className="p-2">
+                <section className="p-2 bg-zinc-100 rounded-2xl">
+                  <Skeleton className="h-[250px] sm:h-[300px] w-full rounded-lg" />
+                </section>
+              </section>
+            </section>
+          </section>
+        </section>
       </section>
     )
   }

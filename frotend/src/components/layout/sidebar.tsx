@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
@@ -208,7 +209,7 @@ function SidebarContentComponent() {
 }
 
 function UserDropdown() {
-  const { user, logout } = useAuth()
+  const { user, logout, isLoading, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const { state } = useSidebar()
 
@@ -231,6 +232,32 @@ function UserDropdown() {
     navigate({ to: '/auth/login', replace: true })
   }
 
+  // Show skeleton if loading (isLoading from useAuth already includes Convex query loading)
+  const showSkeleton = isLoading
+
+  if (showSkeleton) {
+    return (
+      <SidebarMenuButton
+        className={cn(
+          "w-full justify-start gap-2 !p-2 h-auto",
+          state === "collapsed" && "!size-8 !p-2 justify-center"
+        )}
+        disabled
+      >
+        <Skeleton className="size-8 shrink-0 rounded-full" />
+        {state === "expanded" && (
+          <>
+            <div className="flex flex-col gap-1 items-start flex-1 min-w-0">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+            <Skeleton className="size-4 shrink-0 rounded" />
+          </>
+        )}
+      </SidebarMenuButton>
+    )
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -239,7 +266,7 @@ function UserDropdown() {
             "w-full justify-start gap-2 !p-2 h-auto",
             state === "collapsed" && "!size-8 !p-2 justify-center"
           )}
-          tooltip={state === "collapsed" ? `${user?.name || 'User'} - ${user?.orgName || 'Organization'}` : undefined}
+          tooltip={state === "collapsed" && user ? `${user.name} - ${user.orgName || 'Organization'}` : undefined}
         >
           <Avatar className="size-8 shrink-0">
             <AvatarImage src={user?.profilePic} alt={user?.name || 'User'} />
