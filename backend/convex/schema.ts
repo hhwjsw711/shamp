@@ -263,6 +263,7 @@ export default defineSchema({
         ),
         message: v.string(),
         date: v.number(),
+        vendorId: v.optional(v.id("vendors")), // Optional vendor ID for vendor messages
       })
     ),
     createdAt: v.number(),

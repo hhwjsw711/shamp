@@ -501,6 +501,7 @@ Shamp is a hospitality maintenance platform that connects service providers like
             conversationId,
             sender: "agent",
             message: emailTextContent || `Quote request sent to ${vendor.businessName}`,
+            vendorId, // Store vendorId to associate agent message with vendor
           }
         );
 

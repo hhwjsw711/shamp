@@ -452,6 +452,7 @@ export const handleInboundEmail = httpAction(async (ctx, request) => {
         conversationId: conversation._id,
         sender: "vendor",
         message: emailBody,
+        vendorId: vendor?._id, // Store vendorId for vendor messages
       }
     );
 

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ExternalLink, Mail, MapPin, Phone, Star } from 'lucide-react'
+import { ChevronRight, ExternalLink, Mail, MapPin, Phone, Star } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
@@ -25,6 +25,8 @@ interface VendorCardProps {
   }
   variant?: 'quote' | 'discovered'
   className?: string
+  onClick?: () => void
+  isSelected?: boolean
 }
 
 function formatDate(timestamp: number) {
@@ -35,12 +37,15 @@ function formatDate(timestamp: number) {
   })
 }
 
-export function VendorCard({ vendor, quote, className = '' }: VendorCardProps) {
+export function VendorCard({ vendor, quote, className = '', onClick, isSelected = false }: VendorCardProps) {
   const priceInDollars = quote ? quote.price / 100 : undefined
   const [showMoreServices, setShowMoreServices] = useState(false)
 
   return (
-    <section className={`p-4 rounded-2xl bg-zinc-100 ${className}`}>
+    <section 
+      className={`p-4 rounded-2xl bg-zinc-100 transition-colors ${onClick ? 'cursor-pointer hover:bg-zinc-200/50' : ''} ${isSelected ? 'ring-2 ring-primary' : ''} ${className}`}
+      onClick={onClick}
+    >
       <section className="space-y-2">
         <section className="flex items-center justify-between">
           <h4 className="font-medium text-sm">{vendor.businessName}</h4>
@@ -49,9 +54,7 @@ export function VendorCard({ vendor, quote, className = '' }: VendorCardProps) {
               {quote.status}
             </Badge>
           ) : (
-            <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
-              Discovered
-            </Badge>
+            <ChevronRight className="size-4 text-muted-foreground" />
           )}
         </section>
 

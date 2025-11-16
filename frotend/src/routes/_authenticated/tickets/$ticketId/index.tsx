@@ -136,6 +136,7 @@ function TicketDetailsPage() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [isMarkingAsReviewed, setIsMarkingAsReviewed] = useState(false)
   const [isNavigatingAway, setIsNavigatingAway] = useState(false)
+  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null)
   
   // Track which completion logs we've shown toast for (persists across navigation)
   const getShownCompletionLogs = (): Set<string> => {
@@ -901,6 +902,9 @@ function TicketDetailsPage() {
               const vendor = vendorsMap.get(quote.vendorId)
               if (!vendor) return null
               
+              // Use quote._id + vendor._id as unique identifier to avoid conflicts
+              const uniqueVendorId = `quote-${quote._id}-${vendor._id}`
+              
               return (
                 <VendorCard
                   key={quote._id}
@@ -916,6 +920,8 @@ function TicketDetailsPage() {
                   }}
                   quote={quote}
                   variant="quote"
+                  onClick={() => setSelectedVendorId(uniqueVendorId)}
+                  isSelected={selectedVendorId === uniqueVendorId}
                 />
               )
             })}
@@ -923,8 +929,14 @@ function TicketDetailsPage() {
             {/* Display discovered vendors (not yet contacted) */}
             {discoveredVendors.map((vendor: any, index: number) => {
               // Skip vendors that already have quotes
-              const hasQuote = vendorQuotes.some((q: any) => q.vendorId === vendor.vendorId)
+              const hasQuote = vendorQuotes.some((q: any) => {
+                const existingVendor = vendorsMap.get(q.vendorId)
+                return existingVendor && existingVendor._id === vendor.vendorId
+              })
               if (hasQuote) return null
+              
+              // Use discovered vendor's vendorId or create unique identifier
+              const uniqueVendorId = vendor.vendorId ? `discovered-${vendor.vendorId}` : `discovered-${index}`
               
               return (
                 <VendorCard
@@ -940,6 +952,8 @@ function TicketDetailsPage() {
                     services: vendor.services,
                   }}
                   variant="discovered"
+                  onClick={() => setSelectedVendorId(uniqueVendorId)}
+                  isSelected={selectedVendorId === uniqueVendorId}
                 />
               )
             })}
@@ -950,58 +964,162 @@ function TicketDetailsPage() {
   )
 
   // Render Conversations Section
-  const renderConversations = () => (
-    <section className="flex flex-col w-full md:w-80 md:min-w-80 shrink-0 bg-background rounded-3xl">
-      {/* Header */}
-      <header className="p-4 shrink-0">
-        <section className="flex items-center gap-2">
-          <MessageSquare className="size-4" />
-          <h2 className="font-semibold text-sm">Conversations</h2>
-          {conversation && (
-            <Badge variant="secondary">{conversation.messages.length}</Badge>
+  const renderConversations = () => {
+    // Get selected vendor directly from the unique identifier
+    // Format: "quote-{quoteId}-{vendorId}" or "discovered-{vendorId}" or "discovered-{index}"
+    let selectedVendor: any = null
+    let actualVendorId: string | null = null
+
+    if (selectedVendorId) {
+      if (selectedVendorId.startsWith('quote-')) {
+        // Format: "quote-{quoteId}-{vendorId}"
+        // Since Convex IDs don't contain dashes, split by '-' gives us exactly 3 parts
+        const parts = selectedVendorId.split('-')
+        if (parts.length >= 3) {
+          // parts[0] = "quote", parts[1] = quoteId, parts[2] = vendorId
+          const quoteId = parts[1]
+          // Find the quote
+          const quote = vendorQuotes.find((q: any) => q._id === quoteId)
+          if (quote) {
+            actualVendorId = quote.vendorId
+            selectedVendor = vendorsMap.get(quote.vendorId)
+          }
+        }
+      } else if (selectedVendorId.startsWith('discovered-')) {
+        // Extract vendor ID from "discovered-{vendorId}" or "discovered-{index}"
+        const vendorIdPart = selectedVendorId.replace('discovered-', '')
+        // Check if it's a numeric index (discovered vendors without vendorId)
+        if (/^\d+$/.test(vendorIdPart)) {
+          const index = parseInt(vendorIdPart, 10)
+          if (index >= 0 && index < discoveredVendors.length) {
+            const discoveredVendor = discoveredVendors[index]
+            actualVendorId = discoveredVendor.vendorId || null
+            selectedVendor = discoveredVendor
+          }
+        } else {
+          // It's a vendor ID
+          actualVendorId = vendorIdPart
+          selectedVendor = discoveredVendors.find((v: any) => v.vendorId === vendorIdPart) ||
+                          vendorsMap.get(vendorIdPart)
+        }
+      } else {
+        // Fallback: treat as direct vendor ID
+        actualVendorId = selectedVendorId
+        selectedVendor = vendorsMap.get(selectedVendorId) ||
+                         discoveredVendors.find((v: any) => v.vendorId === selectedVendorId)
+      }
+    }
+
+    // Filter messages by selected vendor
+    // Show all messages if no vendor is selected, or filter by vendorId
+    const filteredMessages = conversation?.messages.filter((message: any) => {
+      if (!actualVendorId) {
+        // If no vendor selected, show all messages
+        return true
+      }
+      // Show messages that are:
+      // 1. User messages (always show user messages)
+      // 2. Messages from the selected vendor (vendorId matches)
+      // 3. Agent messages sent to the selected vendor (vendorId matches)
+      return (
+        message.sender === 'user' ||
+        (message.vendorId && message.vendorId === actualVendorId)
+      )
+    }) || []
+
+    return (
+      <section className="flex flex-col w-full md:w-80 md:min-w-80 shrink-0 bg-background rounded-3xl">
+        {/* Header */}
+        <header className="p-4 shrink-0">
+          <section className="flex items-center gap-2">
+            <MessageSquare className="size-4" />
+            <h2 className="font-semibold text-sm">Conversations</h2>
+            {selectedVendor ? (
+              <Badge variant="secondary" className="text-xs justify-start text-left max-w-[120px] truncate overflow-hidden">
+                {selectedVendor.businessName || 'Vendor'}
+              </Badge>
+            ) : conversation ? (
+              <Badge variant="secondary">{conversation.messages.length}</Badge>
+            ) : null}
+          </section>
+        </header>
+
+        {/* Scrollable Content */}
+        <section className="flex-1 overflow-y-auto p-4 min-h-0">
+          {!selectedVendorId ? (
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <MessageSquare />
+                </EmptyMedia>
+                <EmptyTitle>Select a vendor</EmptyTitle>
+                <EmptyDescription>Click on a vendor to view their conversation.</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          ) : !conversation ? (
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <MessageSquare />
+                </EmptyMedia>
+                <EmptyTitle>No conversation started</EmptyTitle>
+                <EmptyDescription>
+                  {selectedVendor?.businessName
+                    ? (
+                      <p>
+                        No conversation has been started with <span className="font-semibold">{selectedVendor.businessName}</span> yet. Messages will appear here once communication begins.
+                      </p>
+                    )
+                    : 'No conversation has been started for this ticket yet.'}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          ) : filteredMessages.length === 0 ? (
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <MessageSquare />
+                </EmptyMedia>
+                <EmptyTitle>No messages yet</EmptyTitle>
+                <EmptyDescription>
+                  {selectedVendor?.businessName 
+                    ? (
+                      <>
+                        No messages exchanged with <span className="font-medium">{selectedVendor.businessName}</span> yet. Messages will appear here once communication begins.
+                      </>
+                    )
+                    : 'No messages for this vendor yet. Messages will appear here once communication begins.'}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          ) : (
+            <section className="space-y-4">
+              {filteredMessages.map((message: any, index: number) => (
+                <section
+                  key={index}
+                  className={`p-3 rounded-lg ${
+                    message.sender === 'user'
+                      ? 'bg-primary/10 ml-auto max-w-[80%]'
+                      : message.sender === 'agent'
+                      ? 'bg-muted mr-auto max-w-[80%]'
+                      : 'bg-secondary/50 mr-auto max-w-[80%]'
+                  }`}
+                >
+                  <section className="flex items-center gap-2 mb-1">
+                    <section className="text-xs font-medium capitalize">{message.sender}</section>
+                    <section className="text-xs text-muted-foreground">
+                      {formatDate(message.date)}
+                    </section>
+                  </section>
+                  <p className="text-sm">{message.message}</p>
+                </section>
+              ))}
+            </section>
           )}
         </section>
-      </header>
-
-      {/* Scrollable Content */}
-      <section className="flex-1 overflow-y-auto p-4 min-h-0">
-        {!conversation || conversation.messages.length === 0 ? (
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <MessageSquare />
-              </EmptyMedia>
-              <EmptyTitle>No messages</EmptyTitle>
-              <EmptyDescription>No conversations for this ticket yet.</EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        ) : (
-          <section className="space-y-4">
-            {conversation.messages.map((message: any, index: number) => (
-              <section
-                key={index}
-                className={`p-3 rounded-lg ${
-                  message.sender === 'user'
-                    ? 'bg-primary/10 ml-auto max-w-[80%]'
-                    : message.sender === 'agent'
-                    ? 'bg-muted mr-auto max-w-[80%]'
-                    : 'bg-secondary/50 mr-auto max-w-[80%]'
-                }`}
-              >
-                <section className="flex items-center gap-2 mb-1">
-                  <section className="text-xs font-medium capitalize">{message.sender}</section>
-                  <section className="text-xs text-muted-foreground">
-                    {formatDate(message.date)}
-                  </section>
-                </section>
-                <p className="text-sm">{message.message}</p>
-              </section>
-            ))}
-          </section>
-        )}
       </section>
-    </section>
-  )
+    )
+  }
 
   return (
     <main className="flex flex-col flex-1 overflow-hidden min-h-0">
