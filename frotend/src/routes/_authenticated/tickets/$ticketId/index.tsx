@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { Calendar, History, MapPin, MessageSquare, Pencil, Tag, Trash2, Users, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { VendorCard } from '@/components/layout/vendor-card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -476,11 +477,133 @@ function TicketDetailsPage() {
     }
   }
 
-  // Show loading state
+  // Show loading state with skeleton loaders
   if (isLoading) {
     return (
-      <main className="flex items-center justify-center h-full">
-        <Spinner className="size-8" />
+      <main className="flex flex-col flex-1 overflow-hidden min-h-0">
+        {/* Tabs Section - Mobile Only (< md) */}
+        <section className="md:hidden w-full border-b p-4 shrink-0">
+          <Tabs value="details">
+            <TabsList className="w-full justify-start overflow-x-auto scrollbar-hide">
+              <TabsTrigger value="details" className="shrink-0">
+                <Skeleton className="h-5 w-16" />
+              </TabsTrigger>
+              <TabsTrigger value="vendors" className="shrink-0">
+                <Skeleton className="h-5 w-20" />
+              </TabsTrigger>
+              <TabsTrigger value="conversations" className="shrink-0">
+                <Skeleton className="h-5 w-28" />
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </section>
+
+        {/* Content Section with Skeletons */}
+        <section className="flex-1 overflow-hidden min-h-0">
+          <section className="flex flex-row gap-4 h-full px-4 py-4 w-full">
+            {/* Ticket Details Skeleton */}
+            <section className="flex flex-col w-full md:w-80 md:min-w-80 shrink-0 bg-background rounded-3xl">
+              <header className="p-4 shrink-0 flex flex-row items-center justify-between">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-5 w-20 rounded-full" />
+              </header>
+              <section className="flex-1 overflow-y-auto p-2 min-h-0">
+                <section className="flex flex-col gap-2">
+                  {/* Photos Skeleton */}
+                  <section className="bg-zinc-100 rounded-2xl p-4">
+                    <Skeleton className="h-3 w-16 mb-3" />
+                    <section className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+                      {Array.from({ length: 3 }).map((_, i) => (
+                        <Skeleton key={i} className="w-20 h-20 rounded-lg flex-none" />
+                      ))}
+                    </section>
+                  </section>
+                  {/* Description Skeleton */}
+                  <section className="bg-zinc-100 rounded-2xl p-4">
+                    <Skeleton className="h-3 w-24 mb-2" />
+                    <Skeleton className="h-4 w-full mb-1" />
+                    <Skeleton className="h-4 w-3/4" />
+                  </section>
+                  {/* Problem Analysis Skeleton */}
+                  <section className="bg-zinc-100 rounded-2xl p-4">
+                    <Skeleton className="h-3 w-32 mb-2" />
+                    <Skeleton className="h-4 w-full mb-1" />
+                    <Skeleton className="h-4 w-5/6" />
+                  </section>
+                  {/* Issue Type Skeleton */}
+                  <section className="bg-zinc-100 rounded-2xl p-4">
+                    <Skeleton className="h-3 w-20 mb-2" />
+                    <Skeleton className="h-6 w-24 rounded-full" />
+                  </section>
+                  {/* Urgency Skeleton */}
+                  <section className="bg-zinc-100 rounded-2xl p-4">
+                    <Skeleton className="h-3 w-16 mb-2" />
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                  </section>
+                  {/* Location Skeleton */}
+                  <section className="bg-zinc-100 rounded-2xl p-4">
+                    <Skeleton className="h-3 w-20 mb-2" />
+                    <Skeleton className="h-4 w-32" />
+                  </section>
+                  {/* Date Skeleton */}
+                  <section className="bg-zinc-100 rounded-2xl p-4">
+                    <Skeleton className="h-3 w-24 mb-2" />
+                    <Skeleton className="h-4 w-40" />
+                  </section>
+                </section>
+              </section>
+            </section>
+
+            {/* Vendors Section Skeleton */}
+            <section className="flex flex-col w-full md:flex-1 md:min-w-96 bg-background rounded-3xl min-h-0">
+              <header className="p-4 shrink-0 flex flex-row items-center justify-between">
+                <section className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded" />
+                  <Skeleton className="h-5 w-20" />
+                  <Skeleton className="h-5 w-6 rounded-full" />
+                </section>
+                <Skeleton className="h-8 w-8 rounded" />
+              </header>
+              <section className="flex-1 overflow-y-auto p-2 min-h-0">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <section key={i} className="mb-2 p-4 bg-card rounded-lg border border-border">
+                    <section className="flex flex-col gap-2">
+                      <Skeleton className="h-5 w-3/4" />
+                      <Skeleton className="h-4 w-1/2" />
+                      <section className="flex items-center gap-2 mt-2">
+                        <Skeleton className="h-4 w-16 rounded-full" />
+                        <Skeleton className="h-4 w-20 rounded-full" />
+                      </section>
+                    </section>
+                  </section>
+                ))}
+              </section>
+            </section>
+
+            {/* Conversations Section Skeleton */}
+            <section className="flex flex-col w-full md:w-80 md:min-w-80 shrink-0 bg-background rounded-3xl">
+              <header className="p-4 shrink-0">
+                <section className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded" />
+                  <Skeleton className="h-5 w-28" />
+                  <Skeleton className="h-5 w-6 rounded-full" />
+                </section>
+              </header>
+              <section className="flex-1 overflow-y-auto p-4 min-h-0">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <section key={i} className="mb-4 p-3 rounded-lg bg-muted">
+                    <section className="flex items-center gap-2 mb-1">
+                      <Skeleton className="h-3 w-12" />
+                      <Skeleton className="h-3 w-24" />
+                    </section>
+                    <Skeleton className="h-4 w-full mb-1" />
+                    <Skeleton className="h-4 w-5/6" />
+                  </section>
+                ))}
+              </section>
+            </section>
+          </section>
+        </section>
       </main>
     )
   }
