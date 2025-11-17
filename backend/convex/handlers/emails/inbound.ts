@@ -223,10 +223,17 @@ export const handleInboundEmail = httpAction(async (ctx, request) => {
     );
 
     if (vendor) {
+      // Use the already-fetched ticket (fetched earlier in the function)
+      if (!ticket) {
+        console.error("Ticket not found for vendor outreach query");
+        return new Response("OK", { status: 200 });
+      }
+      
       const outreachRecords: Array<Doc<"vendorOutreach">> = await ctx.runQuery(
         (api as any).functions.vendorOutreach.queries.getByTicketId,
         {
           ticketId: ticketId as Id<"tickets">,
+          userId: ticket.createdBy, // Pass userId for authorization
         }
       );
 
@@ -387,11 +394,23 @@ export const handleInboundEmail = httpAction(async (ctx, request) => {
               }
             );
 
+            // Check if this is the first quote received
+            const existingQuotes = await ctx.runQuery(
+              (internal as any).functions.vendorQuotes.queries.getByTicketIdInternal,
+              {
+                ticketId: ticketId as Id<"tickets">,
+              }
+            );
+            
+            const isFirstQuote = existingQuotes.length === 1;
+
             await ctx.runMutation(
               (internal as any).functions.tickets.mutations.updateInternal,
               {
                 ticketId: ticketId as Id<"tickets">,
                 quoteStatus: "quotes_received",
+                // Update status to "quotes_available" when first quote is received
+                ...(isFirstQuote ? { status: "quotes_available" } : {}),
               }
             );
           } else if (quoteData.isDeclining) {
@@ -433,6 +452,7 @@ export const handleInboundEmail = httpAction(async (ctx, request) => {
         conversationId: conversation._id,
         sender: "vendor",
         message: emailBody,
+        vendorId: vendor?._id, // Store vendorId for vendor messages
       }
     );
 

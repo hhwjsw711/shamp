@@ -201,9 +201,9 @@ export const selectVendor = action({
         ticketId: args.ticketId,
         selectedVendorId: quote.vendorId,
         selectedVendorQuoteId: args.quoteId,
-        quoteStatus: "vendor_selected",
-        status: quote.scheduledDate ? "vendor_scheduled" : "vendor_selected", // Set to vendor_scheduled if scheduledDate is provided
-        scheduledDate: quote.scheduledDate, // Use scheduled date from quote
+        quoteStatus: "quotes_available",
+        status: "quote_selected", // Status changes to quote_selected when vendor is selected
+        scheduledDate: quote.scheduledDate, // Store scheduled date from quote
       }
     );
 

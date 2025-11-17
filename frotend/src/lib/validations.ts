@@ -88,6 +88,7 @@ export const createTicketSchema = z.object({
   photoIds: z.array(z.string()).min(1, 'At least one photo is required').max(5, 'Maximum 5 photos allowed'),
   location: z.string().optional(),
   name: z.string().optional(),
+  urgency: z.enum(['emergency', 'urgent', 'normal', 'low']).optional(),
 })
 
 // Vendor creation schema

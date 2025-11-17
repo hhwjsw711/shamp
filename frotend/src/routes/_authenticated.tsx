@@ -23,7 +23,7 @@ export const Route = createFileRoute('/_authenticated')({
 })
 
 function AuthenticatedLayout() {
-  const { getCurrentUser } = useAuth()
+  const { getCurrentUser, isLoading } = useAuth()
   const hasFetchedRef = React.useRef(false)
 
   // Fetch user data on mount to populate the store (only once)
@@ -39,6 +39,12 @@ function AuthenticatedLayout() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Empty array - only run once on mount
+
+  // Show loading skeleton while auth is loading
+  // This ensures skeletons show immediately on page load
+  if (isLoading) {
+    return null // Let pendingComponent handle the loading state
+  }
 
   return <Outlet />
 }

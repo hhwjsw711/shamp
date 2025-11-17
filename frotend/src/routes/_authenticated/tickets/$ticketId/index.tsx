@@ -1,0 +1,1385 @@
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useAction, useMutation, useQuery } from 'convex/react'
+import { useEffect, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
+import { Calendar, History, MapPin, MessageSquare, Pencil, Tag, Trash2, Users, X } from 'lucide-react'
+import { toast } from 'sonner'
+import { VendorCard } from '@/components/layout/vendor-card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Spinner } from '@/components/ui/spinner'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { useAuth } from '@/hooks/useAuth'
+import { api as convexApi } from '@/lib/convex-api'
+import { usePageHeaderCTAs } from '@/components/layout/page-header-ctas'
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty'
+
+export const Route = createFileRoute('/_authenticated/tickets/$ticketId/')({
+  component: TicketDetailsPage,
+})
+
+function getUrgencyStyles(urgency?: string) {
+  switch (urgency) {
+    case 'emergency':
+      return 'bg-red-100 text-red-700 border-red-200'
+    case 'urgent':
+      return 'bg-orange-100 text-orange-700 border-orange-200'
+    case 'normal':
+      return 'bg-blue-100 text-blue-700 border-blue-200'
+    case 'low':
+      return 'bg-green-100 text-green-700 border-green-200'
+    default:
+      return ''
+  }
+}
+
+function getUrgencyLabel(urgency?: string) {
+  switch (urgency) {
+    case 'emergency':
+      return 'Emergency'
+    case 'urgent':
+      return 'Urgent'
+    case 'normal':
+      return 'Normal'
+    case 'low':
+      return 'Low'
+    default:
+      return 'Not specified'
+  }
+}
+
+function getStatusLabel(status: string) {
+  switch (status) {
+    case 'analyzing':
+      return 'Analyzing'
+    case 'analyzed':
+      return 'Analyzed'
+    case 'reviewed':
+      return 'Reviewed'
+    case 'find_vendors':
+      return 'Finding Vendors'
+    case 'requested_for_information':
+      return 'RFI'
+    case 'quotes_available':
+      return 'Quotes Available'
+    case 'quote_selected':
+      return 'Quote Selected'
+    case 'fixed':
+      return 'Fixed'
+    case 'closed':
+      return 'Closed'
+    default:
+      return status
+  }
+}
+
+function getStatusStyles(status: string) {
+  switch (status) {
+    case 'analyzing':
+      return 'bg-gray-100 text-gray-700 border-gray-200'
+    case 'analyzed':
+      return 'bg-blue-100 text-blue-700 border-blue-200'
+    case 'reviewed':
+      return 'bg-purple-100 text-purple-700 border-purple-200'
+    case 'find_vendors':
+      return 'bg-yellow-100 text-yellow-700 border-yellow-200'
+    case 'requested_for_information':
+      return 'bg-amber-100 text-amber-700 border-amber-200'
+    case 'quotes_available':
+      return 'bg-orange-100 text-orange-700 border-orange-200'
+    case 'quote_selected':
+      return 'bg-indigo-100 text-indigo-700 border-indigo-200'
+    case 'fixed':
+      return 'bg-green-100 text-green-700 border-green-200'
+    case 'closed':
+      return 'bg-gray-100 text-gray-700 border-gray-200'
+    default:
+      return ''
+  }
+}
+
+function formatDate(timestamp: number) {
+  return new Date(timestamp).toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function TicketDetailsPage() {
+  const { ticketId } = Route.useParams()
+  const navigate = useNavigate()
+  const { user, isAuthenticated } = useAuth()
+  const { setCTAs } = usePageHeaderCTAs()
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const [selectedTab, setSelectedTab] = useState<'details' | 'vendors' | 'conversations'>('details')
+  const [isMobile, setIsMobile] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showDiscoveryLog, setShowDiscoveryLog] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [isMarkingAsReviewed, setIsMarkingAsReviewed] = useState(false)
+  const [isNavigatingAway, setIsNavigatingAway] = useState(false)
+  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null)
+  
+  // Track which completion logs we've shown toast for (persists across navigation)
+  // Use ticket-specific storage key to avoid conflicts between tickets
+  const getStorageKey = () => `vendorDiscoveryCompletionLogs_${ticketId}`
+  
+  // Use ref to track logs we've processed in this render cycle to prevent duplicate toasts
+  // Initialize from sessionStorage on mount
+  const processedLogsRef = useRef<Set<string>>(new Set())
+  
+  // Initialize ref from sessionStorage on mount
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem(getStorageKey())
+      if (stored) {
+        processedLogsRef.current = new Set(JSON.parse(stored))
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  }, [ticketId])
+  
+  const getShownCompletionLogs = (): Set<string> => {
+    try {
+      const stored = sessionStorage.getItem(getStorageKey())
+      return stored ? new Set(JSON.parse(stored)) : new Set()
+    } catch {
+      return new Set()
+    }
+  }
+  
+  const markCompletionLogAsShown = (logId: string) => {
+    try {
+      // Mark in both sessionStorage (persists) and ref (prevents duplicates in same session)
+      const shown = getShownCompletionLogs()
+      shown.add(logId)
+      sessionStorage.setItem(getStorageKey(), JSON.stringify([...shown]))
+      processedLogsRef.current.add(logId)
+    } catch {
+      // Ignore storage errors
+    }
+  }
+  
+  const hasShownToastForCompletionLog = (logId: string): boolean => {
+    // Check both sessionStorage and ref
+    return getShownCompletionLogs().has(logId) || processedLogsRef.current.has(logId)
+  }
+
+  // Mutations and Actions
+  const markAsReviewed = useMutation(convexApi.functions.tickets.mutations.markAsReviewed)
+  const deleteTicket = useMutation(convexApi.functions.tickets.mutations.deleteTicket)
+  const discoverVendors = useAction(convexApi.functions.agents.vendorDiscoveryAction.discoverVendors)
+
+  // Use Convex query for real-time ticket data
+  const ticketResult = useQuery(
+    convexApi.functions.tickets.queries.getById,
+    user?.id && isAuthenticated && ticketId
+      ? { ticketId: ticketId as any, userId: user.id as any }
+      : 'skip'
+  )
+
+  // Fetch discovery logs from database
+  const discoveryLogsResult = useQuery(
+    convexApi.functions.discoveryLogs.queries.getByTicketId,
+    user?.id && isAuthenticated && ticketId
+      ? { ticketId: ticketId as any, userId: user.id as any }
+      : 'skip'
+  )
+
+  // Fetch vendor quotes for this ticket
+  const vendorQuotesResult = useQuery(
+    convexApi.functions.vendorQuotes.queries.getByTicketId,
+    user?.id && isAuthenticated && ticketId
+      ? { ticketId: ticketId as any, userId: user.id as any }
+      : 'skip'
+  )
+
+  // Fetch discovered vendors from firecrawl results
+  const firecrawlResults = useQuery(
+    convexApi.functions.firecrawlResults.queries.getByTicketId,
+    user?.id && isAuthenticated && ticketId
+      ? { ticketId: ticketId as any, userId: user.id as any }
+      : 'skip'
+  )
+
+  // Fetch vendors for each quote
+  const vendorQuotes = vendorQuotesResult?.quotes || []
+  const vendorIds = [...new Set(vendorQuotes.map((q: any) => q.vendorId))]
+  
+  // Fetch vendor details for each unique vendor ID
+  const vendorsResult = useQuery(
+    convexApi.functions.vendors.queries.list,
+    user?.id && isAuthenticated && vendorIds.length > 0
+      ? { userId: user.id as any }
+      : 'skip'
+  )
+  
+  // Create a map of vendorId to vendor details
+  const vendorsMap = new Map()
+  if (vendorsResult) {
+    vendorsResult.forEach((vendor: any) => {
+      vendorsMap.set(vendor._id, vendor)
+    })
+  }
+
+  // Get discovered vendors from firecrawl results (vendors found but not yet contacted)
+  const discoveredVendors = firecrawlResults?.results || []
+
+  // Fetch conversation for this ticket
+  const conversationResult = useQuery(
+    convexApi.functions.conversations.queries.getByTicketId,
+    user?.id && isAuthenticated && ticketId
+      ? { ticketId: ticketId as any, userId: user.id as any }
+      : 'skip'
+  )
+
+  // Handle loading and error states
+  const isLoading = ticketResult === undefined && isAuthenticated
+  const ticket = ticketResult || null
+  const conversation = conversationResult || null
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768) // md breakpoint
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Reset selected tab to 'details' when switching from mobile to desktop
+  useEffect(() => {
+    if (!isMobile && selectedTab !== 'details') {
+      setSelectedTab('details')
+    }
+  }, [isMobile, selectedTab])
+
+  // Auto-scroll discovery log to bottom when new logs arrive
+  useEffect(() => {
+    if (showDiscoveryLog && discoveryLogsResult?.logs && discoveryLogsResult.logs.length > 0) {
+      const logContainer = document.querySelector('[data-discovery-log]')
+      if (logContainer) {
+        // Small delay to ensure DOM is updated
+        setTimeout(() => {
+          logContainer.scrollTop = logContainer.scrollHeight
+        }, 100)
+      }
+    }
+  }, [discoveryLogsResult?.logs, showDiscoveryLog])
+
+  // Check if processing is complete based on logs and ticket status
+  useEffect(() => {
+    if (!discoveryLogsResult?.logs) return
+    
+    const completeLog = discoveryLogsResult.logs.find((log: any) => log.type === 'complete')
+    const hasError = discoveryLogsResult.logs.some((log: any) => log.type === 'error')
+    const hasComplete = !!completeLog
+    
+    // If we have complete or error logs, processing is done
+    if (completeLog || hasError) {
+      setIsProcessing(false)
+      
+      // Only show toast if we haven't shown it for this completion log yet
+      // Check synchronously BEFORE showing to prevent race conditions
+      if (completeLog && completeLog._id) {
+        const logId = completeLog._id as string
+        const alreadyShown = hasShownToastForCompletionLog(logId)
+        
+        if (!alreadyShown) {
+          // Mark as shown IMMEDIATELY (synchronously) before showing toast
+          markCompletionLogAsShown(logId)
+          toast.success('Vendor Discovery Complete', {
+            description: 'Vendors have been discovered and saved.',
+            duration: 4000,
+          })
+        }
+      }
+    }
+    
+    // Also check ticket status - if status is "find_vendors", we're still processing
+    // This ensures the indicator shows even after page reload
+    if (ticket && (ticket.status as string) === 'find_vendors') {
+      // Check if we have completion logs - if not, still processing
+      // discoveryLogsResult.logs is guaranteed to exist here due to early return above
+      if (!hasComplete && !hasError) {
+        setIsProcessing(true)
+      }
+    } else if (ticket && (ticket.status as string) !== 'find_vendors' && isProcessing) {
+      // If status is no longer "find_vendors", stop the indicator
+      setIsProcessing(false)
+    }
+  }, [discoveryLogsResult?.logs, ticket?.status, hasShownToastForCompletionLog, markCompletionLogAsShown, setIsProcessing, isProcessing])
+
+  // Handle navigation if ticket was deleted (e.g., from another tab/window)
+  // This must be before any conditional returns (React hooks rule)
+  // Only navigate if ticket was explicitly deleted (null result) AND not loading
+  useEffect(() => {
+    // Only navigate if:
+    // 1. We're authenticated (not loading)
+    // 2. Query has completed (ticketResult is not undefined)
+    // 3. Ticket doesn't exist (ticketResult === null)
+    // 4. We're not already navigating away
+    if (
+      isAuthenticated &&
+      ticketResult !== undefined &&
+      ticketResult === null &&
+      !isNavigatingAway
+    ) {
+      setIsNavigatingAway(true)
+      navigate({ to: '/tickets' })
+    }
+  }, [ticketResult, isAuthenticated, isNavigatingAway, navigate])
+
+  // Set up page header CTAs
+  useEffect(() => {
+    if (!ticket || !user) {
+      setCTAs(null)
+      return
+    }
+
+    // Edit allowed only for analyzed and reviewed (backend restriction)
+    const canEdit = ['analyzed', 'reviewed'].includes(ticket.status)
+    // Delete allowed for analyzed, reviewed, fixed, closed (NOT find_vendors, requested_for_information - vendor engagement stages)
+    const canDelete = ['analyzed', 'reviewed', 'fixed', 'closed'].includes(ticket.status)
+    const canMarkAsReviewed = ticket.status === 'analyzed'
+    // Show process button if status is 'reviewed' OR if currently processing (to show loading state)
+    const canProcessTicket = ticket.status === 'reviewed' || isProcessing
+
+    const ctas = (
+      <section className="flex items-center gap-2">
+        {canMarkAsReviewed && (
+          <Button
+            variant="default-glass"
+            size="sm"
+            disabled={isMarkingAsReviewed}
+            onClick={async () => {
+              if (!user.id || isMarkingAsReviewed) return
+              setIsMarkingAsReviewed(true)
+              try {
+                await markAsReviewed({ 
+                  ticketId: ticketId as any,
+                  userId: user.id as any,
+                })
+                toast.success('Ticket Marked as Reviewed', {
+                  description: 'The ticket has been successfully marked as reviewed.',
+                  duration: 3000,
+                })
+              } catch (error) {
+                toast.error('Failed to Mark as Reviewed', {
+                  description: error instanceof Error ? error.message : 'An error occurred.',
+                  duration: 5000,
+                })
+              } finally {
+                setIsMarkingAsReviewed(false)
+              }
+            }}
+          >
+            {isMarkingAsReviewed ? (
+              <>
+                <Spinner className="size-4" />
+                Marking...
+              </>
+            ) : (
+              'Mark As Reviewed'
+            )}
+          </Button>
+        )}
+        {canProcessTicket && (
+          <Button
+            variant="default-glass"
+            size="sm"
+            disabled={isProcessing}
+            onClick={async () => {
+              if (!user.id || isProcessing) return
+              
+              setIsProcessing(true)
+              setShowDiscoveryLog(true)
+              
+              try {
+                // Call Convex action - it runs independently and saves logs to database
+                // The Convex query will automatically update when logs are saved
+                await discoverVendors({
+                  ticketId: ticketId as any,
+                  userId: user.id as any,
+                })
+                
+                // Note: Processing completion is detected via the useEffect that watches discoveryLogsResult
+                // The action runs independently, so we don't wait for it to complete here
+              } catch (error) {
+                setIsProcessing(false)
+                toast.error('Failed to Process Ticket', {
+                  description: error instanceof Error ? error.message : 'An error occurred while processing the ticket.',
+                  duration: 5000,
+                })
+              }
+            }}
+          >
+            {isProcessing ? (
+              <>
+                <Spinner className="size-4" />
+                Finding Vendors...
+              </>
+            ) : (
+              'Find Vendors'
+            )}
+          </Button>
+        )}
+        {canEdit && (
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => navigate({ to: `/tickets/${ticketId}/edit` })}
+            aria-label="Edit ticket"
+          >
+            <Pencil className="size-4" />
+          </Button>
+        )}
+        {canDelete && (
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setShowDeleteDialog(true)}
+            aria-label="Delete ticket"
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        )}
+      </section>
+    )
+
+    setCTAs(ctas)
+
+    // Cleanup: clear CTAs when component unmounts or ticket changes
+    return () => {
+      setCTAs(null)
+    }
+  }, [ticketResult, user, ticketId, markAsReviewed, navigate, setCTAs, isMarkingAsReviewed, isProcessing, discoverVendors])
+
+  const handleDeleteTicket = async () => {
+    if (!ticket || !user?.id) return
+
+    try {
+      // Navigate immediately to prevent error page from showing
+      setShowDeleteDialog(false)
+      setIsNavigatingAway(true)
+      navigate({ to: '/tickets' })
+      
+      // Delete ticket after navigation
+      await deleteTicket({
+        ticketId: ticketId as any,
+        userId: user.id as any,
+      })
+
+      toast.success('Ticket Deleted', {
+        description: 'The ticket has been successfully deleted.',
+        duration: 3000,
+      })
+    } catch (error) {
+      setIsNavigatingAway(false)
+      toast.error('Failed to Delete Ticket', {
+        description: error instanceof Error ? error.message : 'An error occurred while deleting the ticket.',
+        duration: 5000,
+      })
+    }
+  }
+
+  // Show loading state with skeleton loaders
+  if (isLoading) {
+    return (
+      <main className="flex flex-col flex-1 overflow-hidden min-h-0">
+        {/* Tabs Section - Mobile Only (< md) */}
+        <section className="md:hidden w-full border-b p-4 shrink-0">
+          <Tabs value="details">
+            <TabsList className="w-full justify-start overflow-x-auto scrollbar-hide">
+              <TabsTrigger value="details" className="shrink-0">
+                <Skeleton className="h-5 w-16" />
+              </TabsTrigger>
+              <TabsTrigger value="vendors" className="shrink-0">
+                <Skeleton className="h-5 w-20" />
+              </TabsTrigger>
+              <TabsTrigger value="conversations" className="shrink-0">
+                <Skeleton className="h-5 w-28" />
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </section>
+
+        {/* Content Section with Skeletons */}
+        <section className="flex-1 overflow-hidden min-h-0">
+          <section className="flex flex-row gap-4 h-full px-4 py-4 w-full">
+            {/* Ticket Details Skeleton */}
+            <section className="flex flex-col w-full md:w-80 md:min-w-80 shrink-0 bg-background rounded-3xl">
+              <header className="p-4 shrink-0 flex flex-row items-center justify-between">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-5 w-20 rounded-full" />
+              </header>
+              <section className="flex-1 overflow-y-auto p-2 min-h-0">
+                <section className="flex flex-col gap-2">
+                  {/* Photos Skeleton */}
+                  <section className="bg-zinc-100 rounded-2xl p-4">
+                    <Skeleton className="h-3 w-16 mb-3" />
+                    <section className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+                      {Array.from({ length: 3 }).map((_, i) => (
+                        <Skeleton key={i} className="w-20 h-20 rounded-lg flex-none" />
+                      ))}
+                    </section>
+                  </section>
+                  {/* Description Skeleton */}
+                  <section className="bg-zinc-100 rounded-2xl p-4">
+                    <Skeleton className="h-3 w-24 mb-2" />
+                    <Skeleton className="h-4 w-full mb-1" />
+                    <Skeleton className="h-4 w-3/4" />
+                  </section>
+                  {/* Problem Analysis Skeleton */}
+                  <section className="bg-zinc-100 rounded-2xl p-4">
+                    <Skeleton className="h-3 w-32 mb-2" />
+                    <Skeleton className="h-4 w-full mb-1" />
+                    <Skeleton className="h-4 w-5/6" />
+                  </section>
+                  {/* Issue Type Skeleton */}
+                  <section className="bg-zinc-100 rounded-2xl p-4">
+                    <Skeleton className="h-3 w-20 mb-2" />
+                    <Skeleton className="h-6 w-24 rounded-full" />
+                  </section>
+                  {/* Urgency Skeleton */}
+                  <section className="bg-zinc-100 rounded-2xl p-4">
+                    <Skeleton className="h-3 w-16 mb-2" />
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                  </section>
+                  {/* Location Skeleton */}
+                  <section className="bg-zinc-100 rounded-2xl p-4">
+                    <Skeleton className="h-3 w-20 mb-2" />
+                    <Skeleton className="h-4 w-32" />
+                  </section>
+                  {/* Date Skeleton */}
+                  <section className="bg-zinc-100 rounded-2xl p-4">
+                    <Skeleton className="h-3 w-24 mb-2" />
+                    <Skeleton className="h-4 w-40" />
+                  </section>
+                </section>
+              </section>
+            </section>
+
+            {/* Vendors Section Skeleton */}
+            <section className="flex flex-col w-full md:flex-1 md:min-w-96 bg-background rounded-3xl min-h-0">
+              <header className="p-4 shrink-0 flex flex-row items-center justify-between">
+                <section className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded" />
+                  <Skeleton className="h-5 w-20" />
+                  <Skeleton className="h-5 w-6 rounded-full" />
+                </section>
+                <Skeleton className="h-8 w-8 rounded" />
+              </header>
+              <section className="flex-1 overflow-y-auto p-2 min-h-0">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <section key={i} className="mb-2 p-4 bg-card rounded-lg border border-border">
+                    <section className="flex flex-col gap-2">
+                      <Skeleton className="h-5 w-3/4" />
+                      <Skeleton className="h-4 w-1/2" />
+                      <section className="flex items-center gap-2 mt-2">
+                        <Skeleton className="h-4 w-16 rounded-full" />
+                        <Skeleton className="h-4 w-20 rounded-full" />
+                      </section>
+                    </section>
+                  </section>
+                ))}
+              </section>
+            </section>
+
+            {/* Conversations Section Skeleton */}
+            <section className="flex flex-col w-full md:w-80 md:min-w-80 shrink-0 bg-background rounded-3xl">
+              <header className="p-4 shrink-0">
+                <section className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded" />
+                  <Skeleton className="h-5 w-28" />
+                  <Skeleton className="h-5 w-6 rounded-full" />
+                </section>
+              </header>
+              <section className="flex-1 overflow-y-auto p-4 min-h-0">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <section key={i} className="mb-4 p-3 rounded-lg bg-muted">
+                    <section className="flex items-center gap-2 mb-1">
+                      <Skeleton className="h-3 w-12" />
+                      <Skeleton className="h-3 w-24" />
+                    </section>
+                    <Skeleton className="h-4 w-full mb-1" />
+                    <Skeleton className="h-4 w-5/6" />
+                  </section>
+                ))}
+              </section>
+            </section>
+          </section>
+        </section>
+      </main>
+    )
+  }
+
+  // Don't render anything if navigating away
+  if (isNavigatingAway) {
+    return null
+  }
+
+  // Show error state - but navigate away instead of showing error
+  if (ticketResult === null || !ticket) {
+    return (
+      <main className="flex items-center justify-center h-full p-4">
+        <Spinner className="size-8" />
+      </main>
+    )
+  }
+
+  // Filter out null/undefined photoUrls
+  const validPhotoUrls = ticket.photoUrls.filter((url: string | null | undefined): url is string => Boolean(url))
+
+  // Render Ticket Details Section
+  const renderTicketDetails = () => (
+    <section className="flex flex-col w-full md:w-80 md:min-w-80 shrink-0 bg-background rounded-3xl">
+      {/* Header */}
+      <header className="p-4 shrink-0 flex flex-row items-center justify-between">
+        <h2 className="font-semibold text-sm">Ticket Details</h2>
+        <Badge
+          variant="outline"
+          className={`text-xs px-2 py-1 ${getStatusStyles(ticket.status)}`}
+        >
+          {getStatusLabel(ticket.status)}
+        </Badge>
+      </header>
+
+      {/* Scrollable Content */}
+      <section className="flex-1 overflow-y-auto p-2 min-h-0">
+        <section className="flex flex-col gap-2">
+        {/* Images Section */}
+        {validPhotoUrls.length > 0 && (
+          <section className="bg-zinc-100 rounded-2xl p-4">
+            <h3 className="text-xs font-normal text-muted-foreground/70 mb-3 uppercase tracking-wide">Photos</h3>
+            <section className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+              {validPhotoUrls.map((url: string, index: number) => (
+                <section
+                  key={index}
+                  className="group relative flex-none w-20 h-20 cursor-pointer"
+                  onClick={() => setSelectedImage(url)}
+                >
+                  <img
+                    src={url}
+                    alt={`Ticket photo ${index + 1}`}
+                    className="h-full w-full rounded-lg border object-cover transition-transform group-hover:scale-105"
+                  />
+                  <section className="absolute inset-0 rounded-lg bg-black/0 group-hover:bg-black/10 transition-colors" />
+                </section>
+              ))}
+            </section>
+          </section>
+        )}
+
+        {/* Description */}
+        <section className="bg-zinc-100 rounded-2xl p-4">
+          <h3 className="text-xs font-normal text-muted-foreground/70 mb-2 uppercase tracking-wide">Description</h3>
+          <p className="text-base font-medium text-foreground whitespace-pre-wrap">{ticket.description || 'No description provided'}</p>
+        </section>
+
+        {/* Problem Description */}
+        {ticket.problemDescription && (
+          <section className="bg-zinc-100 rounded-2xl p-4">
+            <h3 className="text-xs font-normal text-muted-foreground/70 mb-2 uppercase tracking-wide">Problem Analysis</h3>
+            <p className="text-base font-medium text-foreground whitespace-pre-wrap">{ticket.problemDescription}</p>
+          </section>
+        )}
+
+        {/* Issue Type */}
+        {ticket.issueType && (
+          <section className="bg-zinc-100 rounded-2xl p-4">
+            <h3 className="text-xs font-normal text-muted-foreground/70 mb-2 flex items-center gap-2 uppercase tracking-wide">
+              <Tag className="size-3" />
+              Issue Type
+            </h3>
+            <Badge variant="outline" className="text-sm px-2 py-1">
+              {ticket.issueType}
+            </Badge>
+          </section>
+        )}
+
+        {/* Urgency */}
+        <section className="bg-zinc-100 rounded-2xl p-4">
+          <h3 className="text-xs font-normal text-muted-foreground/70 mb-2 uppercase tracking-wide">Urgency</h3>
+          <Badge
+            variant="outline"
+            className={`text-sm px-2 py-1 ${getUrgencyStyles(ticket.urgency)}`}
+          >
+            {getUrgencyLabel(ticket.urgency)}
+          </Badge>
+        </section>
+
+        {/* Location */}
+        {ticket.location && (
+          <section className="bg-zinc-100 rounded-2xl p-4">
+            <h3 className="text-xs font-normal text-muted-foreground/70 mb-2 flex items-center gap-2 uppercase tracking-wide">
+              <MapPin className="size-3" />
+              Location
+            </h3>
+            <p className="text-base font-medium text-foreground">{ticket.location}</p>
+          </section>
+        )}
+
+        {/* Date */}
+        <section className="bg-zinc-100 rounded-2xl p-4">
+          <h3 className="text-xs font-normal text-muted-foreground/70 mb-2 flex items-center gap-2 uppercase tracking-wide">
+            <Calendar className="size-3" />
+            Created Date
+          </h3>
+          <p className="text-base font-medium text-foreground">{formatDate(ticket.createdAt)}</p>
+        </section>
+        </section>
+      </section>
+    </section>
+  )
+
+  // Render Discovery Log Section
+  const renderDiscoveryLog = () => (
+    <section className="flex flex-col w-full md:flex-1 md:min-w-96 bg-background rounded-3xl min-h-0">
+      {/* Header */}
+      <header className="p-4 shrink-0 flex flex-row items-center justify-between">
+        <section className="flex items-center gap-2">
+          <History className="size-4" />
+          <h2 className="font-semibold text-sm">Discovery Log</h2>
+        </section>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setShowDiscoveryLog(false)}
+          aria-label="Close discovery log"
+        >
+          <X className="size-4" />
+        </Button>
+      </header>
+
+      {/* Scrollable Content */}
+      <section 
+        data-discovery-log
+        className="flex-1 overflow-y-auto p-2 min-h-0"
+      >
+        {!discoveryLogsResult?.logs || discoveryLogsResult.logs.length === 0 ? (
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <History />
+              </EmptyMedia>
+              <EmptyTitle>No discovery activity</EmptyTitle>
+              <EmptyDescription>Click "Process Ticket" to start vendor discovery.</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <section className="space-y-2">
+            {discoveryLogsResult.logs.map((log: any) => (
+              <motion.section
+                key={log._id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+                className={`p-3 rounded-lg transition-all ${
+                  log.type === 'error'
+                    ? 'bg-red-50/50 border border-red-200/50'
+                    : log.type === 'complete'
+                    ? 'bg-green-50/50 border border-green-200/50'
+                    : log.type === 'vendor_found'
+                    ? 'bg-blue-50/50 border border-blue-200/50'
+                    : log.type === 'tool_call'
+                    ? 'bg-purple-50/50 border border-purple-200/50'
+                    : 'bg-zinc-50/50 border border-zinc-200/50'
+                }`}
+              >
+                {log.type === 'status' && (
+                  <p className="text-sm text-foreground leading-relaxed">{log.message}</p>
+                )}
+                {log.type === 'tool_call' && (
+                  <section className="space-y-1.5">
+                    <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Tool Call</p>
+                    <p className="text-sm text-foreground leading-relaxed">
+                      <span className="font-medium text-purple-900">{log.toolName}</span>
+                      {log.message && (
+                        <span className="text-muted-foreground">: {log.message}</span>
+                      )}
+                    </p>
+                  </section>
+                )}
+                {log.type === 'tool_result' && (
+                  <section className="space-y-1.5">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tool Result</p>
+                    <p className="text-sm text-foreground leading-relaxed">
+                      <span className="font-medium">{log.toolName}</span> completed successfully
+                    </p>
+                  </section>
+                )}
+                {log.type === 'vendor_found' && log.vendor && (
+                  <section className="space-y-2">
+                    <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Vendor Found</p>
+                    <p className="text-sm font-semibold text-foreground">{log.vendor.businessName}</p>
+                    {log.vendor.specialty && (
+                      <p className="text-xs text-muted-foreground">Specialty: {log.vendor.specialty}</p>
+                    )}
+                    {log.vendor.address && (
+                      <p className="text-xs text-muted-foreground">📍 {log.vendor.address}</p>
+                    )}
+                    {log.vendor.rating && (
+                      <p className="text-xs text-muted-foreground">⭐ Rating: {log.vendor.rating}/5</p>
+                    )}
+                  </section>
+                )}
+                {log.type === 'step' && (
+                  <section className="space-y-1.5">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      Step {log.stepNumber}
+                    </p>
+                    <p className="text-sm text-foreground leading-relaxed">{log.message}</p>
+                  </section>
+                )}
+                {log.type === 'complete' && (
+                  <section className="space-y-1.5">
+                    <p className="text-sm font-semibold text-green-700 flex items-center gap-2">
+                      <span>✓</span>
+                      <span>Discovery Complete</span>
+                    </p>
+                    <p className="text-sm text-foreground leading-relaxed">{log.message}</p>
+                  </section>
+                )}
+                {log.type === 'error' && (
+                  <section className="space-y-1.5">
+                    <p className="text-sm font-semibold text-red-700 flex items-center gap-2">
+                      <span>✗</span>
+                      <span>Error</span>
+                    </p>
+                    <p className="text-sm text-foreground leading-relaxed">{log.error}</p>
+                  </section>
+                )}
+              </motion.section>
+            ))}
+            {isProcessing && (
+              <motion.section
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex items-center gap-2 p-3 rounded-lg bg-zinc-50/50 border border-zinc-200/50"
+              >
+                <Spinner className="size-4 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Processing...</p>
+              </motion.section>
+            )}
+          </section>
+        )}
+      </section>
+    </section>
+  )
+
+  // Render Vendors Section
+  const renderVendors = () => (
+    <section className="flex flex-col w-full md:flex-1 md:min-w-96 bg-background rounded-3xl min-h-0">
+      {/* Header */}
+      <header className="p-4 shrink-0 flex flex-row items-center justify-between">
+        <section className="flex items-center gap-2">
+          <Users className="size-4" />
+          <h2 className="font-semibold text-sm">Vendors</h2>
+          <Badge variant="secondary">{vendorQuotes.length + discoveredVendors.length}</Badge>
+        </section>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setShowDiscoveryLog(true)}
+          aria-label="View discovery log"
+        >
+          <History className="size-4" />
+        </Button>
+      </header>
+
+      {/* Scrollable Content */}
+      <section className="flex-1 overflow-y-auto p-2 min-h-0">
+        {vendorQuotes.length === 0 && discoveredVendors.length === 0 ? (
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Users />
+              </EmptyMedia>
+              <EmptyTitle>No vendors</EmptyTitle>
+              <EmptyDescription>No vendors have been discovered for this ticket yet.</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <section className="space-y-2">
+            {/* Display vendors with quotes first */}
+            {vendorQuotes.map((quote: any) => {
+              const vendor = vendorsMap.get(quote.vendorId)
+              if (!vendor) return null
+              
+              // Use quote._id + vendor._id as unique identifier to avoid conflicts
+              const uniqueVendorId = `quote-${quote._id}-${vendor._id}`
+              
+              return (
+                <VendorCard
+                  key={quote._id}
+                  vendor={{
+                    businessName: vendor.businessName || 'Unknown Vendor',
+                    email: vendor.email,
+                    phone: vendor.phone,
+                    address: vendor.address,
+                    rating: vendor.rating,
+                    url: vendor.url,
+                    specialty: vendor.specialty,
+                    services: vendor.services,
+                  }}
+                  quote={quote}
+                  variant="quote"
+                  onClick={() => setSelectedVendorId(uniqueVendorId)}
+                  isSelected={selectedVendorId === uniqueVendorId}
+                />
+              )
+            })}
+            
+            {/* Display discovered vendors (not yet contacted) */}
+            {discoveredVendors.map((vendor: any, index: number) => {
+              // Skip vendors that already have quotes
+              const hasQuote = vendorQuotes.some((q: any) => {
+                const existingVendor = vendorsMap.get(q.vendorId)
+                return existingVendor && existingVendor._id === vendor.vendorId
+              })
+              if (hasQuote) return null
+              
+              // Use discovered vendor's vendorId or create unique identifier
+              const uniqueVendorId = vendor.vendorId ? `discovered-${vendor.vendorId}` : `discovered-${index}`
+              
+              return (
+                <VendorCard
+                  key={`discovered-${index}`}
+                  vendor={{
+                    businessName: vendor.businessName,
+                    email: vendor.email,
+                    phone: vendor.phone,
+                    address: vendor.address,
+                    rating: vendor.rating,
+                    url: vendor.url,
+                    specialty: vendor.specialty,
+                    services: vendor.services,
+                  }}
+                  variant="discovered"
+                  onClick={() => setSelectedVendorId(uniqueVendorId)}
+                  isSelected={selectedVendorId === uniqueVendorId}
+                />
+              )
+            })}
+          </section>
+        )}
+      </section>
+    </section>
+  )
+
+  // Render Conversations Section
+  const renderConversations = () => {
+    // Get selected vendor directly from the unique identifier
+    // Format: "quote-{quoteId}-{vendorId}" or "discovered-{vendorId}" or "discovered-{index}"
+    let selectedVendor: any = null
+    let actualVendorId: string | null = null
+
+    if (selectedVendorId) {
+      if (selectedVendorId.startsWith('quote-')) {
+        // Format: "quote-{quoteId}-{vendorId}"
+        // Since Convex IDs don't contain dashes, split by '-' gives us exactly 3 parts
+        const parts = selectedVendorId.split('-')
+        if (parts.length >= 3) {
+          // parts[0] = "quote", parts[1] = quoteId, parts[2] = vendorId
+          const quoteId = parts[1]
+          // Find the quote to get the correct vendorId
+          const quote = vendorQuotes.find((q: any) => q._id === quoteId)
+          if (quote && quote.vendorId) {
+            // Use the vendorId from the quote, not from parsing the string
+            // Ensure vendorId exists before using it
+            actualVendorId = quote.vendorId
+            selectedVendor = vendorsMap.get(quote.vendorId)
+          }
+        }
+      } else if (selectedVendorId.startsWith('discovered-')) {
+        // Extract vendor ID from "discovered-{vendorId}" or "discovered-{index}"
+        const vendorIdPart = selectedVendorId.replace('discovered-', '')
+        // Check if it's a numeric index (discovered vendors without vendorId)
+        if (/^\d+$/.test(vendorIdPart)) {
+          const index = parseInt(vendorIdPart, 10)
+          if (index >= 0 && index < discoveredVendors.length) {
+            const discoveredVendor = discoveredVendors[index]
+            // Only set actualVendorId if the discovered vendor has a vendorId
+            // If it doesn't, we can't filter messages for it
+            actualVendorId = discoveredVendor.vendorId || null
+            selectedVendor = discoveredVendor
+          }
+        } else {
+          // It's a vendor ID - use it directly
+          actualVendorId = vendorIdPart
+          selectedVendor = discoveredVendors.find((v: any) => v.vendorId === vendorIdPart) ||
+                          vendorsMap.get(vendorIdPart)
+        }
+      } else {
+        // Fallback: treat as direct vendor ID
+        actualVendorId = selectedVendorId
+        selectedVendor = vendorsMap.get(selectedVendorId) ||
+                         discoveredVendors.find((v: any) => v.vendorId === selectedVendorId)
+      }
+    }
+
+    // Helper function to extract business name from message content
+    // Looks for patterns like "Dear {BusinessName}," or "Dear {BusinessName} Team,"
+    const extractBusinessNameFromMessage = (messageText: string): string | null => {
+      // Match patterns like "Dear Air Group," or "Dear Air Group Team," or "Dear Air Group,"
+      const match = messageText.match(/Dear\s+([^,\n]+?)(?:\s+Team)?[,:]/i)
+      if (match && match[1]) {
+        return match[1].trim()
+      }
+      return null
+    }
+
+    // Helper function to check if message matches selected vendor by business name or email
+    const messageMatchesVendor = (message: any, vendor: any): boolean => {
+      if (!vendor) return false
+
+      // Try to extract business name from message
+      const messageBusinessName = extractBusinessNameFromMessage(message.message)
+      
+      // Match by business name (case-insensitive, partial match)
+      if (messageBusinessName && vendor.businessName) {
+        const vendorNameLower = vendor.businessName.toLowerCase()
+        const messageNameLower = messageBusinessName.toLowerCase()
+        // Check if message business name matches vendor business name (exact or contains)
+        if (vendorNameLower === messageNameLower || 
+            vendorNameLower.includes(messageNameLower) || 
+            messageNameLower.includes(vendorNameLower)) {
+          return true
+        }
+      }
+
+      // Match by email if available (for future messages that might include email)
+      if (message.message && vendor.email) {
+        const emailRegex = new RegExp(vendor.email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+        if (emailRegex.test(message.message)) {
+          return true
+        }
+      }
+
+      return false
+    }
+
+    // Filter messages by selected vendor
+    // CRITICAL: If a vendor is selected but has no vendorId, show empty state (not all messages)
+    const filteredMessages = conversation?.messages.filter((message: any) => {
+      // If no vendor selected, show all messages
+      if (!selectedVendorId) {
+        return true
+      }
+      
+      // If vendor is selected but actualVendorId is null (discovered vendor without vendorId),
+      // try to match by business name/email, otherwise show empty state
+      if (!actualVendorId) {
+        // Try fallback matching by business name/email for messages without vendorId
+        if (message.sender === 'user') {
+          return true // User messages always shown
+        }
+        // Try to match message to selected vendor by business name/email
+        return messageMatchesVendor(message, selectedVendor)
+      }
+      
+      // User messages are always shown
+      if (message.sender === 'user') {
+        return true
+      }
+      
+      // For agent/vendor messages, check vendorId match first
+      if (message.vendorId) {
+        // Convert both to strings for reliable comparison (handles Convex ID objects/strings)
+        const messageVendorIdStr = String(message.vendorId).trim()
+        const selectedVendorIdStr = String(actualVendorId).trim()
+        
+        // Exact vendorId match
+        if (messageVendorIdStr === selectedVendorIdStr) {
+          return true
+        }
+      }
+      
+      // Fallback: If message has no vendorId, try to match by business name/email
+      // This handles old messages created before vendorId was added
+      if (!message.vendorId && selectedVendor) {
+        return messageMatchesVendor(message, selectedVendor)
+      }
+      
+      // No match found
+      return false
+    }) || []
+
+    return (
+      <section className="flex flex-col w-full md:w-80 md:min-w-80 shrink-0 bg-background rounded-3xl">
+        {/* Header */}
+        <header className="p-4 shrink-0">
+          <section className="flex items-center gap-2">
+            <MessageSquare className="size-4" />
+            <h2 className="font-semibold text-sm">Conversations</h2>
+            {selectedVendor ? (
+              <Badge variant="secondary" className="text-xs justify-start text-left max-w-[120px] truncate overflow-hidden">
+                {selectedVendor.businessName || 'Vendor'}
+              </Badge>
+            ) : conversation ? (
+              <Badge variant="secondary">{conversation.messages.length}</Badge>
+            ) : null}
+          </section>
+        </header>
+
+        {/* Scrollable Content */}
+        <section className="flex-1 overflow-y-auto p-4 min-h-0">
+          {!selectedVendorId ? (
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <MessageSquare />
+                </EmptyMedia>
+                <EmptyTitle>Select a vendor</EmptyTitle>
+                <EmptyDescription>Click on a vendor to view their conversation.</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          ) : !conversation ? (
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <MessageSquare />
+                </EmptyMedia>
+                <EmptyTitle>No conversation started</EmptyTitle>
+                <EmptyDescription>
+                  {selectedVendor?.businessName
+                    ? (
+                      <p>
+                        No conversation has been started with <span className="font-semibold">{selectedVendor.businessName}</span> yet. Messages will appear here once communication begins.
+                      </p>
+                    )
+                    : 'No conversation has been started for this ticket yet.'}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          ) : filteredMessages.length === 0 ? (
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <MessageSquare />
+                </EmptyMedia>
+                <EmptyTitle>No messages yet</EmptyTitle>
+                <EmptyDescription>
+                  {selectedVendor?.businessName 
+                    ? (
+                      <>
+                        No messages exchanged with <span className="font-medium">{selectedVendor.businessName}</span> yet. Messages will appear here once communication begins.
+                      </>
+                    )
+                    : 'No messages for this vendor yet. Messages will appear here once communication begins.'}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          ) : (
+            <section className="space-y-4">
+              {filteredMessages.map((message: any, index: number) => {
+                // Format message content for email readability
+                // Preserve line breaks and format as email content
+                const formatEmailContent = (text: string) => {
+                  // Split by double line breaks (paragraphs) and single line breaks
+                  return text.split(/\n\n+/).map((paragraph, pIndex) => (
+                    <p key={pIndex} className={pIndex > 0 ? 'mt-4' : ''}>
+                      {paragraph.split('\n').map((line, lIndex, lines) => (
+                        <span key={lIndex}>
+                          {line}
+                          {lIndex < lines.length - 1 && <br />}
+                        </span>
+                      ))}
+                    </p>
+                  ))
+                }
+
+                const isEmailMessage = message.sender === 'agent' || message.sender === 'vendor'
+                
+                return (
+                  <section
+                    key={index}
+                    className={`p-4 rounded-lg ${
+                      message.sender === 'user'
+                        ? 'bg-primary/10 ml-auto max-w-[80%]'
+                        : message.sender === 'agent'
+                        ? 'bg-muted ml-auto max-w-[80%]'
+                        : 'bg-secondary/50 mr-auto max-w-[80%]'
+                    }`}
+                  >
+                    <section className="flex flex-col gap-1 mb-3 pb-3 border-b border-border/50">
+                      <section className="text-xs font-medium capitalize">{message.sender}</section>
+                      <section className="text-xs text-muted-foreground">
+                        {formatDate(message.date)}
+                      </section>
+                    </section>
+                    {isEmailMessage ? (
+                      <section className="text-sm leading-relaxed whitespace-pre-wrap wrap-break-word">
+                        {formatEmailContent(message.message)}
+                      </section>
+                    ) : (
+                      <p className="text-sm">{message.message}</p>
+                    )}
+                  </section>
+                )
+              })}
+            </section>
+          )}
+        </section>
+      </section>
+    )
+  }
+
+  return (
+    <main className="flex flex-col flex-1 overflow-hidden min-h-0">
+      {/* Tabs Section - Mobile Only (< md) */}
+      <section className="md:hidden w-full border-b p-4 shrink-0">
+        <Tabs
+          value={selectedTab}
+          onValueChange={(value) => setSelectedTab(value as typeof selectedTab)}
+        >
+          <TabsList className="w-full justify-start overflow-x-auto scrollbar-hide">
+            <TabsTrigger value="details" className="shrink-0">
+              Details
+            </TabsTrigger>
+            <TabsTrigger value="vendors" className="shrink-0">
+              {showDiscoveryLog ? 'Discovery Log' : `Vendors (${vendorQuotes.length})`}
+            </TabsTrigger>
+            <TabsTrigger value="conversations" className="shrink-0">
+              Conversations ({conversation?.messages.length || 0})
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </section>
+
+      {/* Content Section */}
+      <section className="flex-1 overflow-hidden min-h-0">
+        <section className="flex flex-row gap-4 h-full px-4 py-4 w-full">
+          {/* Ticket Details */}
+          <section className={isMobile && selectedTab !== 'details' ? 'hidden' : 'flex'}>
+            {renderTicketDetails()}
+          </section>
+
+          {/* Vendors / Discovery Log */}
+          <section className={isMobile && selectedTab !== 'vendors' ? 'hidden' : 'flex flex-col h-full flex-1 min-w-0'}>
+            <AnimatePresence mode="wait">
+              {showDiscoveryLog ? (
+                <motion.div
+                  key="discovery-log"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.2, ease: 'easeInOut' }}
+                  className="flex flex-col h-full w-full flex-1 min-w-0"
+                >
+                  {renderDiscoveryLog()}
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="vendors"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ duration: 0.2, ease: 'easeInOut' }}
+                  className="flex flex-col h-full w-full flex-1 min-w-0"
+                >
+                  {renderVendors()}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </section>
+
+          {/* Conversations */}
+          <section className={isMobile && selectedTab !== 'conversations' ? 'hidden' : 'flex'}>
+            {renderConversations()}
+          </section>
+        </section>
+      </section>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete this ticket</DialogTitle>
+            <DialogDescription>
+              {ticket.ticketName
+                ? `Deleting "${ticket.ticketName}" means all associated data including photos, vendor quotes, and conversation history will be permanently removed. This action cannot be undone.`
+                : 'Deleting this ticket means all associated data including photos, vendor quotes, and conversation history will be permanently removed. This action cannot be undone.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-row justify-start gap-4">
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDeleteTicket}
+            >
+              Delete ticket
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowDeleteDialog(false)}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Preview Modal */}
+      <AnimatePresence>
+        {selectedImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            onClick={() => setSelectedImage(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="relative max-h-full max-w-full"
+            >
+              <img
+                src={selectedImage}
+                alt="Preview"
+                className="max-h-full max-w-full rounded-lg object-contain"
+                onClick={(e) => e.stopPropagation()}
+              />
+              <Button
+                type="button"
+                onClick={() => setSelectedImage(null)}
+                variant="secondary"
+                size="icon"
+                className="absolute end-2 top-2 size-7 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </main>
+  )
+}

@@ -5,6 +5,7 @@
 
 import { redirect } from '@tanstack/react-router'
 import { api } from '@/lib/api'
+import { useAuthStore } from '@/stores/authStore'
 
 export interface AuthCheckOptions {
   /**
@@ -163,6 +164,16 @@ export async function requireAuth(
         if (redirectResult) {
           throw redirectResult
         }
+      }
+      
+      // Populate auth store immediately when auth is validated
+      // IMPORTANT: Keep isLoading true - it will be set to false when Convex query completes
+      // This ensures skeletons show until all data is ready
+      if (typeof window !== 'undefined') {
+        const store = useAuthStore.getState()
+        store.setUser(user)
+        // Don't set isLoading to false here - let Convex query completion handle it
+        // This ensures components show skeletons until Convex query syncs
       }
       
       return user

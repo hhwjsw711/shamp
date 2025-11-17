@@ -2,28 +2,44 @@
  * Analytics queries - Get dashboard statistics and KPIs
  */
 
-import { internalQuery } from "../../_generated/server";
+import { query, internalQuery } from "../../_generated/server";
 import { v } from "convex/values";
 import type { Doc, Id } from "../../_generated/dataModel";
+import { validateUserId } from "../../utils/queryAuth";
 
 /**
- * Get dashboard analytics/KPIs for a user
+ * Get dashboard analytics/KPIs for a user (public query with authorization)
  * Returns ticket counts, average response/fix times, most used vendor, and quote statistics
- * @param userId - User ID (already authenticated via HTTP handler)
+ * SECURITY: Validates userId and filters all data by userId
  */
-export const getDashboardStatsInternal = internalQuery({
+export const getDashboardStats = query({
   args: {
-    userId: v.id("users"),
+    userId: v.id("users"), // Required for authorization
   },
   handler: async (ctx, args) => {
+    // Validate userId exists in database
+    await validateUserId(ctx, args.userId);
+    
     // Get all tickets for the user
+    // SECURITY: Always filter by userId using index
     const tickets = await ctx.db
       .query("tickets")
       .withIndex("by_createdBy", (q) => q.eq("createdBy", args.userId))
       .collect();
 
     // Calculate ticket counts by status
-    const ticketCountsByStatus: Record<string, number> = {};
+    // Initialize all possible statuses to 0 to ensure all are shown
+    const ticketCountsByStatus: Record<string, number> = {
+      analyzing: 0,
+      analyzed: 0,
+      reviewed: 0,
+      find_vendors: 0,
+      requested_for_information: 0,
+      quotes_available: 0,
+      quote_selected: 0,
+      fixed: 0,
+      closed: 0,
+    };
     tickets.forEach((ticket) => {
       ticketCountsByStatus[ticket.status] =
         (ticketCountsByStatus[ticket.status] || 0) + 1;
@@ -118,7 +134,7 @@ export const getDashboardStatsInternal = internalQuery({
 
     // Calculate average fix time (time from creation to closure)
     const closedTickets = tickets.filter(
-      (t) => t.status === "Fixed" && t.closedAt,
+      (t) => t.status === "fixed" && t.closedAt,
     );
     const fixTimes = closedTickets
       .map((ticket) => ticket.closedAt! - ticket.createdAt)
@@ -151,6 +167,90 @@ export const getDashboardStatsInternal = internalQuery({
       ? await ctx.db.get(mostUsedVendorId)
       : null;
 
+    // Calculate vendor performance metrics
+    const vendorPerformance: Array<{
+      vendorId: Id<"vendors">;
+      businessName: string;
+      ticketCount: number;
+      averageResponseTimeHours: number | null;
+      averageFixTimeHours: number | null;
+    }> = [];
+
+    // Get all vendors that have been selected for tickets
+    const vendorIds = new Set<Id<"vendors">>();
+    tickets.forEach((ticket) => {
+      if (ticket.selectedVendorId) {
+        vendorIds.add(ticket.selectedVendorId);
+      }
+    });
+
+    // Calculate metrics for each vendor
+    for (const vendorId of vendorIds) {
+      const vendor = await ctx.db.get(vendorId);
+      if (!vendor) continue;
+
+      const vendorTickets = tickets.filter((t) => t.selectedVendorId === vendorId);
+      const ticketCount = vendorTickets.length;
+
+      // Calculate average response time for this vendor
+      const vendorResponseTimes: Array<number> = [];
+      for (const ticket of vendorTickets) {
+        if (ticket.conversationId) {
+          const conversation = await ctx.db.get(ticket.conversationId);
+          if (conversation) {
+            const firstVendorMessage = conversation.messages.find(
+              (msg) => msg.sender === "vendor",
+            );
+            if (firstVendorMessage) {
+              const responseTime = firstVendorMessage.date - ticket.createdAt;
+              if (responseTime > 0) {
+                vendorResponseTimes.push(responseTime);
+              }
+            }
+          }
+        }
+      }
+
+      const averageResponseTimeHours =
+        vendorResponseTimes.length > 0
+          ? Math.round(
+              (vendorResponseTimes.reduce((a, b) => a + b, 0) /
+                vendorResponseTimes.length /
+                (1000 * 60 * 60)) *
+                100,
+            ) / 100
+          : null;
+
+      // Calculate average fix time for this vendor
+      const closedVendorTickets = vendorTickets.filter(
+        (t) => t.status === "fixed" && t.closedAt,
+      );
+      const vendorFixTimes = closedVendorTickets
+        .map((ticket) => ticket.closedAt! - ticket.createdAt)
+        .filter((time) => time > 0);
+
+      const averageFixTimeHours =
+        vendorFixTimes.length > 0
+          ? Math.round(
+              (vendorFixTimes.reduce((a, b) => a + b, 0) /
+                vendorFixTimes.length /
+                (1000 * 60 * 60)) *
+                100,
+            ) / 100
+          : null;
+
+      vendorPerformance.push({
+        vendorId,
+        businessName: vendor.businessName,
+        ticketCount,
+        averageResponseTimeHours,
+        averageFixTimeHours,
+      });
+    }
+
+    // Sort by ticket count (most used first)
+    vendorPerformance.sort((a, b) => b.ticketCount - a.ticketCount);
+
     return {
       totalTickets: tickets.length,
       ticketCountsByStatus,
@@ -179,6 +279,279 @@ export const getDashboardStatsInternal = internalQuery({
       ticketsAwaitingSelection, // Tickets with quotes but no vendor selected yet
       averageQuotePrice, // Average price in smallest currency unit (e.g., cents for USD)
       averageQuoteDeliveryTimeHours, // Average delivery time in hours
+      vendorPerformance, // Vendor performance metrics for charts
+    };
+  },
+});
+
+/**
+ * Get dashboard analytics/KPIs for a user (internal query)
+ * Used by other backend functions that already have auth context
+ */
+export const getDashboardStatsInternal = internalQuery({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    // Get all tickets for the user
+    const tickets = await ctx.db
+      .query("tickets")
+      .withIndex("by_createdBy", (q) => q.eq("createdBy", args.userId))
+      .collect();
+
+    // Calculate ticket counts by status
+    // Initialize all possible statuses to 0 to ensure all are shown
+    const ticketCountsByStatus: Record<string, number> = {
+      analyzing: 0,
+      analyzed: 0,
+      reviewed: 0,
+      find_vendors: 0,
+      requested_for_information: 0,
+      quotes_available: 0,
+      quote_selected: 0,
+      fixed: 0,
+      closed: 0,
+    };
+    tickets.forEach((ticket) => {
+      ticketCountsByStatus[ticket.status] =
+        (ticketCountsByStatus[ticket.status] || 0) + 1;
+    });
+
+    // Get all quotes for user's tickets
+    const ticketIds = tickets.map((t) => t._id);
+    const allQuotes: Array<Array<Doc<"vendorQuotes">>> = await Promise.all(
+      ticketIds.map(async (ticketId) => {
+        return await ctx.db
+          .query("vendorQuotes")
+          .withIndex("by_ticketId", (q) => q.eq("ticketId", ticketId))
+          .collect();
+      }),
+    );
+    const quotes: Array<Doc<"vendorQuotes">> = allQuotes.flat();
+
+    // Calculate quote statistics
+    const newQuotesCount = quotes.filter((q) => q.status === "received").length;
+    const pendingQuotesCount = quotes.filter(
+      (q) => q.status === "pending",
+    ).length;
+    const selectedQuotesCount = quotes.filter(
+      (q) => q.status === "selected",
+    ).length;
+    const rejectedQuotesCount = quotes.filter(
+      (q) => q.status === "rejected",
+    ).length;
+    const expiredQuotesCount = quotes.filter(
+      (q) => q.status === "expired",
+    ).length;
+
+    // Calculate average quote price (only for received quotes)
+    const receivedQuotes = quotes.filter((q) => q.status === "received");
+    const quotePrices = receivedQuotes.map((q) => q.price);
+    const averageQuotePrice =
+      quotePrices.length > 0
+        ? Math.round(
+            quotePrices.reduce((a, b) => a + b, 0) / quotePrices.length,
+          )
+        : null;
+
+    // Calculate average quote delivery time (only for received quotes)
+    const quoteDeliveryTimes = receivedQuotes.map(
+      (q) => q.estimatedDeliveryTime,
+    );
+    const averageQuoteDeliveryTimeHours =
+      quoteDeliveryTimes.length > 0
+        ? Math.round(
+            (quoteDeliveryTimes.reduce((a, b) => a + b, 0) /
+              quoteDeliveryTimes.length) *
+              100,
+          ) / 100
+        : null;
+
+    // Count tickets awaiting quote selection (have quotes but no selected vendor)
+    const ticketsAwaitingSelection = tickets.filter(
+      (t) => t.quoteStatus === "quotes_received" && !t.selectedVendorQuoteId,
+    ).length;
+
+    // Calculate average response time (time from ticket creation to first vendor reply)
+    const ticketsWithConversations = await Promise.all(
+      tickets
+        .filter((t) => t.conversationId)
+        .map(async (ticket) => {
+          const conversation = await ctx.db.get(ticket.conversationId!);
+          return { ticket, conversation };
+        }),
+    );
+
+    const responseTimes: Array<number> = [];
+    ticketsWithConversations.forEach(({ ticket, conversation }) => {
+      if (conversation) {
+        // Find first vendor message (reply)
+        const firstVendorMessage = conversation.messages.find(
+          (msg) => msg.sender === "vendor",
+        );
+        if (firstVendorMessage) {
+          // Response time = time from ticket creation to first vendor reply
+          const responseTime = firstVendorMessage.date - ticket.createdAt;
+          if (responseTime > 0) {
+            responseTimes.push(responseTime);
+          }
+        }
+      }
+    });
+
+    const averageResponseTime =
+      responseTimes.length > 0
+        ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length
+        : null;
+
+    // Calculate average fix time (time from creation to closure)
+    const closedTickets = tickets.filter(
+      (t) => t.status === "fixed" && t.closedAt,
+    );
+    const fixTimes = closedTickets
+      .map((ticket) => ticket.closedAt! - ticket.createdAt)
+      .filter((time) => time > 0);
+
+    const averageFixTime =
+      fixTimes.length > 0
+        ? fixTimes.reduce((a, b) => a + b, 0) / fixTimes.length
+        : null;
+
+    // Find most used vendor
+    const vendorUsage: Record<string, number> = {};
+    tickets.forEach((ticket) => {
+      if (ticket.selectedVendorId) {
+        const vendorId = ticket.selectedVendorId;
+        vendorUsage[vendorId] = (vendorUsage[vendorId] || 0) + 1;
+      }
+    });
+
+    // Find most used vendor ID with proper type safety
+    const vendorEntries = Object.entries(vendorUsage);
+    const mostUsedVendorId: Id<"vendors"> | null =
+      vendorEntries.length > 0
+        ? (vendorEntries.reduce((a, b) =>
+            a[1] > b[1] ? a : b,
+          )[0] as Id<"vendors">)
+        : null;
+
+    const mostUsedVendor = mostUsedVendorId
+      ? await ctx.db.get(mostUsedVendorId)
+      : null;
+
+    // Calculate vendor performance metrics
+    const vendorPerformance: Array<{
+      vendorId: Id<"vendors">;
+      businessName: string;
+      ticketCount: number;
+      averageResponseTimeHours: number | null;
+      averageFixTimeHours: number | null;
+    }> = [];
+
+    // Get all vendors that have been selected for tickets
+    const vendorIds = new Set<Id<"vendors">>();
+    tickets.forEach((ticket) => {
+      if (ticket.selectedVendorId) {
+        vendorIds.add(ticket.selectedVendorId);
+      }
+    });
+
+    // Calculate metrics for each vendor
+    for (const vendorId of vendorIds) {
+      const vendor = await ctx.db.get(vendorId);
+      if (!vendor) continue;
+
+      const vendorTickets = tickets.filter((t) => t.selectedVendorId === vendorId);
+      const ticketCount = vendorTickets.length;
+
+      // Calculate average response time for this vendor
+      const vendorResponseTimes: Array<number> = [];
+      for (const ticket of vendorTickets) {
+        if (ticket.conversationId) {
+          const conversation = await ctx.db.get(ticket.conversationId);
+          if (conversation) {
+            const firstVendorMessage = conversation.messages.find(
+              (msg) => msg.sender === "vendor",
+            );
+            if (firstVendorMessage) {
+              const responseTime = firstVendorMessage.date - ticket.createdAt;
+              if (responseTime > 0) {
+                vendorResponseTimes.push(responseTime);
+              }
+            }
+          }
+        }
+      }
+
+      const averageResponseTimeHours =
+        vendorResponseTimes.length > 0
+          ? Math.round(
+              (vendorResponseTimes.reduce((a, b) => a + b, 0) /
+                vendorResponseTimes.length /
+                (1000 * 60 * 60)) *
+                100,
+            ) / 100
+          : null;
+
+      // Calculate average fix time for this vendor
+      const closedVendorTickets = vendorTickets.filter(
+        (t) => t.status === "fixed" && t.closedAt,
+      );
+      const vendorFixTimes = closedVendorTickets
+        .map((ticket) => ticket.closedAt! - ticket.createdAt)
+        .filter((time) => time > 0);
+
+      const averageFixTimeHours =
+        vendorFixTimes.length > 0
+          ? Math.round(
+              (vendorFixTimes.reduce((a, b) => a + b, 0) /
+                vendorFixTimes.length /
+                (1000 * 60 * 60)) *
+                100,
+            ) / 100
+          : null;
+
+      vendorPerformance.push({
+        vendorId,
+        businessName: vendor.businessName,
+        ticketCount,
+        averageResponseTimeHours,
+        averageFixTimeHours,
+      });
+    }
+
+    // Sort by ticket count (most used first)
+    vendorPerformance.sort((a, b) => b.ticketCount - a.ticketCount);
+
+    return {
+      totalTickets: tickets.length,
+      ticketCountsByStatus,
+      averageResponseTimeMs: averageResponseTime,
+      averageResponseTimeHours: averageResponseTime
+        ? Math.round((averageResponseTime / (1000 * 60 * 60)) * 100) / 100
+        : null,
+      averageFixTimeMs: averageFixTime,
+      averageFixTimeHours: averageFixTime
+        ? Math.round((averageFixTime / (1000 * 60 * 60)) * 100) / 100
+        : null,
+      mostUsedVendor: mostUsedVendor
+        ? {
+            _id: mostUsedVendor._id,
+            businessName: mostUsedVendor.businessName,
+            usageCount: mostUsedVendorId ? vendorUsage[mostUsedVendorId] : 0,
+          }
+        : null,
+      // Quote statistics
+      newQuotesCount, // Quotes received that need review
+      pendingQuotesCount, // Quotes awaiting vendor response
+      selectedQuotesCount, // Quotes that were selected
+      rejectedQuotesCount, // Quotes that were rejected
+      expiredQuotesCount, // Quotes that expired
+      totalQuotesReceived: receivedQuotes.length,
+      ticketsAwaitingSelection, // Tickets with quotes but no vendor selected yet
+      averageQuotePrice, // Average price in smallest currency unit (e.g., cents for USD)
+      averageQuoteDeliveryTimeHours, // Average delivery time in hours
+      vendorPerformance, // Vendor performance metrics for charts
     };
   },
 });

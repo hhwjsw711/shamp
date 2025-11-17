@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as functions_agents_actions_extractVendorUrl from "../functions/agents/actions/extractVendorUrl.js";
 import type * as functions_agents_emailDraftAgent from "../functions/agents/emailDraftAgent.js";
 import type * as functions_agents_ticketAnalysisAgent from "../functions/agents/ticketAnalysisAgent.js";
 import type * as functions_agents_tools_analyzeImage from "../functions/agents/tools/analyzeImage.js";
@@ -22,7 +23,9 @@ import type * as functions_agents_tools_searchVendors from "../functions/agents/
 import type * as functions_agents_tools_updateTicket from "../functions/agents/tools/updateTicket.js";
 import type * as functions_agents_userChatAgent from "../functions/agents/userChatAgent.js";
 import type * as functions_agents_vendorConversationAgent from "../functions/agents/vendorConversationAgent.js";
+import type * as functions_agents_vendorDiscoveryAction from "../functions/agents/vendorDiscoveryAction.js";
 import type * as functions_agents_vendorDiscoveryAgent from "../functions/agents/vendorDiscoveryAgent.js";
+import type * as functions_agents_vendorDiscoveryAgentStream from "../functions/agents/vendorDiscoveryAgentStream.js";
 import type * as functions_agents_vendorRankingAgent from "../functions/agents/vendorRankingAgent.js";
 import type * as functions_agents_vendorResponseAgent from "../functions/agents/vendorResponseAgent.js";
 import type * as functions_analytics_queries from "../functions/analytics/queries.js";
@@ -33,6 +36,8 @@ import type * as functions_auth_mutations from "../functions/auth/mutations.js";
 import type * as functions_auth_queries from "../functions/auth/queries.js";
 import type * as functions_conversations_mutations from "../functions/conversations/mutations.js";
 import type * as functions_conversations_queries from "../functions/conversations/queries.js";
+import type * as functions_discoveryLogs_mutations from "../functions/discoveryLogs/mutations.js";
+import type * as functions_discoveryLogs_queries from "../functions/discoveryLogs/queries.js";
 import type * as functions_emailVerification_actions from "../functions/emailVerification/actions.js";
 import type * as functions_emailVerification_mutations from "../functions/emailVerification/mutations.js";
 import type * as functions_emailVerification_queries from "../functions/emailVerification/queries.js";
@@ -56,11 +61,16 @@ import type * as functions_pinSessions_mutations from "../functions/pinSessions/
 import type * as functions_pinSessions_queries from "../functions/pinSessions/queries.js";
 import type * as functions_sessions_mutations from "../functions/sessions/mutations.js";
 import type * as functions_sessions_queries from "../functions/sessions/queries.js";
+import type * as functions_tickets_actions from "../functions/tickets/actions.js";
 import type * as functions_tickets_mutations from "../functions/tickets/mutations.js";
 import type * as functions_tickets_queries from "../functions/tickets/queries.js";
+import type * as functions_vendorCallLogs_mutations from "../functions/vendorCallLogs/mutations.js";
 import type * as functions_vendorOutreach_actions from "../functions/vendorOutreach/actions.js";
+import type * as functions_vendorOutreach_callVendor from "../functions/vendorOutreach/callVendor.js";
 import type * as functions_vendorOutreach_mutations from "../functions/vendorOutreach/mutations.js";
 import type * as functions_vendorOutreach_queries from "../functions/vendorOutreach/queries.js";
+import type * as functions_vendorOutreach_utils_extractEmailFromTranscript from "../functions/vendorOutreach/utils/extractEmailFromTranscript.js";
+import type * as functions_vendorOutreach_utils_formatPhoneNumber from "../functions/vendorOutreach/utils/formatPhoneNumber.js";
 import type * as functions_vendorQuotes_actions from "../functions/vendorQuotes/actions.js";
 import type * as functions_vendorQuotes_mutations from "../functions/vendorQuotes/mutations.js";
 import type * as functions_vendorQuotes_queries from "../functions/vendorQuotes/queries.js";
@@ -100,6 +110,7 @@ import type * as prompts_draftEmail from "../prompts/draftEmail.js";
 import type * as prompts_emailDraft from "../prompts/emailDraft.js";
 import type * as prompts_ticketAnalysis from "../prompts/ticketAnalysis.js";
 import type * as prompts_userChat from "../prompts/userChat.js";
+import type * as prompts_vendorCall from "../prompts/vendorCall.js";
 import type * as prompts_vendorConversation from "../prompts/vendorConversation.js";
 import type * as prompts_vendorDiscovery from "../prompts/vendorDiscovery.js";
 import type * as prompts_vendorExtraction from "../prompts/vendorExtraction.js";
@@ -112,6 +123,7 @@ import type * as utils_constants from "../utils/constants.js";
 import type * as utils_errors from "../utils/errors.js";
 import type * as utils_httpAuth from "../utils/httpAuth.js";
 import type * as utils_nameUtils from "../utils/nameUtils.js";
+import type * as utils_queryAuth from "../utils/queryAuth.js";
 import type * as utils_security from "../utils/security.js";
 import type * as utils_validation from "../utils/validation.js";
 
@@ -130,6 +142,7 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  "functions/agents/actions/extractVendorUrl": typeof functions_agents_actions_extractVendorUrl;
   "functions/agents/emailDraftAgent": typeof functions_agents_emailDraftAgent;
   "functions/agents/ticketAnalysisAgent": typeof functions_agents_ticketAnalysisAgent;
   "functions/agents/tools/analyzeImage": typeof functions_agents_tools_analyzeImage;
@@ -144,7 +157,9 @@ declare const fullApi: ApiFromModules<{
   "functions/agents/tools/updateTicket": typeof functions_agents_tools_updateTicket;
   "functions/agents/userChatAgent": typeof functions_agents_userChatAgent;
   "functions/agents/vendorConversationAgent": typeof functions_agents_vendorConversationAgent;
+  "functions/agents/vendorDiscoveryAction": typeof functions_agents_vendorDiscoveryAction;
   "functions/agents/vendorDiscoveryAgent": typeof functions_agents_vendorDiscoveryAgent;
+  "functions/agents/vendorDiscoveryAgentStream": typeof functions_agents_vendorDiscoveryAgentStream;
   "functions/agents/vendorRankingAgent": typeof functions_agents_vendorRankingAgent;
   "functions/agents/vendorResponseAgent": typeof functions_agents_vendorResponseAgent;
   "functions/analytics/queries": typeof functions_analytics_queries;
@@ -155,6 +170,8 @@ declare const fullApi: ApiFromModules<{
   "functions/auth/queries": typeof functions_auth_queries;
   "functions/conversations/mutations": typeof functions_conversations_mutations;
   "functions/conversations/queries": typeof functions_conversations_queries;
+  "functions/discoveryLogs/mutations": typeof functions_discoveryLogs_mutations;
+  "functions/discoveryLogs/queries": typeof functions_discoveryLogs_queries;
   "functions/emailVerification/actions": typeof functions_emailVerification_actions;
   "functions/emailVerification/mutations": typeof functions_emailVerification_mutations;
   "functions/emailVerification/queries": typeof functions_emailVerification_queries;
@@ -178,11 +195,16 @@ declare const fullApi: ApiFromModules<{
   "functions/pinSessions/queries": typeof functions_pinSessions_queries;
   "functions/sessions/mutations": typeof functions_sessions_mutations;
   "functions/sessions/queries": typeof functions_sessions_queries;
+  "functions/tickets/actions": typeof functions_tickets_actions;
   "functions/tickets/mutations": typeof functions_tickets_mutations;
   "functions/tickets/queries": typeof functions_tickets_queries;
+  "functions/vendorCallLogs/mutations": typeof functions_vendorCallLogs_mutations;
   "functions/vendorOutreach/actions": typeof functions_vendorOutreach_actions;
+  "functions/vendorOutreach/callVendor": typeof functions_vendorOutreach_callVendor;
   "functions/vendorOutreach/mutations": typeof functions_vendorOutreach_mutations;
   "functions/vendorOutreach/queries": typeof functions_vendorOutreach_queries;
+  "functions/vendorOutreach/utils/extractEmailFromTranscript": typeof functions_vendorOutreach_utils_extractEmailFromTranscript;
+  "functions/vendorOutreach/utils/formatPhoneNumber": typeof functions_vendorOutreach_utils_formatPhoneNumber;
   "functions/vendorQuotes/actions": typeof functions_vendorQuotes_actions;
   "functions/vendorQuotes/mutations": typeof functions_vendorQuotes_mutations;
   "functions/vendorQuotes/queries": typeof functions_vendorQuotes_queries;
@@ -222,6 +244,7 @@ declare const fullApi: ApiFromModules<{
   "prompts/emailDraft": typeof prompts_emailDraft;
   "prompts/ticketAnalysis": typeof prompts_ticketAnalysis;
   "prompts/userChat": typeof prompts_userChat;
+  "prompts/vendorCall": typeof prompts_vendorCall;
   "prompts/vendorConversation": typeof prompts_vendorConversation;
   "prompts/vendorDiscovery": typeof prompts_vendorDiscovery;
   "prompts/vendorExtraction": typeof prompts_vendorExtraction;
@@ -234,6 +257,7 @@ declare const fullApi: ApiFromModules<{
   "utils/errors": typeof utils_errors;
   "utils/httpAuth": typeof utils_httpAuth;
   "utils/nameUtils": typeof utils_nameUtils;
+  "utils/queryAuth": typeof utils_queryAuth;
   "utils/security": typeof utils_security;
   "utils/validation": typeof utils_validation;
 }>;

@@ -20,6 +20,7 @@ interface GalleryUploadProps {
   accept?: string;
   multiple?: boolean;
   className?: string;
+  initialFiles?: Array<FileMetadata>;
   onFilesChange?: (files: Array<FileWithPreview>) => void;
 }
 
@@ -29,6 +30,7 @@ export default function GalleryUpload({
   accept = 'image/jpeg,image/jpg,image/png,image/gif,image/webp',
   multiple = true,
   className,
+  initialFiles,
   onFilesChange,
 }: GalleryUploadProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -52,6 +54,7 @@ export default function GalleryUpload({
     maxSize,
     accept,
     multiple,
+    initialFiles,
     onFilesChange,
   });
 

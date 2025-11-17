@@ -101,6 +101,7 @@ export const listVendorQuotesHandler = httpAction(async (ctx, request) => {
         (api as any).functions.vendorQuotes.queries.getByTicketId,
         {
           ticketId: ticketId as any,
+          userId: user.userId as any, // Pass userId for authorization
           limit,
           cursor: cursor || undefined,
         }

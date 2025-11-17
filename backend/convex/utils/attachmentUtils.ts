@@ -85,13 +85,13 @@ export const fetchEmailAttachments = action({
       }
 
       return {
-        id: attachment.id,
-        filename: attachment.filename,
+      id: attachment.id,
+      filename: attachment.filename,
         // API returns snake_case 'content_type' (per Resend API docs)
-        contentType: attachment.content_type || attachment.contentType || "application/octet-stream",
-        size: attachment.size || 0,
+      contentType: attachment.content_type || attachment.contentType || "application/octet-stream",
+      size: attachment.size || 0,
         // API returns snake_case 'download_url' (per Resend API docs)
-        downloadUrl: attachment.download_url || attachment.downloadUrl,
+      downloadUrl: attachment.download_url || attachment.downloadUrl,
         expiresAt,
       };
     });

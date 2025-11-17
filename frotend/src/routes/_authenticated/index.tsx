@@ -1,12 +1,51 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
-import { api } from '@/lib/api'
-import { Spinner } from '@/components/ui/spinner'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useQuery } from 'convex/react'
+import { 
+  AlertCircle,
+  Building2,
+  CheckCircle,
+  Clock,
+  DollarSign,
+  FileText,
+  Package,
+  Ticket,
+  Wrench
+} from 'lucide-react'
+import AnalyticsCard from '@/components/layout/analytics-card'
+import VendorPerformanceChart from '@/components/layout/vendor-performance-chart'
+import { Skeleton } from '@/components/ui/skeleton'
+import { useAuth } from '@/hooks/useAuth'
+import { api } from '@/lib/convex-api'
 
 export const Route = createFileRoute('/_authenticated/')({
   component: App,
 })
+
+function getStatusLabel(status: string): string {
+  const statusMap: Record<string, string> = {
+    analyzing: 'Analyzing',
+    analyzed: 'Analyzed',
+    reviewed: 'Reviewed',
+    find_vendors: 'Finding Vendors',
+    requested_for_information: 'Requested for Information',
+    quotes_available: 'Quotes Available',
+    quote_selected: 'Quote Selected',
+    fixed: 'Fixed',
+    closed: 'Closed',
+  }
+  return statusMap[status] || status
+}
+
+// Define ticket status flow order (excluding analyzing and quote_selected)
+const TICKET_STATUS_ORDER = [
+  'analyzed',
+  'reviewed',
+  'find_vendors',
+  'requested_for_information',
+  'quotes_available',
+  'fixed',
+  'closed',
+] as const
 
 interface DashboardStats {
   totalTickets: number
@@ -29,46 +68,141 @@ interface DashboardStats {
   ticketsAwaitingSelection: number
   averageQuotePrice: number | null
   averageQuoteDeliveryTimeHours: number | null
+  vendorPerformance: Array<{
+    vendorId: string
+    businessName: string
+    ticketCount: number
+    averageResponseTimeHours: number | null
+    averageFixTimeHours: number | null
+  }>
 }
 
 function App() {
-  const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth()
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setIsLoading(true)
-        setError(null)
-        const response = await api.analytics.getDashboardStats()
-        setStats(response.data)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load dashboard statistics')
-      } finally {
-        setIsLoading(false)
-      }
-    }
+  // Use Convex query for real-time dashboard stats
+  // SECURITY: userId is validated on the backend - users can only see their own stats
+  const statsResult = useQuery(
+    api.functions.analytics.queries.getDashboardStats,
+    user?.id && isAuthenticated
+      ? { userId: user.id as any } // Type assertion - backend validates userId
+      : 'skip' // Skip query if not authenticated
+  ) as DashboardStats | undefined | null
 
-    fetchStats()
-  }, [])
+  // Handle loading and error states
+  // When query is skipped (not authenticated), statsResult is undefined
+  // When loading, statsResult is undefined  
+  // When error, statsResult is null
+  // When success, statsResult is DashboardStats
+  // Show loading if:
+  // 1. Auth is loading (includes getCurrentUser and Convex query loading)
+  // 2. Query is loading (when authenticated and user exists)
+  const isLoading = authLoading || (statsResult === undefined && isAuthenticated && user)
+  const hasError = statsResult === null
+  const stats: DashboardStats | undefined = statsResult ?? undefined
 
   if (isLoading) {
     return (
-      <section className="flex flex-col gap-2 p-4">
-        <div className="flex items-center justify-center h-64">
-          <Spinner className="w-8 h-8" />
-        </div>
+      <section className="flex flex-col h-full overflow-hidden">
+        {/* Header - Fixed */}
+        <header className="shrink-0 p-4 pb-2">
+          <section className="flex flex-col gap-1">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-80 mt-1" />
+          </section>
+        </header>
+
+        {/* Content - Scrollable */}
+        <section className="flex-1 overflow-y-auto p-4 pt-2 flex flex-col gap-6 min-h-0">
+          {/* Ticket Statistics Skeleton */}
+          <section className="flex flex-col gap-2">
+            <Skeleton className="h-7 w-40" />
+            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <section key={i} className="flex flex-col gap-0 p-0 rounded-[24px] border-0 shadow-none bg-card">
+                  <section className="flex flex-row items-center gap-4 py-2 px-4">
+                    <Skeleton className="w-5 h-5 rounded" />
+                    <Skeleton className="h-4 w-32" />
+                  </section>
+                  <section className="p-2">
+                    <section className="p-2 bg-zinc-100 rounded-2xl">
+                      <Skeleton className="h-8 w-16" />
+                    </section>
+                  </section>
+                </section>
+              ))}
+            </section>
+          </section>
+
+          {/* Quote Statistics Skeleton */}
+          <section className="flex flex-col gap-2">
+            <Skeleton className="h-7 w-40" />
+            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <section key={i} className="flex flex-col gap-0 p-0 rounded-[24px] border-0 shadow-none bg-card">
+                  <section className="flex flex-row items-center gap-4 py-2 px-4">
+                    <Skeleton className="w-5 h-5 rounded" />
+                    <Skeleton className="h-4 w-32" />
+                  </section>
+                  <section className="p-2">
+                    <section className="p-2 bg-zinc-100 rounded-2xl">
+                      <section className="flex flex-col gap-1">
+                        <Skeleton className="h-8 w-16" />
+                        <Skeleton className="h-3 w-24" />
+                      </section>
+                    </section>
+                  </section>
+                </section>
+              ))}
+            </section>
+          </section>
+
+          {/* Performance Metrics Skeleton */}
+          <section className="flex flex-col gap-4">
+            <Skeleton className="h-7 w-48" />
+            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <section key={i} className="flex flex-col gap-0 p-0 rounded-[24px] border-0 shadow-none bg-card">
+                  <section className="flex flex-row items-center gap-4 py-2 px-4">
+                    <Skeleton className="w-5 h-5 rounded" />
+                    <Skeleton className="h-4 w-36" />
+                  </section>
+                  <section className="p-2">
+                    <section className="p-2 bg-zinc-100 rounded-2xl">
+                      <section className="flex flex-col gap-1">
+                        <Skeleton className="h-7 w-32" />
+                        <Skeleton className="h-4 w-48" />
+                      </section>
+                    </section>
+                  </section>
+                </section>
+              ))}
+            </section>
+
+            {/* Vendor Performance Chart Skeleton */}
+            <section className="flex flex-col gap-0 p-0 rounded-[24px] border-0 shadow-none bg-card">
+              <section className="flex flex-col gap-1 py-2 px-4">
+                <Skeleton className="h-5 w-64" />
+                <Skeleton className="h-3 w-80" />
+              </section>
+              <section className="p-2">
+                <section className="p-2 bg-zinc-100 rounded-2xl">
+                  <Skeleton className="h-[250px] sm:h-[300px] w-full rounded-lg" />
+                </section>
+              </section>
+            </section>
+          </section>
+        </section>
       </section>
     )
   }
 
-  if (error) {
+  if (hasError) {
     return (
       <section className="flex flex-col gap-2 p-4">
-        <div className="flex items-center justify-center h-64">
-          <p className="text-destructive">{error}</p>
-        </div>
+        <section className="flex items-center justify-center h-64">
+          <p className="text-destructive">Failed to load dashboard statistics</p>
+        </section>
       </section>
     )
   }
@@ -82,151 +216,171 @@ function App() {
   }
 
   return (
-    <section className="flex flex-col gap-4 p-4">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
-          Overview of your tickets, quotes, and performance metrics
-        </p>
-      </div>
+    <section className="flex flex-col h-full overflow-hidden">
+      {/* Header - Fixed */}
+      <header className="shrink-0 p-4 pb-2">
+        <section className="flex flex-col gap-1">
+          <h1 className="text-2xl font-semibold">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">
+            Overview of your tickets, quotes, and performance metrics
+          </p>
+        </section>
+      </header>
 
-      {/* Ticket Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Tickets</CardDescription>
-            <CardTitle className="text-3xl">{stats.totalTickets}</CardTitle>
-          </CardHeader>
-        </Card>
+      {/* Content - Scrollable */}
+      <section className="flex-1 overflow-y-auto p-4 pt-2 flex flex-col gap-6 min-h-0">
+        {/* Ticket Statistics */}
+        <section className="flex flex-col gap-2">
+          <h2 className="text-lg font-semibold">Ticket Statistics</h2>
+          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <AnalyticsCard
+          icon={<Ticket className="w-5 h-5" />}
+          name="Total Tickets"
+          value={<span className="text-3xl font-semibold">{stats.totalTickets}</span>}
+        />
 
-        {Object.entries(stats.ticketCountsByStatus).map(([status, count]) => (
-          <Card key={status}>
-            <CardHeader className="pb-2">
-              <CardDescription>{status}</CardDescription>
-              <CardTitle className="text-3xl">{count}</CardTitle>
-            </CardHeader>
-          </Card>
+        {TICKET_STATUS_ORDER.map((status) => (
+          <AnalyticsCard
+            key={status}
+            icon={<Ticket className="w-5 h-5" />}
+            name={getStatusLabel(status)}
+            value={<span className="text-3xl font-semibold">{stats.ticketCountsByStatus[status] || 0}</span>}
+          />
         ))}
-      </div>
+          </section>
+        </section>
 
-      {/* Performance Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {stats.averageResponseTimeHours !== null && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Average Response Time</CardTitle>
-              <CardDescription>Time from ticket creation to first vendor reply</CardDescription>
-            </CardHeader>
-            <CardContent>
+        {/* Quote Statistics */}
+        <section className="flex flex-col gap-2">
+          <h2 className="text-lg font-semibold">Quote Statistics</h2>
+          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <AnalyticsCard
+          icon={<FileText className="w-5 h-5" />}
+          name="New Quotes"
+          value={
+            <section className="flex flex-col gap-1">
+              <span className="text-3xl font-semibold">{stats.newQuotesCount}</span>
+              <p className="text-xs text-muted-foreground">Awaiting review</p>
+            </section>
+          }
+        />
+
+        <AnalyticsCard
+          icon={<AlertCircle className="w-5 h-5" />}
+          name="Tickets Awaiting Selection"
+          value={
+            <section className="flex flex-col gap-1">
+              <span className="text-3xl font-semibold">{stats.ticketsAwaitingSelection}</span>
+              <p className="text-xs text-muted-foreground">Have quotes but no vendor selected</p>
+            </section>
+          }
+        />
+
+        <AnalyticsCard
+          icon={<CheckCircle className="w-5 h-5" />}
+          name="Selected Quotes"
+          value={
+            <section className="flex flex-col gap-1">
+              <span className="text-3xl font-semibold">{stats.selectedQuotesCount}</span>
+              <p className="text-xs text-muted-foreground">Selected vendors</p>
+            </section>
+          }
+        />
+          </section>
+        </section>
+
+        {/* Performance Metrics */}
+        <section className="flex flex-col gap-4">
+          <h2 className="text-lg font-semibold">Performance Metrics</h2>
+          <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <AnalyticsCard
+          icon={<Clock className="w-5 h-5" />}
+          name="Average Response Time"
+          value={
+            <section className="flex flex-col gap-1">
               <p className="text-2xl font-semibold">
-                {stats.averageResponseTimeHours.toFixed(2)} hours
+                {stats.averageResponseTimeHours !== null 
+                  ? `${stats.averageResponseTimeHours.toFixed(2)} hours`
+                  : '0 hours'}
               </p>
-            </CardContent>
-          </Card>
-        )}
+              <p className="text-sm text-muted-foreground">Time from ticket creation to first vendor reply</p>
+            </section>
+          }
+        />
 
-        {stats.averageFixTimeHours !== null && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Average Fix Time</CardTitle>
-              <CardDescription>Time from ticket creation to closure</CardDescription>
-            </CardHeader>
-            <CardContent>
+        <AnalyticsCard
+          icon={<Wrench className="w-5 h-5" />}
+          name="Average Fix Time"
+          value={
+            <section className="flex flex-col gap-1">
               <p className="text-2xl font-semibold">
-                {stats.averageFixTimeHours.toFixed(2)} hours
+                {stats.averageFixTimeHours !== null 
+                  ? `${stats.averageFixTimeHours.toFixed(2)} hours`
+                  : '0 hours'}
               </p>
-            </CardContent>
-          </Card>
-        )}
+              <p className="text-sm text-muted-foreground">Time from ticket creation to closure</p>
+            </section>
+          }
+        />
 
-        {stats.mostUsedVendor && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Most Used Vendor</CardTitle>
-              <CardDescription>Vendor with most assigned tickets</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-lg font-semibold">{stats.mostUsedVendor.businessName}</p>
+        <AnalyticsCard
+          icon={<Building2 className="w-5 h-5" />}
+          name="Most Used Vendor"
+          value={
+            <section className="flex flex-col gap-1">
+              <p className="text-lg font-semibold">
+                {stats.mostUsedVendor?.businessName || 'No vendor yet'}
+              </p>
               <p className="text-sm text-muted-foreground">
-                {stats.mostUsedVendor.usageCount} ticket{stats.mostUsedVendor.usageCount !== 1 ? 's' : ''}
+                {stats.mostUsedVendor?.usageCount || 0} ticket{(stats.mostUsedVendor?.usageCount || 0) !== 1 ? 's' : ''}
               </p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+            </section>
+          }
+        />
+          </section>
 
-      {/* Quote Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>New Quotes</CardDescription>
-            <CardTitle className="text-3xl">{stats.newQuotesCount}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground">Awaiting review</p>
-          </CardContent>
-        </Card>
+          {/* Vendor Performance Chart */}
+          <VendorPerformanceChart data={stats.vendorPerformance} />
+        </section>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Pending Quotes</CardDescription>
-            <CardTitle className="text-3xl">{stats.pendingQuotesCount}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground">Awaiting vendor response</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Selected Quotes</CardDescription>
-            <CardTitle className="text-3xl">{stats.selectedQuotesCount}</CardTitle>
-          </CardHeader>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Tickets Awaiting Selection</CardDescription>
-            <CardTitle className="text-3xl">{stats.ticketsAwaitingSelection}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground">Have quotes but no vendor selected</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Quote Averages */}
-      {(stats.averageQuotePrice !== null || stats.averageQuoteDeliveryTimeHours !== null) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Quote Averages */}
+        {(stats.averageQuotePrice !== null || stats.averageQuoteDeliveryTimeHours !== null) && (
+          <section className="flex flex-col gap-2">
+            <h2 className="text-lg font-semibold">Quote Averages</h2>
+            <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {stats.averageQuotePrice !== null && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Average Quote Price</CardTitle>
-                <CardDescription>Average price of received quotes</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-semibold">
-                  ${(stats.averageQuotePrice / 100).toFixed(2)}
-                </p>
-              </CardContent>
-            </Card>
+            <AnalyticsCard
+              icon={<DollarSign className="w-5 h-5" />}
+              name="Average Quote Price"
+              value={
+                <section className="flex flex-col gap-1">
+                  <p className="text-2xl font-semibold">
+                    ${(stats.averageQuotePrice / 100).toFixed(2)}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Average price of received quotes</p>
+                </section>
+              }
+            />
           )}
 
           {stats.averageQuoteDeliveryTimeHours !== null && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Average Delivery Time</CardTitle>
-                <CardDescription>Average estimated delivery time from quotes</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-semibold">
-                  {stats.averageQuoteDeliveryTimeHours.toFixed(2)} hours
-                </p>
-              </CardContent>
-            </Card>
+            <AnalyticsCard
+              icon={<Package className="w-5 h-5" />}
+              name="Average Delivery Time"
+              value={
+                <section className="flex flex-col gap-1">
+                  <p className="text-2xl font-semibold">
+                    {stats.averageQuoteDeliveryTimeHours.toFixed(2)} hours
+                  </p>
+                  <p className="text-sm text-muted-foreground">Average estimated delivery time from quotes</p>
+                </section>
+              }
+            />
           )}
-        </div>
-      )}
-    </section>
+            </section>
+          </section>
+        )}
+      </section>
+    </section>  
   )
 }

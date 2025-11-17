@@ -63,6 +63,15 @@ export const discoverVendors = action({
       throw new Error("Not authorized to discover vendors for this ticket");
     }
 
+    // Update ticket status to "processing" immediately when processing starts
+    await ctx.runMutation(
+      (api as any).functions.tickets.mutations.updateStatusInternal,
+      {
+        ticketId: args.ticketId,
+        status: "processing",
+      }
+    );
+
     // Get user location - prioritize user's location from users table
     const userData: Doc<"users"> | null = await ctx.runQuery(
       (internal as any).functions.auth.queries.getUserByIdInternal,
@@ -133,17 +142,18 @@ export const discoverVendors = action({
       );
 
       // Automatically send outreach emails to discovered vendors
-      try {
-        await ctx.runAction(
-          (api as any).functions.vendorOutreach.actions.sendOutreachEmails,
-          {
-            ticketId: args.ticketId,
-            userId: args.userId,
-          }
-        );
-      } catch (error) {
-        console.error("Error sending outreach emails:", error);
-      }
+      // COMMENTED OUT FOR TESTING - Extract individual URLs first
+      // try {
+      //   await ctx.runAction(
+      //     (api as any).functions.vendorOutreach.actions.sendOutreachEmails,
+      //     {
+      //       ticketId: args.ticketId,
+      //       userId: args.userId,
+      //     }
+      //   );
+      // } catch (error) {
+      //   console.error("Error sending outreach emails:", error);
+      // }
 
       return {
         vendors: vendorResults,
@@ -172,6 +182,8 @@ export const discoverVendors = action({
       issueType: ticket.issueType,
       tags: ticket.predictedTags,
       location,
+      description: ticket.description,
+      problemDescription: ticket.problemDescription,
     });
 
     const result = await agent.generate({ prompt });

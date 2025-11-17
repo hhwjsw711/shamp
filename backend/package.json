@@ -16,6 +16,7 @@
     "ai": "^5.0.89",
     "bcryptjs": "^3.0.3",
     "convex": "^1.28.2",
+    "convex-helpers": "^0.1.104",
     "cookie": "^1.0.2",
     "dotenv": "^17.2.3",
     "google-auth-library": "^10.5.0",

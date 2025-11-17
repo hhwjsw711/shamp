@@ -21,9 +21,11 @@ import {
 } from '@/components/ui/form'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { FormFooter } from '@/components/layout/form-footer'
+import { Label } from '@/components/ui/label'
 
 export const Route = createFileRoute('/_authenticated/tickets/create')({
   component: CreateTicketPage,
@@ -44,6 +46,7 @@ function CreateTicketPage() {
       location: '',
       name: user?.name || '',
       photoIds: [],
+      urgency: undefined,
     },
   })
 
@@ -172,11 +175,12 @@ function CreateTicketPage() {
       }
 
       // Submit ticket with photo IDs
-      await api.tickets.create({
+      const response = await api.tickets.create({
         description: data.description,
         photoIds: allPhotoIds,
         location: data.location || undefined,
         name: data.name || undefined,
+        urgency: data.urgency || undefined,
       })
 
       // Show success toast
@@ -185,10 +189,17 @@ function CreateTicketPage() {
         duration: 4000,
       })
       
-      // Redirect to dashboard after a short delay
-      setTimeout(() => {
-        navigate({ to: '/' })
-      }, 1000)
+      // Redirect to ticket details page after a short delay
+      if (response?.ticket?._id) {
+        setTimeout(() => {
+          navigate({ to: `/tickets/${response.ticket._id}` })
+        }, 1000)
+      } else {
+        // Fallback to tickets list if ticket ID not available
+        setTimeout(() => {
+          navigate({ to: '/tickets' })
+        }, 1000)
+      }
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Failed to create ticket')
     } finally {
@@ -277,6 +288,59 @@ function CreateTicketPage() {
                 )}
               />
 
+              {/* Urgency */}
+              <FormField
+                control={form.control}
+                name="urgency"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Urgency (Optional)</FormLabel>
+                    <FormDescription>
+                      How urgent is this issue? This helps prioritize your request. Leave unselected if unsure.
+                    </FormDescription>
+                      <FormControl>
+                        <RadioGroup
+                          value={field.value || ''}
+                          onValueChange={(value) => field.onChange(value || undefined)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              handleSubmit()
+                            }
+                          }}
+                          className="flex flex-col gap-3"
+                        >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="emergency" id="urgency-emergency" />
+                          <Label htmlFor="urgency-emergency" className="font-normal cursor-pointer">
+                            Emergency - Critical: fire, flood, security, guest safety
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="urgent" id="urgency-urgent" />
+                          <Label htmlFor="urgency-urgent" className="font-normal cursor-pointer">
+                            Urgent - High: guest-facing issues, operational disruption
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="normal" id="urgency-normal" />
+                          <Label htmlFor="urgency-normal" className="font-normal cursor-pointer">
+                            Normal - Standard: routine maintenance
+                          </Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="low" id="urgency-low" />
+                          <Label htmlFor="urgency-low" className="font-normal cursor-pointer">
+                            Low - Non-critical: cosmetic issues
+                          </Label>
+                        </div>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
 
 
               {/* Error Alert */}
@@ -288,7 +352,13 @@ function CreateTicketPage() {
                 </Alert>
               )}
 
-
+              {/* Hidden submit button to enable Enter key submission */}
+              <button
+                type="submit"
+                className="sr-only"
+                aria-hidden="true"
+                tabIndex={-1}
+              />
             </form>
           </Form>
         </CardContent>

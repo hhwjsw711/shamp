@@ -37,6 +37,7 @@ export const addMessageInternal = internalMutation({
       v.literal("vendor")
     ),
     message: v.string(),
+    vendorId: v.optional(v.id("vendors")), // Optional vendor ID for vendor messages
   },
   handler: async (ctx, args) => {
     const conversation = await ctx.db.get(args.conversationId);
@@ -48,6 +49,7 @@ export const addMessageInternal = internalMutation({
       sender: args.sender,
       message: args.message,
       date: Date.now(),
+      ...(args.vendorId ? { vendorId: args.vendorId } : {}),
     };
 
     await ctx.db.patch(args.conversationId, {

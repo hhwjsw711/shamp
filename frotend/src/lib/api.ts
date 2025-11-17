@@ -95,8 +95,23 @@ async function request<T>(
   }
 
   const fullUrl = `${CONVEX_URL}${endpoint}`
+  console.log('[request] Making request:', {
+    method: config.method || 'GET',
+    url: fullUrl,
+    hasBody: !!config.body,
+    hasAuth: !!sessionToken,
+    credentials: config.credentials,
+    headers: config.headers,
+  })
 
   const response = await fetch(fullUrl, config)
+  
+  console.log('[request] Response received:', {
+    status: response.status,
+    statusText: response.statusText,
+    ok: response.ok,
+    headers: Object.fromEntries(response.headers.entries()),
+  })
 
   // Read response text once (can only be read once)
   const responseText = await response.text()
@@ -276,6 +291,7 @@ export const api = {
       photoIds: Array<string>
       location?: string
       name?: string
+      urgency?: 'emergency' | 'urgent' | 'normal' | 'low'
     }) => {
       // Send as JSON with photoIds array (files are already uploaded)
       return request<{
@@ -291,7 +307,88 @@ export const api = {
           photoIds: data.photoIds,
           location: data.location,
           name: data.name,
+          urgency: data.urgency,
         },
+      })
+    },
+    getById: async (ticketId: string) => {
+      return request<{
+        success: boolean
+        ticket: {
+          _id: string
+          createdBy: string
+          name?: string
+          description: string
+          location?: string
+          status: string
+          urgency?: 'emergency' | 'urgent' | 'normal' | 'low'
+          issueType?: string
+          predictedTags?: Array<string>
+          problemDescription?: string
+          photoIds: Array<string>
+          photoUrls?: Array<string | null>
+          createdAt: number
+          [key: string]: unknown
+        }
+      }>(`/api/tickets/${ticketId}`, {
+        method: 'GET',
+      })
+    },
+    update: async (ticketId: string, data: {
+      description?: string
+      photoIds?: Array<string>
+      location?: string
+      name?: string
+      urgency?: 'emergency' | 'urgent' | 'normal' | 'low'
+    }) => {
+      console.log('[api.tickets.update] Starting update request:', {
+        ticketId,
+        data: {
+          description: data.description?.substring(0, 50),
+          location: data.location,
+          photoIdsCount: data.photoIds?.length,
+          urgency: data.urgency,
+          name: data.name,
+        },
+      });
+      
+      const CONVEX_URL =
+        import.meta.env.VITE_CONVEX_SITE_URL || 
+        import.meta.env.VITE_CONVEX_URL?.replace('.convex.cloud', '.convex.site') ||
+        ''
+      
+      console.log('[api.tickets.update] CONVEX_URL:', CONVEX_URL);
+      
+      const endpoint = `/api/tickets/${ticketId}`;
+      const fullUrl = `${CONVEX_URL}${endpoint}`;
+      console.log('[api.tickets.update] Full URL:', fullUrl);
+      
+      try {
+        const result = await request<{
+          success: boolean
+          ticket: {
+            _id: string
+            photoUrls?: Array<string | null>
+            [key: string]: unknown
+          }
+        }>(endpoint, {
+          method: 'PATCH',
+          body: data,
+        });
+        
+        console.log('[api.tickets.update] Success:', result);
+        return result;
+      } catch (error) {
+        console.error('[api.tickets.update] Error:', error);
+        throw error;
+      }
+    },
+    deleteFile: async (fileId: string) => {
+      return request<{
+        success: boolean
+        message: string
+      }>(`/api/files/${fileId}`, {
+        method: 'DELETE',
       })
     },
     list: async (params?: {
