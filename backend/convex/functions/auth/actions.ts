@@ -17,14 +17,22 @@ import { formatName } from "../../utils/nameUtils";
  * Get OAuth2Client instance (lazy initialization)
  * Throws error only when called if env vars are missing
  */
-function getOAuth2Client(): OAuth2Client {
+function getOAuth2Client(redirectUriOverride?: string): OAuth2Client {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+  const frontendUrl = process.env.FRONTEND_URL;
+  // Best practice: have Google redirect back to the SAME ORIGIN as the app,
+  // so the callback response can set a first-party HttpOnly session cookie.
+  // This should be your deployed app URL + "/api/auth/callback/google".
+  const computedRedirectUri = frontendUrl
+    ? new URL("/api/auth/callback/google", frontendUrl).toString()
+    : undefined;
+  const redirectUri =
+    redirectUriOverride || computedRedirectUri || process.env.GOOGLE_REDIRECT_URI;
 
   if (!clientId || !clientSecret || !redirectUri) {
     throw new Error(
-      "Google OAuth environment variables are not configured. Please set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REDIRECT_URI in your Convex environment variables."
+      "Google OAuth environment variables are not configured. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET. Also set FRONTEND_URL (preferred) or GOOGLE_REDIRECT_URI."
     );
   }
 
@@ -34,10 +42,11 @@ function getOAuth2Client(): OAuth2Client {
 /**
  * Generate Google OAuth authorization URL
  * @param state - Optional state parameter for OAuth flow
+ * @param redirectUriOverride - Optional redirect URI override (must match Google Console)
  * @returns Authorization URL
  */
-export function getGoogleAuthUrl(state = ""): string {
-  const oAuth2Client = getOAuth2Client();
+export function getGoogleAuthUrl(state = "", redirectUriOverride?: string): string {
+  const oAuth2Client = getOAuth2Client(redirectUriOverride);
   return oAuth2Client.generateAuthUrl({
     access_type: "offline",
     scope: ["profile", "email"],
@@ -49,16 +58,20 @@ export function getGoogleAuthUrl(state = ""): string {
 /**
  * Exchange authorization code for user info
  * @param code - Authorization code from Google OAuth callback
+ * @param redirectUriOverride - Optional redirect URI override (must match auth request)
  * @returns User info from Google
  */
-export async function getGoogleUser(code: string): Promise<{
+export async function getGoogleUser(
+  code: string,
+  redirectUriOverride?: string
+): Promise<{
   email: string | undefined;
   name: string | undefined;
   googleId: string | undefined;
   emailVerified: boolean | undefined;
   picture: string | undefined;
 }> {
-  const oAuth2Client = getOAuth2Client();
+  const oAuth2Client = getOAuth2Client(redirectUriOverride);
   const clientId = process.env.GOOGLE_CLIENT_ID!;
   
   const { tokens } = await oAuth2Client.getToken(code);
@@ -193,10 +206,11 @@ export const handleGoogleIdTokenLogin = action({
 export const getGoogleAuthUrlAction = action({
   args: {
     state: v.optional(v.string()),
+    redirectUri: v.optional(v.string()),
   },
   handler: async (_ctx, args) => {
     return {
-      url: getGoogleAuthUrl(args.state || ""),
+      url: getGoogleAuthUrl(args.state || "", args.redirectUri),
     };
   },
 });
@@ -209,9 +223,10 @@ export const getGoogleAuthUrlAction = action({
 export const getGoogleUserAction = action({
   args: {
     code: v.string(),
+    redirectUri: v.optional(v.string()),
   },
   handler: async (_ctx, args) => {
-    return await getGoogleUser(args.code);
+    return await getGoogleUser(args.code, args.redirectUri);
   },
 });
 

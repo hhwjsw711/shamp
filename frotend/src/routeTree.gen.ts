@@ -17,6 +17,7 @@ import { Route as AuthResetPasswordRouteImport } from './routes/auth/reset-passw
 import { Route as AuthRequestResetPasswordRouteImport } from './routes/auth/request-reset-password'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthCreateAccountRouteImport } from './routes/auth/create-account'
+import { Route as ApiSplatRouteImport } from './routes/api/$'
 import { Route as AuthenticatedTicketsIndexRouteImport } from './routes/_authenticated/tickets/index'
 import { Route as AuthenticatedTicketsCreateRouteImport } from './routes/_authenticated/tickets/create'
 import { Route as AuthenticatedAuthOnboardingRouteImport } from './routes/_authenticated/auth/onboarding'
@@ -63,6 +64,11 @@ const AuthCreateAccountRoute = AuthCreateAccountRouteImport.update({
   path: '/auth/create-account',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSplatRoute = ApiSplatRouteImport.update({
+  id: '/api/$',
+  path: '/api/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedTicketsIndexRoute =
   AuthenticatedTicketsIndexRouteImport.update({
     id: '/tickets/',
@@ -95,6 +101,7 @@ const AuthenticatedTicketsTicketIdEditRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
+  '/api/$': typeof ApiSplatRoute
   '/auth/create-account': typeof AuthCreateAccountRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/request-reset-password': typeof AuthRequestResetPasswordRoute
@@ -109,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/tickets/$ticketId': typeof AuthenticatedTicketsTicketIdIndexRoute
 }
 export interface FileRoutesByTo {
+  '/api/$': typeof ApiSplatRoute
   '/auth/create-account': typeof AuthCreateAccountRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/request-reset-password': typeof AuthRequestResetPasswordRoute
@@ -125,6 +133,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/api/$': typeof ApiSplatRoute
   '/auth/create-account': typeof AuthCreateAccountRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/request-reset-password': typeof AuthRequestResetPasswordRoute
@@ -141,6 +150,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/api/$'
     | '/auth/create-account'
     | '/auth/login'
     | '/auth/request-reset-password'
@@ -155,6 +165,7 @@ export interface FileRouteTypes {
     | '/tickets/$ticketId'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/api/$'
     | '/auth/create-account'
     | '/auth/login'
     | '/auth/request-reset-password'
@@ -170,6 +181,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_authenticated'
+    | '/api/$'
     | '/auth/create-account'
     | '/auth/login'
     | '/auth/request-reset-password'
@@ -186,6 +198,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  ApiSplatRoute: typeof ApiSplatRoute
   AuthCreateAccountRoute: typeof AuthCreateAccountRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthRequestResetPasswordRoute: typeof AuthRequestResetPasswordRoute
@@ -252,6 +265,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCreateAccountRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/$': {
+      id: '/api/$'
+      path: '/api/$'
+      fullPath: '/api/$'
+      preLoaderRoute: typeof ApiSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/tickets/': {
       id: '/_authenticated/tickets/'
       path: '/tickets'
@@ -315,6 +335,7 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  ApiSplatRoute: ApiSplatRoute,
   AuthCreateAccountRoute: AuthCreateAccountRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthRequestResetPasswordRoute: AuthRequestResetPasswordRoute,

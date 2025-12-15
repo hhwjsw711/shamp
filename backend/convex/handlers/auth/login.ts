@@ -96,13 +96,6 @@ export const loginHandler = httpAction(async (ctx, request) => {
       }
     );
 
-    // Return success response with cookie
-    // For localhost HTTP: also return token in response for localStorage/URL fallback
-    // For ngrok/production (HTTPS): cookies work properly, no token needed in response
-    const isLocalhost = frontendUrl.includes("localhost") || frontendUrl.includes("127.0.0.1");
-    const isNgrok = frontendUrl.includes("ngrok.io") || frontendUrl.includes("ngrok-free.app") || frontendUrl.includes("ngrok-free.dev");
-    const hasHttps = isNgrok || frontendUrl.startsWith("https://");
-    
     const responseBody: {
       success: boolean
       user: {
@@ -114,7 +107,6 @@ export const loginHandler = httpAction(async (ctx, request) => {
         emailVerified?: boolean
         onboardingCompleted?: boolean
       }
-      token?: string // Only for localhost HTTP (not HTTPS/ngrok)
     } = {
       success: true,
       user: {
@@ -126,11 +118,6 @@ export const loginHandler = httpAction(async (ctx, request) => {
         emailVerified: user.emailVerified,
         onboardingCompleted: user.onboardingCompleted,
       },
-    }
-    
-    // Include token in response only for localhost HTTP (not HTTPS/ngrok)
-    if (isLocalhost && !hasHttps) {
-      responseBody.token = token
     }
     
     return new Response(

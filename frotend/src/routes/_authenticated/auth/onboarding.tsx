@@ -34,70 +34,11 @@ import { api } from '@/lib/api'
 
 export const Route = createFileRoute('/_authenticated/auth/onboarding')({
   component: OnboardingPage,
-  validateSearch: (search: Record<string, unknown>) => {
-    return {
-      token: (search.token as string) || undefined,
-    }
-  },
   beforeLoad: async ({ search, location }) => {
     // Parent layout (_authenticated.tsx) already handles authentication
     // Here we only need onboarding-specific checks
     try {
-      // Detect if using ngrok/production (HTTPS) - cookies work properly
-      // Use location.href for SSR compatibility (works in beforeLoad)
-      let isNgrok = false
-      let hasHttps = false
-      
-      if (location.href) {
-        try {
-          const url = new URL(location.href)
-          isNgrok = url.hostname.includes('ngrok.io') ||
-            url.hostname.includes('ngrok-free.app') ||
-            url.hostname.includes('ngrok-free.dev')
-          hasHttps = url.protocol === 'https:'
-        } catch (err) {
-          // If URL parsing fails, fall back to window check (client-side only)
-          if (typeof window !== 'undefined') {
-            isNgrok = window.location.hostname.includes('ngrok.io') ||
-              window.location.hostname.includes('ngrok-free.app') ||
-              window.location.hostname.includes('ngrok-free.dev')
-            hasHttps = window.location.protocol === 'https:'
-          }
-        }
-      } else if (typeof window !== 'undefined') {
-        // Fallback to window check (client-side only)
-        isNgrok = window.location.hostname.includes('ngrok.io') ||
-          window.location.hostname.includes('ngrok-free.app') ||
-          window.location.hostname.includes('ngrok-free.dev')
-        hasHttps = window.location.protocol === 'https:'
-      }
-      
-      const useSecureCookies = isNgrok || hasHttps
-      
-      // Extract token from search params (only for localhost HTTP fallback)
-      let token: string | null = null
-      if (!useSecureCookies) {
-        const urlToken = (search as { token?: string }).token
-        if (urlToken && typeof urlToken === 'string') {
-          token = urlToken
-        }
-        
-        // If no token from URL, try localStorage/cookie (only for localhost HTTP)
-        if (!token && typeof window !== 'undefined') {
-          token = localStorage.getItem('session_token')
-          if (!token && typeof document !== 'undefined') {
-            const cookies = document.cookie.split(';').map(c => c.trim())
-            const sessionCookie = cookies.find(c => c.startsWith('session='))
-            if (sessionCookie) {
-              token = sessionCookie.split('=')[1]
-            }
-          }
-        }
-      }
-      
-      // For ngrok/production: rely solely on cookies (no token needed)
-      // For localhost HTTP: pass token if available
-      const response = await api.auth.me(useSecureCookies ? null : token)
+      const response = await api.auth.me()
       
       if (response.user) {
         const user = response.user as {
@@ -143,7 +84,6 @@ export const Route = createFileRoute('/_authenticated/auth/onboarding')({
 function OnboardingPage() {
   const navigate = useNavigate()
   const { completeOnboarding, getCurrentUser, user } = useAuth()
-  const { token } = Route.useSearch()
 
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -158,15 +98,6 @@ function OnboardingPage() {
       location: '',
     },
   })
-
-  // Remove token from URL after beforeLoad has processed it
-  useEffect(() => {
-    if (token) {
-      const url = new URL(window.location.href)
-      url.searchParams.delete('token')
-      window.history.replaceState({}, '', url.toString())
-    }
-  }, [token])
 
   // Fetch user data on mount to populate form (beforeLoad already verified auth)
   useEffect(() => {

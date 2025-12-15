@@ -1,23 +1,13 @@
 /**
- * API Client for Convex Backend
- * Handles all HTTP requests to the backend endpoints
+ * API Client
+ *
+ * Best-practice auth:
+ * - Use HttpOnly + Secure session cookies
+ * - Always call the API as SAME-ORIGIN (relative /api/*)
+ *
+ * In production, TanStack Start (Cloudflare) proxies /api/* to Convex via a server route
+ * at `src/routes/api/$.ts`, keeping cookies first-party.
  */
-
-// Get Convex HTTP routes URL from environment variable
-// For Convex HTTP routes, use: https://<deployment-name>.convex.site
-// VITE_CONVEX_URL is for API (queries/mutations) - uses .convex.cloud
-// VITE_CONVEX_SITE_URL is for HTTP routes - uses .convex.site
-const CONVEX_URL =
-  import.meta.env.VITE_CONVEX_SITE_URL || 
-  import.meta.env.VITE_CONVEX_URL?.replace('.convex.cloud', '.convex.site') ||
-  (() => {
-    console.error(
-      'Missing VITE_CONVEX_SITE_URL or VITE_CONVEX_URL environment variable.\n' +
-      'Set VITE_CONVEX_SITE_URL=https://<your-deployment>.convex.site in your .env file.\n' +
-      'You can find your deployment URL by running: npx convex dev'
-    )
-    return ''
-  })()
 
 interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown
@@ -28,63 +18,18 @@ async function request<T>(
   options: RequestOptions = {},
   providedToken?: string | null
 ): Promise<T> {
-  if (!CONVEX_URL) {
-    throw new Error(
-      'Convex URL is not configured. Please set VITE_CONVEX_SITE_URL or VITE_CONVEX_URL in your .env file.\n' +
-      'For HTTP routes, use: VITE_CONVEX_SITE_URL=https://<your-deployment>.convex.site'
-    )
+  // Token-based auth is intentionally not supported here.
+  // Best practice is HttpOnly cookies to protect against XSS token theft.
+  if (providedToken !== undefined && providedToken !== null) {
+    throw new Error('Token-based auth is disabled. Use cookie-based sessions only.')
   }
 
   const { body, headers = {}, ...restOptions } = options
-
-  // Detect if we're using ngrok/production (HTTPS) - cookies work properly
-  const isNgrok = typeof window !== 'undefined' && (
-    window.location.hostname.includes('ngrok.io') ||
-    window.location.hostname.includes('ngrok-free.app') ||
-    window.location.hostname.includes('ngrok-free.dev')
-  )
-  const hasHttps = typeof window !== 'undefined' && window.location.protocol === 'https:'
-  const useSecureCookies = isNgrok || hasHttps
-
-  // Extract token from provided token, localStorage, or cookie
-  // For ngrok/production: rely solely on cookies (no localStorage/URL tokens)
-  // For localhost HTTP: use localStorage/cookie as fallback
-  // IMPORTANT: If providedToken is explicitly null, don't try to extract from localStorage/cookie
-  // This means the caller wants to rely solely on cookies
-  let sessionToken: string | null = providedToken || null
-  
-  if (providedToken === null) {
-    // Explicitly null means "use cookies only, don't try localStorage/cookie extraction"
-    sessionToken = null
-  } else if (!sessionToken && typeof window !== 'undefined' && !useSecureCookies) {
-    // Only try localStorage/cookie extraction if:
-    // 1. No token was provided
-    // 2. We're on client-side
-    // 3. We're NOT using secure cookies (localhost HTTP fallback)
-    // Try localStorage first (set from URL token) - only for localhost HTTP
-    sessionToken = localStorage.getItem('session_token')
-    
-    // Fallback to cookie if no localStorage token
-    if (!sessionToken && typeof document !== 'undefined') {
-      const cookies = document.cookie.split(';').map(c => c.trim())
-      const sessionCookie = cookies.find(c => c.startsWith('session='))
-      if (sessionCookie) {
-        sessionToken = sessionCookie.split('=')[1]
-      }
-    }
-  }
-  
-  // For ngrok/production: cookies are sent automatically with credentials: 'include'
-  // No need to extract token - backend reads from cookie header
 
   const config: RequestInit = {
     ...restOptions,
     headers: {
       'Content-Type': 'application/json',
-      // For localhost: always use Authorization header if we have a token
-      // This bypasses cross-domain cookie issues
-      // For ngrok/production: don't add Authorization header, rely on cookies
-      ...(sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {}),
       ...headers,
     },
     credentials: 'include', // Include cookies for session management
@@ -94,24 +39,8 @@ async function request<T>(
     config.body = JSON.stringify(body)
   }
 
-  const fullUrl = `${CONVEX_URL}${endpoint}`
-  console.log('[request] Making request:', {
-    method: config.method || 'GET',
-    url: fullUrl,
-    hasBody: !!config.body,
-    hasAuth: !!sessionToken,
-    credentials: config.credentials,
-    headers: config.headers,
-  })
-
-  const response = await fetch(fullUrl, config)
-  
-  console.log('[request] Response received:', {
-    status: response.status,
-    statusText: response.statusText,
-    ok: response.ok,
-    headers: Object.fromEntries(response.headers.entries()),
-  })
+  // Always use relative URL so cookies are first-party.
+  const response = await fetch(endpoint, config)
 
   // Read response text once (can only be read once)
   const responseText = await response.text()
@@ -180,10 +109,10 @@ export const api = {
         body: data,
       }),
 
-    me: (token?: string | null) =>
+    me: () =>
       request<{ user: unknown }>('/api/auth/me', {
         method: 'GET',
-      }, token),
+      }),
 
     logout: () =>
       request<{ message: string }>('/api/auth/logout', {

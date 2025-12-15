@@ -94,7 +94,7 @@ export function useAuth() {
       setLoading(true)
       const response = await api.auth.login(data)
       setUser(response.user as typeof user)
-      return { success: true, user: response.user, token: response.token }
+      return { success: true, user: response.user }
     } catch (error) {
       return {
         success: false,
@@ -153,19 +153,6 @@ export function useAuth() {
       // Continue with logout even if API call fails
       console.error('Logout error:', error)
     } finally {
-      // Clear localStorage token only for localhost HTTP (not ngrok/production)
-      if (typeof window !== 'undefined') {
-        const isNgrok = window.location.hostname.includes('ngrok.io') ||
-          window.location.hostname.includes('ngrok-free.app') ||
-          window.location.hostname.includes('ngrok-free.dev')
-        const hasHttps = window.location.protocol === 'https:'
-        const useSecureCookies = isNgrok || hasHttps
-        
-        // Only clear localStorage for localhost HTTP (where we used it)
-        if (!useSecureCookies) {
-          localStorage.removeItem('session_token')
-        }
-      }
       logout()
     }
   }

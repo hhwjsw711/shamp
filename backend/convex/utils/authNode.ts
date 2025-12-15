@@ -123,31 +123,21 @@ export function createSecureCookie(
   const isLocalhost = frontendUrl?.includes("localhost") || frontendUrl?.includes("127.0.0.1");
   // Detect ngrok URLs (supports .ngrok.io, .ngrok-free.app, and .ngrok-free.dev domains)
   const isNgrok = frontendUrl?.includes("ngrok.io") || frontendUrl?.includes("ngrok-free.app") || frontendUrl?.includes("ngrok-free.dev");
-  // If using ngrok or production, we have HTTPS - use secure cookies
+  // If using ngrok or production, we have HTTPS - use Secure cookies
   const hasHttps = isNgrok || isProduction || (frontendUrl?.startsWith("https://"));
   
   // Build cookie parts array
   const parts: string[] = [`session=${token}`];
   parts.push("HttpOnly");
-  
-  if (isLocalhost && !hasHttps) {
-    // For localhost HTTP: Use None without Secure (browsers may reject, but it's a fallback)
-    // This is the problematic case - cookies won't work reliably
-    parts.push("SameSite=None");
-    // Don't add Secure for localhost HTTP
-  } else if (hasHttps) {
-    // For HTTPS (ngrok, production, or any HTTPS URL): Use Secure + SameSite=None for cross-site
+
+  // Best practice: first-party cookies (served from same origin via proxy) + HttpOnly.
+  // - In HTTPS: Secure + SameSite=Lax
+  // - In localhost HTTP: SameSite=Lax (no Secure)
+  // Avoid setting Domain; let the host that serves the response own the cookie.
+  if (hasHttps) {
     parts.push("Secure");
-    parts.push("SameSite=None");
-    if (isProduction && !isNgrok) {
-      // Only set Domain for production (not ngrok, as ngrok domains are dynamic)
-      parts.push("Domain=.convex.site");
-    }
-  } else {
-    // Staging/dev HTTPS: Use Lax with Secure
-    parts.push("Secure");
-    parts.push("SameSite=Lax");
   }
+  parts.push("SameSite=Lax");
   
   parts.push("Path=/");
   parts.push(`Max-Age=${maxAge}`);
@@ -166,10 +156,11 @@ export function createDeleteCookie(frontendUrl?: string): string {
   const isNgrok = frontendUrl?.includes("ngrok.io") || frontendUrl?.includes("ngrok-free.app") || frontendUrl?.includes("ngrok-free.dev");
   const hasHttps = isNgrok || isProduction || (frontendUrl?.startsWith("https://"));
   
-  const sameSite = (isLocalhost && !hasHttps) ? "Lax" : (hasHttps ? "None" : "Lax");
+  const sameSite = "Lax";
   const secure = hasHttps ? "Secure" : "";
-  const domain = isProduction && !isLocalhost && !isNgrok ? "; Domain=.convex.site" : "";
   
-  return `session=; HttpOnly; ${secure}; SameSite=${sameSite}; Path=/; Max-Age=0${domain}`.replace(/;\s+/g, "; ").replace(/;\s*$/, "");
+  return `session=; HttpOnly; ${secure}; SameSite=${sameSite}; Path=/; Max-Age=0`
+    .replace(/;\s+/g, "; ")
+    .replace(/;\s*$/, "");
 }
 

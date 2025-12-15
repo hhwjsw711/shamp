@@ -19,20 +19,23 @@ export const getGoogleAuthUrlHandler = httpAction(async (_ctx, request) => {
     const url = new URL(request.url);
     const state = url.searchParams.get("state") || "";
 
-    // Get origin from request header for CORS
+    // When running behind the app's /api proxy, origin might be stripped.
+    // Prefer x-forwarded-origin so Google redirect_uri matches the app origin.
+    const forwardedOrigin = request.headers.get("x-forwarded-origin");
     const origin = request.headers.get("origin");
     const frontendUrl = await _ctx.runAction(
       (api as any).functions.auth.getEnv.getEnvVar,
       { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
     ) || "http://localhost:3000";
     
-    // Use origin from request if available, otherwise fallback to FRONTEND_URL
+    const appOrigin = forwardedOrigin || origin || frontendUrl;
     const allowedOrigin = origin || frontendUrl;
+    const redirectUri = new URL("/api/auth/callback/google", appOrigin).toString();
 
     // Get Google OAuth URL using action
     const result = await _ctx.runAction(
       api.functions.auth.actions.getGoogleAuthUrlAction as any,
-      { state }
+      { state, redirectUri }
     );
 
     return new Response(
@@ -94,7 +97,7 @@ export const googleCallbackHandler = httpAction(async (ctx, request) => {
         { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
       ) || "http://localhost:3000";
       
-      const errorUrl = new URL("/login", frontendUrl);
+      const errorUrl = new URL("/auth/login", frontendUrl);
       errorUrl.searchParams.set("error", "Missing authorization code");
       return new Response(null, {
         status: 302,
@@ -104,10 +107,18 @@ export const googleCallbackHandler = httpAction(async (ctx, request) => {
       });
     }
 
+    const forwardedOrigin = request.headers.get("x-forwarded-origin");
+    const frontendUrl = await ctx.runAction(
+      (api as any).functions.auth.getEnv.getEnvVar,
+      { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
+    ) || "http://localhost:3000";
+    const appOrigin = forwardedOrigin || frontendUrl;
+    const redirectUri = new URL("/api/auth/callback/google", appOrigin).toString();
+
     // Exchange code for user info using action
     const googleUser = await ctx.runAction(
       api.functions.auth.actions.getGoogleUserAction as any,
-      { code }
+      { code, redirectUri }
     );
 
     if (!googleUser.email || !googleUser.googleId) {
@@ -117,7 +128,7 @@ export const googleCallbackHandler = httpAction(async (ctx, request) => {
         { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
       ) || "http://localhost:3000";
       
-      const errorUrl = new URL("/login", frontendUrl);
+      const errorUrl = new URL("/auth/login", frontendUrl);
       errorUrl.searchParams.set("error", "Failed to get user info from Google");
       return new Response(null, {
         status: 302,
@@ -179,7 +190,7 @@ export const googleCallbackHandler = httpAction(async (ctx, request) => {
         { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
       ) || "http://localhost:3000";
       
-      const errorUrl = new URL("/login", frontendUrl);
+      const errorUrl = new URL("/auth/login", frontendUrl);
       errorUrl.searchParams.set("error", "Failed to create user");
       return new Response(null, {
         status: 302,
@@ -199,12 +210,6 @@ export const googleCallbackHandler = httpAction(async (ctx, request) => {
         provider: "google",
       }
     );
-
-    // Get frontend URL for cookie configuration
-    const frontendUrl = await ctx.runAction(
-      (api as any).functions.auth.getEnv.getEnvVar,
-      { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
-    ) || "http://localhost:3000";
 
     // Create secure cookie using action
     const cookieHeader = await ctx.runAction(
@@ -245,27 +250,6 @@ export const googleCallbackHandler = httpAction(async (ctx, request) => {
       redirectUrl.searchParams.set("state", state);
     }
 
-    // For localhost HTTP: browsers reject cookies in cross-origin redirects
-    // Solution: Pass token as URL parameter and let frontend set the cookie
-    // For ngrok/production (HTTPS): cookies work properly, no URL token needed
-    const isLocalhost = frontendUrl.includes("localhost") || frontendUrl.includes("127.0.0.1");
-    const isNgrok = frontendUrl.includes("ngrok.io") || frontendUrl.includes("ngrok-free.app") || frontendUrl.includes("ngrok-free.dev");
-    const hasHttps = isNgrok || frontendUrl.startsWith("https://");
-    
-    // Only use URL token workaround for localhost HTTP (not HTTPS/ngrok)
-    if (isLocalhost && !hasHttps) {
-      redirectUrl.searchParams.set("token", token);
-      // Still try to set cookie, but frontend will handle it if cookie fails
-      return new Response(null, {
-        status: 302,
-        headers: {
-          Location: redirectUrl.toString(),
-          "Set-Cookie": cookieHeader,
-        },
-      });
-    }
-
-    // For ngrok/production (HTTPS): use secure cookies only
     return new Response(null, {
       status: 302,
       headers: {
@@ -281,7 +265,7 @@ export const googleCallbackHandler = httpAction(async (ctx, request) => {
       { key: "FRONTEND_URL", defaultValue: "http://localhost:3000" }
     ) || "http://localhost:3000";
     
-    const errorUrl = new URL("/login", frontendUrl);
+    const errorUrl = new URL("/auth/login", frontendUrl);
     errorUrl.searchParams.set("error", getErrorMessage(error));
     return new Response(null, {
       status: 302,
