@@ -57,6 +57,7 @@ function ResetPasswordCodePage() {
 
   const handleVerify = useCallback(async () => {
     if (!email || isVerifying) return
+    const safeEmail = email
     if (code.length !== 6) {
       setError('Please enter the complete 6-digit code')
       return
@@ -66,11 +67,11 @@ function ResetPasswordCodePage() {
     // Backend only expects code, not email
     const result = await verifyPasswordResetCode({ code })
 
-    if (result.success) {
+    if (result.success && result.userId) {
       toast.success('Reset code verified successfully!')
       navigate({
         to: '/auth/reset-password',
-        search: { email, userId: result.userId },
+        search: { email: safeEmail, userId: result.userId },
       })
     } else {
       setError(result.error || 'Failed to verify reset code')

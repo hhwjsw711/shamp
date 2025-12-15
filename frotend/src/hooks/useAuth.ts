@@ -11,7 +11,6 @@ import type {
   OnboardingInput,
   PasswordResetCompleteInput,
   PasswordResetRequestInput,
-  PasswordResetVerifyInput,
   RegisterInput,
 } from '@/lib/validations'
 import { useAuthStore } from '@/stores/authStore'

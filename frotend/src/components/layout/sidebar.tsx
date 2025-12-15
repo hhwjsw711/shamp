@@ -209,7 +209,7 @@ function SidebarContentComponent() {
 }
 
 function UserDropdown() {
-  const { user, logout, isLoading, isAuthenticated } = useAuth()
+  const { user, logout, isLoading } = useAuth()
   const navigate = useNavigate()
   const { state } = useSidebar()
 

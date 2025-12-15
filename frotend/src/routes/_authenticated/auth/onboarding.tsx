@@ -34,7 +34,7 @@ import { api } from '@/lib/api'
 
 export const Route = createFileRoute('/_authenticated/auth/onboarding')({
   component: OnboardingPage,
-  beforeLoad: async ({ search, location }) => {
+  beforeLoad: async () => {
     // Parent layout (_authenticated.tsx) already handles authentication
     // Here we only need onboarding-specific checks
     try {

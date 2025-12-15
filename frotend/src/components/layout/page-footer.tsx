@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useLocation, useNavigate } from '@tanstack/react-router'
+import { useNavigate } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 
@@ -32,7 +32,6 @@ export const usePageFooter = () => {
 
 export function PageFooter() {
   const navigate = useNavigate()
-  const location = useLocation()
   const {
     onSubmit,
     onCancel,

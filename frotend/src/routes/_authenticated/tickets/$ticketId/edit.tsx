@@ -338,13 +338,37 @@ function EditTicketPage() {
                           accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
                           multiple={true}
                           onFilesChange={handleFilesChange}
-                          initialFiles={ticket.photoUrls?.map((url, index) => ({
-                            id: ticket.photoIds[index],
-                            name: `photo-${index + 1}.jpg`,
-                            size: 0,
-                            type: 'image/jpeg',
-                            url: url || '',
-                          })).filter(f => f.url) || []}
+                          initialFiles={
+                            (ticket.photoUrls ?? [])
+                              .map((url: string | null, index: number) => {
+                                const safeUrl = url ?? ''
+                                if (!safeUrl) return null
+                                return {
+                                  id: ticket.photoIds[index],
+                                  name: `photo-${index + 1}.jpg`,
+                                  size: 0,
+                                  type: 'image/jpeg',
+                                  url: safeUrl,
+                                }
+                              })
+                              .filter(
+                                (
+                                  f: {
+                                    id: string
+                                    name: string
+                                    size: number
+                                    type: string
+                                    url: string
+                                  } | null
+                                ): f is {
+                                  id: string
+                                  name: string
+                                  size: number
+                                  type: string
+                                  url: string
+                                } => Boolean(f?.url)
+                              ) ?? []
+                          }
                           className="max-w-none"
                         />
                       </FormControl>
