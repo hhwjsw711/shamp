@@ -381,7 +381,6 @@ function OnboardingPage() {
                         type="text"
                         {...field}
                         value={field.value || ''}
-                        disabled={Boolean(user?.name)}
                         onChange={(e) => {
                           field.onChange(e)
                           handleFieldChange()
