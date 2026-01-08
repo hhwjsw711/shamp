@@ -38,12 +38,13 @@ export const pinSchema = z
 
 /**
  * Name validation schema
+ * Supports all Unicode characters (Chinese, Japanese, Korean, etc.)
  */
 export const nameSchema = z
   .string()
   .min(1, "Name is required")
   .max(100, "Name must be less than 100 characters")
-  .regex(/^[a-zA-Z\s'-]+$/, "Name contains invalid characters");
+  .regex(/^[\p{L}\p{M}\s'-]+$/u, "Name contains invalid characters");
 
 /**
  * Organization name validation schema

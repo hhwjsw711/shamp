@@ -6,6 +6,7 @@
 /**
  * Sanitize name by removing unwanted characters
  * Removes brackets, quotes (but preserves apostrophes in names), and extra whitespace
+ * Supports Unicode characters (Chinese, Japanese, Korean, etc.)
  * @param name - Name to sanitize
  * @returns Sanitized name
  */
@@ -20,9 +21,9 @@ export function sanitizeName(name: string): string {
     // Remove all types of quotes: straight ", curly " ", and other Unicode quotes
     // Using a more comprehensive regex to catch all quote variations
     .replace(/[""''„‟«»‹›‚‛]/g, '')
-    // Remove any remaining non-alphanumeric characters except spaces, hyphens, and apostrophes
-    // This is a safety net to catch any other invalid characters
-    .replace(/[^a-zA-Z0-9\s'-]/g, '')
+    // Remove control characters and other problematic characters
+    // Keep Unicode letters, marks, numbers, spaces, hyphens, and apostrophes
+    .replace(/[^\p{L}\p{M}\p{N}\s'-]/gu, '')
     // Remove extra whitespace
     .replace(/\s+/g, ' ')
     .trim();
@@ -31,11 +32,18 @@ export function sanitizeName(name: string): string {
 /**
  * Capitalize a name string
  * Handles multiple words, hyphens, and apostrophes
+ * For non-Latin scripts (Chinese, Japanese, etc.), returns name as-is
  * @param name - Name to capitalize
  * @returns Capitalized name
  */
 export function capitalizeName(name: string): string {
   if (!name || name.trim().length === 0) {
+    return name;
+  }
+
+  // Check if name contains non-Latin characters (Chinese, Japanese, Korean, etc.)
+  // If so, return as-is since these scripts don't have case
+  if (/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(name)) {
     return name;
   }
 

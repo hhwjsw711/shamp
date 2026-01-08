@@ -72,51 +72,18 @@ function CreateTicketPage() {
 
   // Upload a single file and return its ID
   const uploadFile = async (file: File): Promise<string> => {
-    const CONVEX_URL =
-      import.meta.env.VITE_CONVEX_SITE_URL || 
-      import.meta.env.VITE_CONVEX_URL?.replace('.convex.cloud', '.convex.site') ||
-      ''
-
-    if (!CONVEX_URL) {
-      throw new Error('Convex URL is not configured')
-    }
-
-    const isNgrok = typeof window !== 'undefined' && (
-      window.location.hostname.includes('ngrok.io') ||
-      window.location.hostname.includes('ngrok-free.app') ||
-      window.location.hostname.includes('ngrok-free.dev')
-    )
-    const hasHttps = typeof window !== 'undefined' && window.location.protocol === 'https:'
-    const useSecureCookies = isNgrok || hasHttps
-
-    let sessionToken: string | null = null
-    
-    if (!useSecureCookies && typeof window !== 'undefined') {
-      sessionToken = localStorage.getItem('session_token')
-      
-      if (!sessionToken && typeof document !== 'undefined') {
-        const cookies = document.cookie.split(';').map(c => c.trim())
-        const sessionCookie = cookies.find(c => c.startsWith('session='))
-        if (sessionCookie) {
-          sessionToken = sessionCookie.split('=')[1]
-        }
-      }
-    }
-
     const formData = new FormData()
     formData.append('file', file)
 
+    // Use relative URL to go through the API proxy (same-origin request)
+    // This ensures cookies are automatically included
     const config: RequestInit = {
       method: 'POST',
-      headers: {
-        ...(sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {}),
-      },
       credentials: 'include',
       body: formData,
     }
 
-    const fullUrl = `${CONVEX_URL}/api/files/upload`
-    const response = await fetch(fullUrl, config)
+    const response = await fetch('/api/files/upload', config)
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({

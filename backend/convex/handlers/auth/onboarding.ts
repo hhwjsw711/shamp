@@ -124,7 +124,7 @@ export const completeOnboardingHandler = httpAction(async (ctx, request) => {
     }
     
     // Validate request body (after sanitization - name should now be clean)
-    // The validate function will check against the schema which requires /^[a-zA-Z\s'-]+$/
+    // The validate function will check against the schema which requires valid Unicode characters
     const { name, orgName, location } = validate(updateProfileSchema, body);
 
     // Format name if provided (formatName already sanitizes, but ensure it's formatted)
