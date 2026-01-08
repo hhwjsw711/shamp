@@ -4,5 +4,9 @@
   "compatibility_date": "2025-01-02",
   "compatibility_flags": ["nodejs_compat"],
   "main": "@tanstack/react-start/server-entry"
+  // Production environment variables (set in Cloudflare Pages Dashboard):
+  // VITE_CONVEX_SITE_URL=https://animated-minnow-951.convex.site
+  // VITE_CONVEX_URL=https://animated-minnow-951.convex.cloud
 }
+
 
