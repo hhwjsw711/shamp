@@ -1,12 +1,13 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { motion } from 'motion/react'
 import { Loader2Icon, OctagonXIcon } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import type { RegisterInput } from '@/lib/validations'
-import { registerSchema } from '@/lib/validations'
+import { createValidationSchemas } from '@/lib/validations'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,13 +31,17 @@ export const Route = createFileRoute('/auth/create-account')({
 function CreateAccountPage() {
   const navigate = useNavigate()
   const { register, getGoogleAuthUrl } = useAuth()
+  const { t } = useTranslation()
   const [isEmailLoading, setIsEmailLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
 
+  // Create validation schemas with translations
+  const schemas = useMemo(() => createValidationSchemas(t), [t])
+
   const form = useForm<RegisterInput>({
-    resolver: zodResolver(registerSchema),
+    resolver: zodResolver(schemas.registerSchema),
     defaultValues: {
       email: '',
       password: '',
@@ -67,7 +72,7 @@ function CreateAccountPage() {
     const result = await register(data)
 
     if (result.success) {
-      toast.success('Account created successfully!')
+      toast.success(t($ => $.auth.createAccount.success))
       // Navigate to verify email page with email in query params
       navigate({
         to: '/auth/verify-email',
@@ -75,7 +80,7 @@ function CreateAccountPage() {
       })
     } else {
       // Set error to display in Alert component
-      setError(result.error || 'Failed to create account')
+      setError(result.error || t($ => $.auth.createAccount.error))
       setIsEmailLoading(false)
     }
   }
@@ -87,7 +92,7 @@ function CreateAccountPage() {
     if (result.success && result.url) {
       window.location.href = result.url
     } else {
-      toast.error(result.error || 'Failed to initiate Google sign up')
+      toast.error(result.error || t($ => $.auth.createAccount.error))
       setIsGoogleLoading(false)
     }
   }
@@ -138,14 +143,14 @@ function CreateAccountPage() {
               size="sm"
               onClick={() => navigate({ to: '/auth/login' })}
             >
-              Log In
+              {t($ => $.auth.createAccount.loginButton)}
             </Button>
           </section>
           <h1 className="text-2xl font-semibold text-foreground">
-            Maintenance management made simple for hotels & restaurants
+            {t($ => $.auth.createAccount.title)}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Create account below to get started
+            {t($ => $.auth.createAccount.subtitle)}
           </p>
         </section>
 
@@ -164,7 +169,7 @@ function CreateAccountPage() {
               {isGoogleLoading ? (
                 <>
                   <Loader2Icon className="w-5 h-5 mr-2 animate-spin" />
-                  Connecting...
+                  {t($ => $.auth.createAccount.creating)}
                 </>
               ) : (
                 <>
@@ -173,7 +178,7 @@ function CreateAccountPage() {
                     alt="Google"
                     className="w-5 h-5 mr-2"
                   />
-                  Get started with Google
+                  {t($ => $.auth.createAccount.googleButton)}
                 </>
               )}
             </Button>
@@ -182,7 +187,7 @@ function CreateAccountPage() {
           {/* Separator with "or" */}
           <section className="flex items-center gap-2">
             <Separator className="flex-1" />
-            <span className="text-sm text-muted-foreground">or</span>
+            <span className="text-sm text-muted-foreground">{t($ => $.common.separator.or)}</span>
             <Separator className="flex-1" />
           </section>
 
@@ -198,7 +203,7 @@ function CreateAccountPage() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>{t($ => $.auth.createAccount.emailLabel)}</FormLabel>
                       <FormControl>
                         <Input
                           type="email"
@@ -219,7 +224,7 @@ function CreateAccountPage() {
                   name="password"
                   render={({ field }) => (
                     <FormItem className="relative">
-                      <FormLabel>Password</FormLabel>
+                      <FormLabel>{t($ => $.auth.createAccount.passwordLabel)}</FormLabel>
                       <Toggle
                         pressed={showPassword}
                         onPressedChange={setShowPassword}
@@ -227,7 +232,7 @@ function CreateAccountPage() {
                         aria-label="Toggle password visibility"
                         className="absolute text-muted-foreground top-0 right-0 z-10 bg-transparent hover:bg-transparent data-[state=on]:bg-transparent h-auto p-0 min-w-0"
                       >
-                        {showPassword ? 'Hide password' : 'Show password'}
+                        {showPassword ? t($ => $.common.buttons.hidePassword) : t($ => $.common.buttons.showPassword)}
                       </Toggle>
                       <FormControl>
                         <Input
@@ -245,19 +250,19 @@ function CreateAccountPage() {
                 />
 
                 <p className="text-sm text-muted-foreground">
-                  By creating an account, you agree to Shamp's{' '}
+                  {t($ => $.auth.createAccount.termsAgreement)}{' '}
                   <a
                     href="/terms"
                     className="text-primary hover:underline underline-offset-4"
                   >
-                    Terms of Service
+                    {t($ => $.auth.createAccount.termsOfService)}
                   </a>{' '}
-                  and{' '}
+                  {t($ => $.auth.createAccount.and)}{' '}
                   <a
                     href="/privacy"
                     className="text-primary hover:underline underline-offset-4"
                   >
-                    Privacy Policy
+                    {t($ => $.auth.createAccount.privacyPolicy)}
                   </a>
                 </p>
 
@@ -278,10 +283,10 @@ function CreateAccountPage() {
                   {isEmailLoading ? (
                     <>
                       <Spinner className="mr-2" />
-                      Creating Account...
+                      {t($ => $.auth.createAccount.creating)}
                     </>
                   ) : (
-                    'Create Account'
+                    t($ => $.auth.createAccount.createButton)
                   )}
                 </Button>
               </form>

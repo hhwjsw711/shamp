@@ -11,11 +11,11 @@ interface Window {
           getPlacePredictions: (
             request: {
               input: string
-              types?: string[]
-              componentRestrictions?: { country?: string | string[] }
+              types?: Array<string>
+              componentRestrictions?: { country?: string | Array<string> }
             },
             callback: (
-              predictions: google.maps.places.AutocompletePrediction[] | null,
+              predictions: Array<google.maps.places.AutocompletePrediction> | null,
               status: google.maps.places.PlacesServiceStatus
             ) => void
           ) => void

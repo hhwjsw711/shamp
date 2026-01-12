@@ -1,13 +1,14 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { TriangleAlert } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 import type { FileMetadata, FileWithPreview } from '@/hooks/use-file-upload'
 import type { CreateTicketInput } from '@/lib/validations'
-import { createTicketSchema } from '@/lib/validations'
+import { createValidationSchemas } from '@/lib/validations'
 import { useAuth } from '@/hooks/useAuth'
 import { api as convexApi } from '@/lib/convex-api'
 import GalleryUpload from '@/components/file-upload/gallery-upload'
@@ -37,11 +38,15 @@ function EditTicketPage() {
   const navigate = useNavigate()
   const { ticketId } = Route.useParams()
   const { user, isAuthenticated } = useAuth()
+  const { t } = useTranslation()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   const filesRef = useRef<Array<FileWithPreview>>([])
   const originalPhotoIdsRef = useRef<Array<string>>([]) // Track original photo IDs to detect removals
+
+  // Create validation schemas with translations
+  const schemas = useMemo(() => createValidationSchemas(t), [t])
 
   // Use Convex query for real-time ticket data
   const ticketResult = useQuery(
@@ -59,7 +64,7 @@ function EditTicketPage() {
   const ticket = ticketResult || null
 
   const form = useForm<CreateTicketInput>({
-    resolver: zodResolver(createTicketSchema),
+    resolver: zodResolver(schemas.createTicketSchema),
     defaultValues: {
       description: '',
       location: '',
@@ -77,7 +82,10 @@ function EditTicketPage() {
     const editableStatuses = ['analyzed', 'reviewed']
     if (!editableStatuses.includes(ticket.status)) {
       setSubmitError(
-        `This ticket cannot be edited. Current status: ${ticket.status}. Only tickets with status: ${editableStatuses.join(', ')} can be edited.`
+        t($ => $.tickets.edit.notEditable, {
+          status: ticket.status,
+          statuses: editableStatuses.join(', ')
+        })
       )
       return
     }
@@ -236,7 +244,7 @@ function EditTicketPage() {
       const allPhotoIds = [...remainingIds, ...uploadedIds]
 
       if (allPhotoIds.length === 0) {
-        setSubmitError('At least one photo is required')
+        setSubmitError(t($ => $.tickets.edit.photosRequired))
         return
       }
 
@@ -258,8 +266,8 @@ function EditTicketPage() {
       })
 
       // Show success toast
-      toast.success('Ticket Updated Successfully', {
-        description: 'Your maintenance request has been updated.',
+      toast.success(t($ => $.tickets.edit.successToast), {
+        description: t($ => $.tickets.edit.successDescription),
         duration: 4000,
       })
       
@@ -268,7 +276,7 @@ function EditTicketPage() {
         navigate({ to: `/tickets/${ticketId}` })
       }, 1000)
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Failed to update ticket')
+      setSubmitError(error instanceof Error ? error.message : t($ => $.tickets.edit.error))
     } finally {
       setIsSubmitting(false)
     }
@@ -289,9 +297,9 @@ function EditTicketPage() {
       <main className="flex items-center justify-center h-full p-4">
         <Alert variant="destructive" className="max-w-md">
           <TriangleAlert className="size-4" />
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle>{t($ => $.common.messages.error)}</AlertTitle>
           <AlertDescription>
-            {submitError || 'Failed to load ticket'}
+            {submitError || t($ => $.tickets.edit.loadError)}
           </AlertDescription>
         </Alert>
       </main>
@@ -302,7 +310,7 @@ function EditTicketPage() {
     return (
       <main className="flex items-center justify-center h-full p-4">
         <Alert className="max-w-md">
-          <AlertDescription>Ticket not found</AlertDescription>
+          <AlertDescription>{t($ => $.tickets.edit.notFound)}</AlertDescription>
         </Alert>
       </main>
     )
@@ -313,9 +321,9 @@ function EditTicketPage() {
       <main className="flex flex-col items-center gap-6 p-4 md:p-6 lg:p-8 overflow-y-auto max-h-full">
         <Card className="border-0 rounded-2xl shadow-none max-w-[500px]">
           <CardHeader>
-            <CardTitle>Edit Ticket</CardTitle>
+            <CardTitle>{t($ => $.tickets.edit.title)}</CardTitle>
             <CardDescription>
-              Update information about the issue and photos.
+              {t($ => $.tickets.edit.subtitle)}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -327,9 +335,9 @@ function EditTicketPage() {
                   name="photoIds"
                   render={() => (
                     <FormItem>
-                      <FormLabel>Photos</FormLabel>
+                      <FormLabel>{t($ => $.tickets.form.photosLabel)}</FormLabel>
                       <FormDescription>
-                        Upload 1-5 photos showing the issue. Maximum 10MB per photo.
+                        {t($ => $.tickets.form.photosDescription)}
                       </FormDescription>
                       <FormControl>
                         <GalleryUpload
@@ -383,9 +391,9 @@ function EditTicketPage() {
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel>{t($ => $.tickets.form.descriptionLabel)}</FormLabel>
                       <FormDescription>
-                        Provide a detailed description of the problem you're experiencing.
+                        {t($ => $.tickets.form.descriptionDescription)}
                       </FormDescription>
                       <FormControl>
                         <Textarea
@@ -404,9 +412,9 @@ function EditTicketPage() {
                   name="location"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Location (Optional)</FormLabel>
+                      <FormLabel>{t($ => $.tickets.form.locationLabel)}</FormLabel>
                       <FormDescription>
-                        Where is this issue located? e.g., Room 205, Kitchen, Lobby
+                        {t($ => $.tickets.form.locationDescription)}
                       </FormDescription>
                       <FormControl>
                         <Input
@@ -424,9 +432,9 @@ function EditTicketPage() {
                   name="urgency"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Urgency (Optional)</FormLabel>
+                      <FormLabel>{t($ => $.tickets.form.urgencyLabel)}</FormLabel>
                       <FormDescription>
-                        How urgent is this issue? This helps prioritize your request. Leave unselected if unsure.
+                        {t($ => $.tickets.form.urgencyDescription)}
                       </FormDescription>
                       <FormControl>
                         <RadioGroup
@@ -443,25 +451,25 @@ function EditTicketPage() {
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="emergency" id="urgency-emergency" />
                             <Label htmlFor="urgency-emergency" className="font-normal cursor-pointer">
-                              Emergency - Critical: fire, flood, security, guest safety
+                              {t($ => $.tickets.form.urgencyEmergency)}
                             </Label>
                           </div>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="urgent" id="urgency-urgent" />
                             <Label htmlFor="urgency-urgent" className="font-normal cursor-pointer">
-                              Urgent - High: guest-facing issues, operational disruption
+                              {t($ => $.tickets.form.urgencyUrgent)}
                             </Label>
                           </div>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="normal" id="urgency-normal" />
                             <Label htmlFor="urgency-normal" className="font-normal cursor-pointer">
-                              Normal - Standard: routine maintenance
+                              {t($ => $.tickets.form.urgencyNormal)}
                             </Label>
                           </div>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="low" id="urgency-low" />
                             <Label htmlFor="urgency-low" className="font-normal cursor-pointer">
-                              Low - Non-critical: cosmetic issues
+                              {t($ => $.tickets.form.urgencyLow)}
                             </Label>
                           </div>
                         </RadioGroup>
@@ -475,7 +483,7 @@ function EditTicketPage() {
                 {submitError && (
                   <Alert variant="destructive">
                     <TriangleAlert className="size-4" />
-                    <AlertTitle>Error</AlertTitle>
+                    <AlertTitle>{t($ => $.common.messages.error)}</AlertTitle>
                     <AlertDescription>{submitError}</AlertDescription>
                   </Alert>
                 )}
@@ -489,8 +497,8 @@ function EditTicketPage() {
         onSubmit={handleSubmit}
         onCancel={() => navigate({ to: '/tickets' })}
         isSubmitting={isSubmitting}
-        submitLabel="Save Changes"
-        cancelLabel="Cancel"
+        submitLabel={t($ => $.tickets.edit.submitButton)}
+        cancelLabel={t($ => $.tickets.edit.cancelButton)}
       />
     </>
   )

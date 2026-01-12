@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { ImageIcon, TriangleAlert, Upload, XIcon, ZoomInIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type {
   FileMetadata,
   FileWithPreview,
@@ -33,6 +34,7 @@ export default function GalleryUpload({
   initialFiles,
   onFilesChange,
 }: GalleryUploadProps) {
+  const { t } = useTranslation();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [localErrors, setLocalErrors] = useState<Array<string>>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -100,12 +102,14 @@ export default function GalleryUpload({
                 // Only take the first files that fit within the limit
                 const filesToAdd = selectedFiles.slice(0, availableSlots);
                 addFiles(filesToAdd);
-                
+
                 // Show error for the excess files
                 const excessCount = selectedFiles.length - availableSlots;
-                const errorMessage = `You can only upload ${maxFiles} files total. ${excessCount} file${excessCount > 1 ? 's' : ''} were not added.`;
+                const errorMessage = t($ => $.fileUpload.maxFilesError)
+                  .replace('{maxFiles}', maxFiles.toString())
+                  .replace('{excessCount}', excessCount.toString());
                 setLocalErrors([errorMessage]);
-                
+
                 // Auto-dismiss error after 5 seconds
                 setTimeout(() => {
                   setLocalErrors([]);
@@ -134,17 +138,19 @@ export default function GalleryUpload({
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-lg font-semibold">Upload images to gallery</h3>
-            <p className="text-sm text-muted-foreground">Drag and drop images here or click to browse</p>
+            <h3 className="text-lg font-semibold">{t($ => $.fileUpload.uploadTitle)}</h3>
+            <p className="text-sm text-muted-foreground">{t($ => $.fileUpload.uploadDescription)}</p>
             <p className="text-xs text-muted-foreground">
-              PNG, JPG, GIF, WEBP up to {formatBytes(maxSize)} each (max {maxFiles} files)
+              {t($ => $.fileUpload.uploadFormats)
+                .replace('{maxSize}', formatBytes(maxSize))
+                .replace('{maxFiles}', maxFiles.toString())}
             </p>
           </div>
 
           {files.length < maxFiles && (
-            <Button 
-              type="button" 
-              variant="secondary" 
+            <Button
+              type="button"
+              variant="secondary"
               onClick={() => {
                 if (fileInputRef.current) {
                   fileInputRef.current.click();
@@ -154,7 +160,7 @@ export default function GalleryUpload({
               }}
             >
               <Upload className="h-4 w-4" />
-              Select images
+              {t($ => $.fileUpload.selectImages)}
             </Button>
           )}
         </div>
@@ -165,14 +171,14 @@ export default function GalleryUpload({
         <div className="mt-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h4 className="text-sm font-medium">
-              Gallery ({files.length}/{maxFiles})
+              {t($ => $.fileUpload.gallery)} ({files.length}/{maxFiles})
             </h4>
             <div className="text-xs text-muted-foreground">
-              Total: {formatBytes(files.reduce((acc, file) => acc + file.file.size, 0))}
+              {t($ => $.fileUpload.total)}: {formatBytes(files.reduce((acc, file) => acc + file.file.size, 0))}
             </div>
           </div>
           <Button type="button" onClick={clearFiles} variant="outline" size="sm">
-            Clear all
+            {t($ => $.common.buttons.clearAll)}
           </Button>
         </div>
       )}
@@ -229,7 +235,7 @@ export default function GalleryUpload({
       {localErrors.length > 0 && (
         <Alert variant="destructive" className="mt-5">
           <TriangleAlert className="size-4" />
-          <AlertTitle>File upload error(s)</AlertTitle>
+          <AlertTitle>{t($ => $.fileUpload.errorTitle)}</AlertTitle>
           <AlertDescription>
             {localErrors.map((error, index) => (
               <p key={index} className="last:mb-0">
@@ -249,7 +255,7 @@ export default function GalleryUpload({
           <div className="relative max-h-full max-w-full">
             <img
               src={selectedImage}
-              alt="Preview"
+              alt={t($ => $.fileUpload.preview)}
               className="max-h-full max-w-full rounded-lg object-contain"
               onClick={(e) => e.stopPropagation()}
             />

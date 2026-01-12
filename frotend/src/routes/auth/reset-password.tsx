@@ -1,12 +1,13 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { motion } from 'motion/react'
 import { OctagonXIcon } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import type { PasswordResetCompleteInput } from '@/lib/validations'
-import { passwordResetCompleteSchema } from '@/lib/validations'
+import { createValidationSchemas } from '@/lib/validations'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,14 +36,18 @@ export const Route = createFileRoute('/auth/reset-password')({
 function ResetPasswordPage() {
   const navigate = useNavigate()
   const { completePasswordReset } = useAuth()
+  const { t } = useTranslation()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const { email, userId } = Route.useSearch()
 
+  // Create validation schemas with translations
+  const schemas = useMemo(() => createValidationSchemas(t), [t])
+
   const form = useForm<PasswordResetCompleteInput>({
-    resolver: zodResolver(passwordResetCompleteSchema),
+    resolver: zodResolver(schemas.passwordResetCompleteSchema),
     defaultValues: {
       userId: userId || '',
       newPassword: '',
@@ -97,10 +102,10 @@ function ResetPasswordPage() {
     })
 
     if (result.success) {
-      toast.success('Password reset successfully! Please sign in with your new password.')
+      toast.success(t($ => $.auth.resetPassword.success))
       navigate({ to: '/auth/login' })
     } else {
-      setError(result.error || 'Failed to reset password')
+      setError(result.error || t($ => $.auth.resetPassword.error))
       setIsLoading(false)
     }
   }
@@ -150,14 +155,14 @@ function ResetPasswordPage() {
               size="sm"
               onClick={() => navigate({ to: '/auth/login' })}
             >
-              Log In
+              {t($ => $.auth.login.loginButton)}
             </Button>
           </section>
           <h1 className="text-2xl font-semibold text-foreground">
-            Reset password
+            {t($ => $.auth.resetPassword.newPasswordTitle)}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Enter your new password below
+            {t($ => $.auth.resetPassword.newPasswordSubtitle)}
           </p>
         </section>
 
@@ -174,7 +179,7 @@ function ResetPasswordPage() {
                 name="newPassword"
                 render={({ field }) => (
                   <FormItem className="relative">
-                    <FormLabel>New password</FormLabel>
+                    <FormLabel>{t($ => $.auth.resetPassword.passwordLabel)}</FormLabel>
                     <Toggle
                       pressed={showPassword}
                       onPressedChange={setShowPassword}
@@ -182,7 +187,7 @@ function ResetPasswordPage() {
                       aria-label="Toggle password visibility"
                       className="absolute text-muted-foreground top-0 right-0 z-10 bg-transparent hover:bg-transparent data-[state=on]:bg-transparent h-auto p-0 min-w-0"
                     >
-                      {showPassword ? 'Hide password' : 'Show password'}
+                      {showPassword ? t($ => $.common.buttons.hidePassword) : t($ => $.common.buttons.showPassword)}
                     </Toggle>
                     <FormControl>
                       <Input
@@ -205,7 +210,7 @@ function ResetPasswordPage() {
                 name="confirmPassword"
                 render={({ field }) => (
                   <FormItem className="relative">
-                    <FormLabel>Confirm password</FormLabel>
+                    <FormLabel>{t($ => $.auth.resetPassword.confirmPasswordLabel)}</FormLabel>
                     <Toggle
                       pressed={showConfirmPassword}
                       onPressedChange={setShowConfirmPassword}
@@ -213,7 +218,7 @@ function ResetPasswordPage() {
                       aria-label="Toggle confirm password visibility"
                       className="absolute text-muted-foreground top-0 right-0 z-10 bg-transparent hover:bg-transparent data-[state=on]:bg-transparent h-auto p-0 min-w-0"
                     >
-                      {showConfirmPassword ? 'Hide password' : 'Show password'}
+                      {showConfirmPassword ? t($ => $.common.buttons.hidePassword) : t($ => $.common.buttons.showPassword)}
                     </Toggle>
                     <FormControl>
                       <Input
@@ -247,10 +252,10 @@ function ResetPasswordPage() {
                 {isLoading ? (
                   <>
                     <Spinner className="mr-2" />
-                    Resetting password...
+                    {t($ => $.auth.resetPassword.resetting)}
                   </>
                 ) : (
-                  'Reset password'
+                  t($ => $.auth.resetPassword.resetButton)
                 )}
               </Button>
             </form>

@@ -13,7 +13,7 @@ const GOOGLE_MAPS_SCRIPT_ID = 'google-maps-script'
 // Type-safe helper to check if Google Maps is loaded
 const getGoogleMaps = (): boolean => {
   // Use type assertion to access window.google safely
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const win = window as any
   return !!win.google?.maps?.places
 }

@@ -1,12 +1,13 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { TriangleAlert } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 import type { FileWithPreview } from '@/hooks/use-file-upload'
 import type { CreateTicketInput } from '@/lib/validations'
-import { createTicketSchema } from '@/lib/validations'
+import { createValidationSchemas } from '@/lib/validations'
 import { api } from '@/lib/api'
 import { useAuth } from '@/hooks/useAuth'
 import GalleryUpload from '@/components/file-upload/gallery-upload'
@@ -34,13 +35,17 @@ export const Route = createFileRoute('/_authenticated/tickets/create')({
 function CreateTicketPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { t } = useTranslation()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   const filesRef = useRef<Array<FileWithPreview>>([])
 
+  // Create validation schemas with translations
+  const schemas = useMemo(() => createValidationSchemas(t), [t])
+
   const form = useForm<CreateTicketInput>({
-    resolver: zodResolver(createTicketSchema),
+    resolver: zodResolver(schemas.createTicketSchema),
     defaultValues: {
       description: '',
       location: '',
@@ -137,7 +142,7 @@ function CreateTicketPage() {
       const allPhotoIds = [...existingIds, ...uploadedIds]
 
       if (allPhotoIds.length === 0) {
-        setSubmitError('At least one photo is required')
+        setSubmitError(t($ => $.tickets.create.photosRequired))
         return
       }
 
@@ -151,8 +156,8 @@ function CreateTicketPage() {
       })
 
       // Show success toast
-      toast.success('Ticket Created Successfully', {
-        description: 'Your maintenance request has been submitted.',
+      toast.success(t($ => $.tickets.create.successToast), {
+        description: t($ => $.tickets.create.successDescription),
         duration: 4000,
       })
       
@@ -168,7 +173,7 @@ function CreateTicketPage() {
         }, 1000)
       }
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Failed to create ticket')
+      setSubmitError(error instanceof Error ? error.message : t($ => $.tickets.create.error))
     } finally {
       setIsSubmitting(false)
     }
@@ -181,9 +186,9 @@ function CreateTicketPage() {
 
       <Card className="border-0 rounded-2xl shadow-none max-w-[500px]">
         <CardHeader>
-          <CardTitle>Ticket Details</CardTitle>
+          <CardTitle>{t($ => $.tickets.create.title)}</CardTitle>
           <CardDescription>
-            Provide information about the issue you're reporting and upload photos.
+            {t($ => $.tickets.create.subtitle)}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -195,9 +200,9 @@ function CreateTicketPage() {
                 name="photoIds"
                 render={() => (
                   <FormItem>
-                    <FormLabel>Photos</FormLabel>
+                    <FormLabel>{t($ => $.tickets.form.photosLabel)}</FormLabel>
                     <FormDescription>
-                      Upload 1-5 photos showing the issue. Maximum 10MB per photo.
+                      {t($ => $.tickets.form.photosDescription)}
                     </FormDescription>
                     <FormControl>
                       <GalleryUpload
@@ -220,9 +225,9 @@ function CreateTicketPage() {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>{t($ => $.tickets.form.descriptionLabel)}</FormLabel>
                     <FormDescription>
-                      Provide a detailed description of the problem you're experiencing.
+                      {t($ => $.tickets.form.descriptionDescription)}
                     </FormDescription>
                     <FormControl>
                       <Textarea
@@ -241,9 +246,9 @@ function CreateTicketPage() {
                 name="location"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Location (Optional)</FormLabel>
+                    <FormLabel>{t($ => $.tickets.form.locationLabel)}</FormLabel>
                     <FormDescription>
-                      Where is this issue located? e.g., Room 205, Kitchen, Lobby
+                      {t($ => $.tickets.form.locationDescription)}
                     </FormDescription>
                     <FormControl>
                       <Input
@@ -261,9 +266,9 @@ function CreateTicketPage() {
                 name="urgency"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Urgency (Optional)</FormLabel>
+                    <FormLabel>{t($ => $.tickets.form.urgencyLabel)}</FormLabel>
                     <FormDescription>
-                      How urgent is this issue? This helps prioritize your request. Leave unselected if unsure.
+                      {t($ => $.tickets.form.urgencyDescription)}
                     </FormDescription>
                       <FormControl>
                         <RadioGroup
@@ -280,25 +285,25 @@ function CreateTicketPage() {
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="emergency" id="urgency-emergency" />
                           <Label htmlFor="urgency-emergency" className="font-normal cursor-pointer">
-                            Emergency - Critical: fire, flood, security, guest safety
+                            {t($ => $.tickets.form.urgencyEmergency)}
                           </Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="urgent" id="urgency-urgent" />
                           <Label htmlFor="urgency-urgent" className="font-normal cursor-pointer">
-                            Urgent - High: guest-facing issues, operational disruption
+                            {t($ => $.tickets.form.urgencyUrgent)}
                           </Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="normal" id="urgency-normal" />
                           <Label htmlFor="urgency-normal" className="font-normal cursor-pointer">
-                            Normal - Standard: routine maintenance
+                            {t($ => $.tickets.form.urgencyNormal)}
                           </Label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="low" id="urgency-low" />
                           <Label htmlFor="urgency-low" className="font-normal cursor-pointer">
-                            Low - Non-critical: cosmetic issues
+                            {t($ => $.tickets.form.urgencyLow)}
                           </Label>
                         </div>
                       </RadioGroup>
@@ -314,7 +319,7 @@ function CreateTicketPage() {
               {submitError && (
                 <Alert variant="destructive">
                   <TriangleAlert className="size-4" />
-                  <AlertTitle>Error</AlertTitle>
+                  <AlertTitle>{t($ => $.common.messages.error)}</AlertTitle>
                   <AlertDescription>{submitError}</AlertDescription>
                 </Alert>
               )}
@@ -336,8 +341,8 @@ function CreateTicketPage() {
         onSubmit={handleSubmit}
         onCancel={() => navigate({ to: '/' })}
         isSubmitting={isSubmitting}
-        submitLabel="Create Ticket"
-        cancelLabel="Cancel"
+        submitLabel={t($ => $.tickets.create.submitButton)}
+        cancelLabel={t($ => $.tickets.create.cancelButton)}
       />
     </>
   )

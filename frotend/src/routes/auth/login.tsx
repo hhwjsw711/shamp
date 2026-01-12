@@ -1,12 +1,13 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { motion } from 'motion/react'
 import { Loader2Icon, OctagonXIcon } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import type { LoginInput } from '@/lib/validations'
-import { loginSchema } from '@/lib/validations'
+import { createValidationSchemas } from '@/lib/validations'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,13 +31,17 @@ export const Route = createFileRoute('/auth/login')({
 function LoginPage() {
   const navigate = useNavigate()
   const { login, getGoogleAuthUrl } = useAuth()
+  const { t } = useTranslation()
   const [isEmailLoading, setIsEmailLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
 
+  // Create validation schemas with translations
+  const schemas = useMemo(() => createValidationSchemas(t), [t])
+
   const form = useForm<LoginInput>({
-    resolver: zodResolver(loginSchema),
+    resolver: zodResolver(schemas.loginSchema),
     defaultValues: {
       email: '',
       password: '',
@@ -67,14 +72,14 @@ function LoginPage() {
     const result = await login(data)
 
     if (result.success && result.user) {
-      toast.success('Logged in successfully!')
-      
+      toast.success(t($ => $.auth.login.success))
+
       // Use login response data to determine redirect
       const user = result.user as {
         onboardingCompleted?: boolean
         emailVerified?: boolean
       }
-      
+
       if (!user.onboardingCompleted) {
         // First-time user - redirect to onboarding
         window.location.href = '/auth/onboarding'
@@ -83,7 +88,7 @@ function LoginPage() {
         navigate({ to: '/' })
       }
     } else {
-      setError(result.error || 'Failed to login')
+      setError(result.error || t($ => $.auth.login.error))
       setIsEmailLoading(false)
     }
   }
@@ -95,7 +100,7 @@ function LoginPage() {
     if (result.success && result.url) {
       window.location.href = result.url
     } else {
-      toast.error(result.error || 'Failed to initiate Google sign in')
+      toast.error(result.error || t($ => $.auth.login.error))
       setIsGoogleLoading(false)
     }
   }
@@ -145,14 +150,14 @@ function LoginPage() {
               size="sm"
               onClick={() => navigate({ to: '/auth/create-account' })}
             >
-              Create Account
+              {t($ => $.common.buttons.createAccount)}
             </Button>
           </section>
           <h1 className="text-2xl font-semibold text-foreground">
-            Welcome back
+            {t($ => $.auth.login.title)}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Log in to your account to continue
+            {t($ => $.auth.login.subtitle)}
           </p>
         </section>
 
@@ -171,7 +176,7 @@ function LoginPage() {
               {isGoogleLoading ? (
                 <>
                   <Loader2Icon className="w-5 h-5 mr-2 animate-spin" />
-                  Logging In...
+                  {t($ => $.auth.login.loggingIn)}
                 </>
               ) : (
                 <>
@@ -180,7 +185,7 @@ function LoginPage() {
                     alt="Google"
                     className="w-5 h-5 mr-2"
                   />
-                  Log In with Google
+                  {t($ => $.auth.login.googleButton)}
                 </>
               )}
             </Button>
@@ -189,7 +194,7 @@ function LoginPage() {
           {/* Separator with "or" */}
           <section className="flex items-center gap-2">
             <Separator className="flex-1" />
-            <span className="text-sm text-muted-foreground">or</span>
+            <span className="text-sm text-muted-foreground">{t($ => $.common.separator.or)}</span>
             <Separator className="flex-1" />
           </section>
 
@@ -205,7 +210,7 @@ function LoginPage() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>{t($ => $.auth.login.emailLabel)}</FormLabel>
                       <FormControl>
                         <Input
                           type="email"
@@ -226,7 +231,7 @@ function LoginPage() {
                   name="password"
                   render={({ field }) => (
                     <FormItem className="relative">
-                      <FormLabel>Password</FormLabel>
+                      <FormLabel>{t($ => $.auth.login.passwordLabel)}</FormLabel>
                       <Toggle
                         pressed={showPassword}
                         onPressedChange={setShowPassword}
@@ -234,7 +239,7 @@ function LoginPage() {
                         aria-label="Toggle password visibility"
                         className="absolute text-muted-foreground top-0 right-0 z-10 bg-transparent hover:bg-transparent data-[state=on]:bg-transparent h-auto p-0 min-w-0"
                       >
-                        {showPassword ? 'Hide password' : 'Show password'}
+                        {showPassword ? t($ => $.common.buttons.hidePassword) : t($ => $.common.buttons.showPassword)}
                       </Toggle>
                       <FormControl>
                         <Input
@@ -260,7 +265,7 @@ function LoginPage() {
                     onClick={() => navigate({ to: '/auth/request-reset-password' })}
                     className="h-auto p-0 text-sm font-normal text-muted-foreground hover:text-foreground"
                   >
-                    Reset password
+                    {t($ => $.auth.login.resetPassword)}
                   </Button>
                 </section>
 
@@ -281,10 +286,10 @@ function LoginPage() {
                   {isEmailLoading ? (
                     <>
                       <Spinner className="mr-2" />
-                      Logging In...
+                      {t($ => $.auth.login.loggingIn)}
                     </>
                   ) : (
-                    'Log In'
+                    t($ => $.auth.login.loginButton)
                   )}
                 </Button>
               </form>

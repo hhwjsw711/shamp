@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { ArrowUpDown, ClipboardList, Search, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -41,6 +42,7 @@ export function TicketStatusColumn({
   sortBy = 'date',
   onSortChange,
 }: TicketStatusColumnProps) {
+  const { t } = useTranslation()
   const [isSearchOpen, setIsSearchOpen] = React.useState(false)
   const searchInputRef = React.useRef<HTMLInputElement>(null)
 
@@ -78,7 +80,7 @@ export function TicketStatusColumn({
               transition={{ duration: 0.2, ease: "easeInOut" }}
               className="flex items-center gap-2"
             >
-              <motion.div 
+              <motion.div
                 className="flex-1 relative"
                 initial={{ scale: 0.95 }}
                 animate={{ scale: 1 }}
@@ -87,7 +89,7 @@ export function TicketStatusColumn({
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground size-4 pointer-events-none z-10" />
                 <Input
                   ref={searchInputRef}
-                  placeholder={`Search ${title.toLowerCase()}...`}
+                  placeholder={t($ => $.tickets.list.searchPlaceholder).replace('{status}', title.toLowerCase())}
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   className="pl-10! h-8 text-sm"
@@ -104,7 +106,7 @@ export function TicketStatusColumn({
                   size="icon-sm"
                   onClick={handleCloseSearch}
                   className="shrink-0"
-                  aria-label="Close search"
+                  aria-label={t($ => $.common.ariaLabels.closeSearch)}
                 >
                   <X className="size-4" />
                 </Button>
@@ -151,7 +153,7 @@ export function TicketStatusColumn({
                       variant="ghost"
                       size="icon-sm"
                       className="shrink-0"
-                      aria-label="Sort tickets"
+                      aria-label={t($ => $.common.ariaLabels.sortTickets)}
                     >
                       <ArrowUpDown className="size-4" />
                     </Button>
@@ -161,13 +163,13 @@ export function TicketStatusColumn({
                       onClick={() => onSortChange?.('date')}
                       className={sortBy === 'date' ? 'bg-accent' : ''}
                     >
-                      Sort by Date
+                      {t($ => $.tickets.list.sortByDate)}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => onSortChange?.('urgency')}
                       className={sortBy === 'urgency' ? 'bg-accent' : ''}
                     >
-                      Sort by Urgency
+                      {t($ => $.tickets.list.sortByUrgency)}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -186,12 +188,12 @@ export function TicketStatusColumn({
                 <ClipboardList />
               </EmptyMedia>
               <EmptyTitle>
-                {searchQuery ? 'No matches found' : 'No tickets'}
+                {searchQuery ? t($ => $.tickets.list.noMatchesFound) : t($ => $.tickets.list.noTicketsInColumn)}
               </EmptyTitle>
               <EmptyDescription>
-                {searchQuery 
-                  ? `No tickets match "${searchQuery}"` 
-                  : 'No tickets in this column yet'}
+                {searchQuery
+                  ? t($ => $.tickets.list.noMatchesDescription).replace('{query}', searchQuery)
+                  : t($ => $.tickets.list.noTicketsInColumnDescription)}
               </EmptyDescription>
             </EmptyHeader>
           </Empty>

@@ -1,4 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 
@@ -20,6 +21,7 @@ export function FormFooter({
   className = ''
 }: FormFooterProps) {
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
   const handleCancel = () => {
     if (onCancel) {
@@ -43,7 +45,7 @@ export function FormFooter({
             {isSubmitting ? (
               <>
                 <Spinner className="mr-2 size-4" />
-                {submitLabel}...
+                {t($ => $.formFooter.submitting).replace('{label}', submitLabel)}
               </>
             ) : (
               submitLabel

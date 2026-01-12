@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { motion } from 'motion/react'
 import { OctagonXIcon } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import {
@@ -26,6 +27,7 @@ export const Route = createFileRoute('/auth/verify-email')({
 function VerifyEmailPage() {
   const navigate = useNavigate()
   const { verifyEmail, sendVerificationCode } = useAuth()
+  const { t } = useTranslation()
   const [code, setCode] = useState('')
   const [isVerifying, setIsVerifying] = useState(false)
   const [isResending, setIsResending] = useState(false)
@@ -59,7 +61,7 @@ function VerifyEmailPage() {
   const handleVerify = useCallback(async () => {
     if (!email || isVerifying) return; // block all double submits, including manual click
     if (code.length !== 6) {
-      setError('Please enter the complete 6-digit code')
+      setError(t($ => $.validation.code.length, { length: 6 }))
       return
     }
     setIsVerifying(true)
@@ -67,13 +69,13 @@ function VerifyEmailPage() {
     const result = await verifyEmail({ email, code })
 
     if (result.success) {
-      toast.success('Email verified successfully!')
+      toast.success(t($ => $.auth.verifyEmail.success))
       navigate({ to: '/auth/login' })
     } else {
-      setError(result.error || 'Failed to verify email')
+      setError(result.error || t($ => $.auth.verifyEmail.error))
       setIsVerifying(false)
     }
-  }, [email, code, verifyEmail, isVerifying])
+  }, [email, code, verifyEmail, isVerifying, t, navigate])
 
   // Auto-submit when code is complete
   useEffect(() => {
@@ -84,7 +86,7 @@ function VerifyEmailPage() {
 
   const handleResend = async () => {
     if (!email) {
-      setError('Email is required')
+      setError(t($ => $.validation.required))
       return
     }
 
@@ -94,10 +96,10 @@ function VerifyEmailPage() {
     const result = await sendVerificationCode({ email })
 
     if (result.success) {
-      toast.success('Verification code sent! Please check your email.')
+      toast.success(t($ => $.auth.verifyEmail.resendCode))
       setCode('') // Clear the input
     } else {
-      setError(result.error || 'Failed to resend verification code')
+      setError(result.error || t($ => $.auth.verifyEmail.error))
     }
 
     setIsResending(false)
@@ -142,10 +144,10 @@ function VerifyEmailPage() {
             className="h-8 w-auto"
           />
           <h1 className="text-2xl font-semibold text-foreground">
-            Verify email
+            {t($ => $.auth.verifyEmail.title)}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Check your email for a 6-digit verification code sent to{' '}
+            {t($ => $.auth.verifyEmail.subtitle)}{' '}
             <span className="font-medium text-foreground">{email}</span>
           </p>
         </section>
@@ -175,7 +177,7 @@ function VerifyEmailPage() {
             {/* Resend section below, left aligned */}
             <section className="flex items-center gap-2 w-full justify-center">
               <p className="text-sm text-muted-foreground">
-                Didn't get OTP?
+                {t($ => $.auth.verifyEmail.didntReceiveCode)}
               </p>
               <Button
                 type="button"
@@ -185,7 +187,7 @@ function VerifyEmailPage() {
                 disabled={isVerifying || isResending}
                 className="h-auto p-0 text-sm font-normal text-primary hover:text-primary/80 hover:underline underline-offset-4"
               >
-                {isResending ? 'Sending...' : 'Resend'}
+                {isResending ? t($ => $.common.buttons.loading) : t($ => $.auth.verifyEmail.resendCode)}
               </Button>
             </section>
           </section>
@@ -210,10 +212,10 @@ function VerifyEmailPage() {
             {isVerifying ? (
               <>
                 <Spinner className="mr-2" />
-                Verifying...
+                {t($ => $.auth.verifyEmail.verifying)}
               </>
             ) : (
-              'Verify email'
+              t($ => $.auth.verifyEmail.verifyButton)
             )}
           </Button>
         </section>

@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from 'convex/react'
-import { 
+import {
   AlertCircle,
   Building2,
   CheckCircle,
@@ -11,6 +11,7 @@ import {
   Ticket,
   Wrench
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import AnalyticsCard from '@/components/layout/analytics-card'
 import VendorPerformanceChart from '@/components/layout/vendor-performance-chart'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -21,19 +22,23 @@ export const Route = createFileRoute('/_authenticated/')({
   component: App,
 })
 
-function getStatusLabel(status: string): string {
-  const statusMap: Record<string, string> = {
-    analyzing: 'Analyzing',
-    analyzed: 'Analyzed',
-    reviewed: 'Reviewed',
-    find_vendors: 'Finding Vendors',
-    requested_for_information: 'Requested for Information',
-    quotes_available: 'Quotes Available',
-    quote_selected: 'Quote Selected',
-    fixed: 'Fixed',
-    closed: 'Closed',
+function useStatusLabel() {
+  const { t } = useTranslation()
+
+  return (status: string): string => {
+    const statusMap: Record<string, string> = {
+      analyzing: t($ => $.dashboard.ticketStats.analyzing),
+      analyzed: t($ => $.dashboard.ticketStats.analyzed),
+      reviewed: t($ => $.dashboard.ticketStats.reviewed),
+      find_vendors: t($ => $.dashboard.ticketStats.findingVendors),
+      requested_for_information: t($ => $.dashboard.ticketStats.requestedForInfo),
+      quotes_available: t($ => $.dashboard.ticketStats.quotesAvailable),
+      quote_selected: t($ => $.dashboard.ticketStats.quoteSelected),
+      fixed: t($ => $.dashboard.ticketStats.fixed),
+      closed: t($ => $.dashboard.ticketStats.closed),
+    }
+    return statusMap[status] || status
   }
-  return statusMap[status] || status
 }
 
 // Define ticket status flow order (excluding analyzing and quote_selected)
@@ -79,6 +84,8 @@ interface DashboardStats {
 
 function App() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth()
+  const { t } = useTranslation()
+  const getStatusLabel = useStatusLabel()
 
   // Use Convex query for real-time dashboard stats
   // SECURITY: userId is validated on the backend - users can only see their own stats
@@ -201,7 +208,7 @@ function App() {
     return (
       <section className="flex flex-col gap-2 p-4">
         <section className="flex items-center justify-center h-64">
-          <p className="text-destructive">Failed to load dashboard statistics</p>
+          <p className="text-destructive">{t($ => $.dashboard.errors.loadFailed)}</p>
         </section>
       </section>
     )
@@ -210,7 +217,7 @@ function App() {
   if (!stats) {
     return (
       <section className="flex flex-col gap-2 p-4">
-        <p>No data available</p>
+        <p>{t($ => $.common.messages.noData)}</p>
       </section>
     )
   }
@@ -220,9 +227,9 @@ function App() {
       {/* Header - Fixed */}
       <header className="shrink-0 p-4 pb-2">
         <section className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold">Dashboard</h1>
+          <h1 className="text-2xl font-semibold">{t($ => $.dashboard.title)}</h1>
           <p className="text-sm text-muted-foreground">
-            Overview of your tickets, quotes, and performance metrics
+            {t($ => $.dashboard.subtitle)}
           </p>
         </section>
       </header>
@@ -231,11 +238,11 @@ function App() {
       <section className="flex-1 overflow-y-auto p-4 pt-2 flex flex-col gap-6 min-h-0">
         {/* Ticket Statistics */}
         <section className="flex flex-col gap-2">
-          <h2 className="text-lg font-semibold">Ticket Statistics</h2>
+          <h2 className="text-lg font-semibold">{t($ => $.dashboard.ticketStats.title)}</h2>
           <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <AnalyticsCard
           icon={<Ticket className="w-5 h-5" />}
-          name="Total Tickets"
+          name={t($ => $.dashboard.ticketStats.total)}
           value={<span className="text-3xl font-semibold">{stats.totalTickets}</span>}
         />
 
@@ -252,37 +259,37 @@ function App() {
 
         {/* Quote Statistics */}
         <section className="flex flex-col gap-2">
-          <h2 className="text-lg font-semibold">Quote Statistics</h2>
+          <h2 className="text-lg font-semibold">{t($ => $.dashboard.quoteStats.title)}</h2>
           <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <AnalyticsCard
           icon={<FileText className="w-5 h-5" />}
-          name="New Quotes"
+          name={t($ => $.dashboard.quoteStats.newQuotes)}
           value={
             <section className="flex flex-col gap-1">
               <span className="text-3xl font-semibold">{stats.newQuotesCount}</span>
-              <p className="text-xs text-muted-foreground">Awaiting review</p>
+              <p className="text-xs text-muted-foreground">{t($ => $.dashboard.quoteStats.awaitingReview)}</p>
             </section>
           }
         />
 
         <AnalyticsCard
           icon={<AlertCircle className="w-5 h-5" />}
-          name="Tickets Awaiting Selection"
+          name={t($ => $.dashboard.quoteStats.ticketsAwaitingSelection)}
           value={
             <section className="flex flex-col gap-1">
               <span className="text-3xl font-semibold">{stats.ticketsAwaitingSelection}</span>
-              <p className="text-xs text-muted-foreground">Have quotes but no vendor selected</p>
+              <p className="text-xs text-muted-foreground">{t($ => $.dashboard.quoteStats.haveQuotesNoVendor)}</p>
             </section>
           }
         />
 
         <AnalyticsCard
           icon={<CheckCircle className="w-5 h-5" />}
-          name="Selected Quotes"
+          name={t($ => $.dashboard.quoteStats.selectedQuotes)}
           value={
             <section className="flex flex-col gap-1">
               <span className="text-3xl font-semibold">{stats.selectedQuotesCount}</span>
-              <p className="text-xs text-muted-foreground">Selected vendors</p>
+              <p className="text-xs text-muted-foreground">{t($ => $.dashboard.quoteStats.selectedVendors)}</p>
             </section>
           }
         />
@@ -291,48 +298,48 @@ function App() {
 
         {/* Performance Metrics */}
         <section className="flex flex-col gap-4">
-          <h2 className="text-lg font-semibold">Performance Metrics</h2>
+          <h2 className="text-lg font-semibold">{t($ => $.dashboard.performance.title)}</h2>
           <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <AnalyticsCard
           icon={<Clock className="w-5 h-5" />}
-          name="Average Response Time"
+          name={t($ => $.dashboard.performance.avgResponseTime)}
           value={
             <section className="flex flex-col gap-1">
               <p className="text-2xl font-semibold">
-                {stats.averageResponseTimeHours !== null 
-                  ? `${stats.averageResponseTimeHours.toFixed(2)} hours`
-                  : '0 hours'}
+                {stats.averageResponseTimeHours !== null
+                  ? `${stats.averageResponseTimeHours.toFixed(2)} ${t($ => $.dashboard.performance.hours)}`
+                  : `0 ${t($ => $.dashboard.performance.hours)}`}
               </p>
-              <p className="text-sm text-muted-foreground">Time from ticket creation to first vendor reply</p>
+              <p className="text-sm text-muted-foreground">{t($ => $.dashboard.performance.responseTimeDesc)}</p>
             </section>
           }
         />
 
         <AnalyticsCard
           icon={<Wrench className="w-5 h-5" />}
-          name="Average Fix Time"
+          name={t($ => $.dashboard.performance.avgFixTime)}
           value={
             <section className="flex flex-col gap-1">
               <p className="text-2xl font-semibold">
-                {stats.averageFixTimeHours !== null 
-                  ? `${stats.averageFixTimeHours.toFixed(2)} hours`
-                  : '0 hours'}
+                {stats.averageFixTimeHours !== null
+                  ? `${stats.averageFixTimeHours.toFixed(2)} ${t($ => $.dashboard.performance.hours)}`
+                  : `0 ${t($ => $.dashboard.performance.hours)}`}
               </p>
-              <p className="text-sm text-muted-foreground">Time from ticket creation to closure</p>
+              <p className="text-sm text-muted-foreground">{t($ => $.dashboard.performance.fixTimeDesc)}</p>
             </section>
           }
         />
 
         <AnalyticsCard
           icon={<Building2 className="w-5 h-5" />}
-          name="Most Used Vendor"
+          name={t($ => $.dashboard.performance.mostUsedVendor)}
           value={
             <section className="flex flex-col gap-1">
               <p className="text-lg font-semibold">
-                {stats.mostUsedVendor?.businessName || 'No vendor yet'}
+                {stats.mostUsedVendor?.businessName || t($ => $.dashboard.performance.noVendorYet)}
               </p>
               <p className="text-sm text-muted-foreground">
-                {stats.mostUsedVendor?.usageCount || 0} ticket{(stats.mostUsedVendor?.usageCount || 0) !== 1 ? 's' : ''}
+                {stats.mostUsedVendor?.usageCount || 0} {t($ => $.dashboard.performance.tickets)}
               </p>
             </section>
           }
@@ -346,18 +353,18 @@ function App() {
         {/* Quote Averages */}
         {(stats.averageQuotePrice !== null || stats.averageQuoteDeliveryTimeHours !== null) && (
           <section className="flex flex-col gap-2">
-            <h2 className="text-lg font-semibold">Quote Averages</h2>
+            <h2 className="text-lg font-semibold">{t($ => $.dashboard.quoteAverages.title)}</h2>
             <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {stats.averageQuotePrice !== null && (
             <AnalyticsCard
               icon={<DollarSign className="w-5 h-5" />}
-              name="Average Quote Price"
+              name={t($ => $.dashboard.quoteAverages.avgPrice)}
               value={
                 <section className="flex flex-col gap-1">
                   <p className="text-2xl font-semibold">
                     ${(stats.averageQuotePrice / 100).toFixed(2)}
                   </p>
-                  <p className="text-sm text-muted-foreground">Average price of received quotes</p>
+                  <p className="text-sm text-muted-foreground">{t($ => $.dashboard.quoteAverages.priceDesc)}</p>
                 </section>
               }
             />
@@ -366,13 +373,13 @@ function App() {
           {stats.averageQuoteDeliveryTimeHours !== null && (
             <AnalyticsCard
               icon={<Package className="w-5 h-5" />}
-              name="Average Delivery Time"
+              name={t($ => $.dashboard.quoteAverages.avgDeliveryTime)}
               value={
                 <section className="flex flex-col gap-1">
                   <p className="text-2xl font-semibold">
-                    {stats.averageQuoteDeliveryTimeHours.toFixed(2)} hours
+                    {stats.averageQuoteDeliveryTimeHours.toFixed(2)} {t($ => $.dashboard.performance.hours)}
                   </p>
-                  <p className="text-sm text-muted-foreground">Average estimated delivery time from quotes</p>
+                  <p className="text-sm text-muted-foreground">{t($ => $.dashboard.quoteAverages.deliveryTimeDesc)}</p>
                 </section>
               }
             />

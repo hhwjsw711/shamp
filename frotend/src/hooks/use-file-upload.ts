@@ -1,7 +1,8 @@
 'use client';
 
+import {    useCallback, useRef, useState } from 'react';
+import type {ChangeEvent, DragEvent, InputHTMLAttributes} from 'react';
 import type React from 'react';
-import { useCallback, useRef, useState, type ChangeEvent, type DragEvent, type InputHTMLAttributes } from 'react';
 
 export type FileMetadata = {
   name: string;
@@ -22,20 +23,20 @@ export type FileUploadOptions = {
   maxSize?: number; // in bytes
   accept?: string;
   multiple?: boolean; // Defaults to false
-  initialFiles?: FileMetadata[];
-  onFilesChange?: (files: FileWithPreview[]) => void; // Callback when files change
-  onFilesAdded?: (addedFiles: FileWithPreview[]) => void; // Callback when new files are added
-  onError?: (errors: string[]) => void;
+  initialFiles?: Array<FileMetadata>;
+  onFilesChange?: (files: Array<FileWithPreview>) => void; // Callback when files change
+  onFilesAdded?: (addedFiles: Array<FileWithPreview>) => void; // Callback when new files are added
+  onError?: (errors: Array<string>) => void;
 };
 
 export type FileUploadState = {
-  files: FileWithPreview[];
+  files: Array<FileWithPreview>;
   isDragging: boolean;
-  errors: string[];
+  errors: Array<string>;
 };
 
 export type FileUploadActions = {
-  addFiles: (files: FileList | File[]) => void;
+  addFiles: (files: FileList | Array<File>) => void;
   removeFile: (id: string) => void;
   clearFiles: () => void;
   clearErrors: () => void;
@@ -151,11 +152,11 @@ export const useFileUpload = (options: FileUploadOptions = {}): [FileUploadState
   }, [onFilesChange]);
 
   const addFiles = useCallback(
-    (newFiles: FileList | File[]) => {
+    (newFiles: FileList | Array<File>) => {
       if (!newFiles || newFiles.length === 0) return;
 
       const newFilesArray = Array.from(newFiles);
-      const errors: string[] = [];
+      const errors: Array<string> = [];
 
       // Clear existing errors when new files are uploaded
       setState((prev) => ({ ...prev, errors: [] }));
@@ -173,7 +174,7 @@ export const useFileUpload = (options: FileUploadOptions = {}): [FileUploadState
         return;
       }
 
-      const validFiles: FileWithPreview[] = [];
+      const validFiles: Array<FileWithPreview> = [];
 
       for (const file of newFilesArray) {
         // Only check for duplicates if multiple files are allowed

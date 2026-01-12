@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
 import { Building2Icon, ChevronRightIcon, HelpCircleIcon, HomeIcon, LogOutIcon, MessageSquareIcon, PlusIcon, SettingsIcon, TicketIcon } from 'lucide-react'
 import * as React from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
 import {
   SidebarContent,
@@ -28,33 +29,39 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
-const menuItems = [
-  {
-    title: 'Home',
-    icon: HomeIcon,
-    href: '/',
-  },
-  {
-    title: 'Tickets',
-    icon: TicketIcon,
-    href: '/tickets',
-  },
-  {
-    title: 'Vendors',
-    icon: Building2Icon,
-    href: '/vendors',
-  },
-  {
-    title: 'Conversations',
-    icon: MessageSquareIcon,
-    href: '/conversations',
-  },
-]
+function useMenuItems() {
+  const { t } = useTranslation()
+
+  return [
+    {
+      title: t($ => $.sidebar.menu.home),
+      icon: HomeIcon,
+      href: '/',
+    },
+    {
+      title: t($ => $.sidebar.menu.tickets),
+      icon: TicketIcon,
+      href: '/tickets',
+    },
+    {
+      title: t($ => $.sidebar.menu.vendors),
+      icon: Building2Icon,
+      href: '/vendors',
+    },
+    {
+      title: t($ => $.sidebar.menu.conversations),
+      icon: MessageSquareIcon,
+      href: '/conversations',
+    },
+  ]
+}
 
 function SidebarContentComponent() {
   const location = useLocation()
   const navigate = useNavigate()
   const { state, setOpen } = useSidebar()
+  const { t } = useTranslation()
+  const menuItems = useMenuItems()
   const [isHovered, setIsHovered] = React.useState(false)
   
   // Hide Create New Ticket button when on the create or edit ticket page
@@ -135,7 +142,7 @@ function SidebarContentComponent() {
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="right">
-                    <p>Create New Ticket</p>
+                    <p>{t($ => $.sidebar.createTicket)}</p>
                   </TooltipContent>
                 </Tooltip>
               ) : (
@@ -146,7 +153,7 @@ function SidebarContentComponent() {
                   onClick={() => navigate({ to: '/tickets/create' })}
                 >
                   <PlusIcon className="size-5 shrink-0" />
-                  <span>Create New Ticket</span>
+                  <span>{t($ => $.sidebar.createTicket)}</span>
                 </Button>
               )}
             </SidebarGroupContent>
@@ -210,6 +217,7 @@ function SidebarContentComponent() {
 
 function UserDropdown() {
   const { user, logout, isLoading } = useAuth()
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { state } = useSidebar()
 
@@ -266,10 +274,10 @@ function UserDropdown() {
             "w-full justify-start gap-2 !p-2 h-auto",
             state === "collapsed" && "!size-8 !p-2 justify-center"
           )}
-          tooltip={state === "collapsed" && user ? `${user.name} - ${user.orgName || 'Organization'}` : undefined}
+          tooltip={state === "collapsed" && user ? `${user.name} - ${user.orgName || t($ => $.sidebar.user.defaultOrganization)}` : undefined}
         >
           <Avatar className="size-8 shrink-0">
-            <AvatarImage src={user?.profilePic} alt={user?.name || 'User'} />
+            <AvatarImage src={user?.profilePic} alt={user?.name || t($ => $.sidebar.user.defaultUser)} />
             <AvatarFallback className="text-xs">
               {getInitials(user?.name)}
             </AvatarFallback>
@@ -278,10 +286,10 @@ function UserDropdown() {
             <>
               <div className="flex flex-col gap-1 items-start flex-1 min-w-0">
                 <span className="text-sm font-medium truncate w-full">
-                  {user?.name || 'User'}
+                  {user?.name || t($ => $.sidebar.user.defaultUser)}
                 </span>
                 <span className="text-xs text-muted-foreground truncate w-full">
-                  {user?.orgName || 'Organization'}
+                  {user?.orgName || t($ => $.sidebar.user.defaultOrganization)}
                 </span>
               </div>
               <ChevronRightIcon className="size-4 shrink-0" />
@@ -292,16 +300,16 @@ function UserDropdown() {
       <DropdownMenuContent side="right" align="end" className="w-48">
         <DropdownMenuItem>
           <SettingsIcon className="size-4" />
-          <span>Settings</span>
+          <span>{t($ => $.sidebar.user.settings)}</span>
         </DropdownMenuItem>
         <DropdownMenuItem>
           <HelpCircleIcon className="size-4" />
-          <span>Help</span>
+          <span>{t($ => $.sidebar.user.help)}</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={handleLogout}>
           <LogOutIcon className="size-4" />
-          <span>Log Out</span>
+          <span>{t($ => $.sidebar.user.logout)}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -1,11 +1,14 @@
 import * as React from 'react'
 import { MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
+
+type TranslationFunction = ReturnType<typeof useTranslation>['t']
 
 interface PageHeaderCTAsContextValue {
   ctas: React.ReactNode | null
@@ -32,12 +35,12 @@ export function usePageHeaderCTAs() {
   return context
 }
 
-function processButton(child: React.ReactNode, index: number): React.ReactNode {
+function processButton(child: React.ReactNode, index: number, t: TranslationFunction): React.ReactNode {
   if (!React.isValidElement(child)) {
     return child
   }
 
-  const originalProps = child.props as { 
+  const originalProps = child.props as {
     className?: string
     size?: string | 'icon'
     variant?: string
@@ -46,22 +49,22 @@ function processButton(child: React.ReactNode, index: number): React.ReactNode {
     onClick?: () => void
     [key: string]: any
   }
-  
+
   // Check if this is an icon button (size="icon" or size="icon-sm" etc)
   const isIconButton = originalProps.size === 'icon' || originalProps.size === 'icon-sm' || originalProps.size === 'icon-lg'
-  
+
   if (isIconButton) {
     // Determine text and icon based on aria-label (most reliable)
     const ariaLabel = String(originalProps['aria-label'] || '').toLowerCase()
     let buttonText = ''
     let iconComponent: React.ReactNode = null
-    
+
     // Check aria-label first
     if (ariaLabel.includes('edit')) {
-      buttonText = 'Edit'
+      buttonText = t($ => $.common.buttons.edit)
       iconComponent = <Pencil className="size-4" />
     } else if (ariaLabel.includes('delete')) {
-      buttonText = 'Delete'
+      buttonText = t($ => $.common.buttons.delete)
       iconComponent = <Trash2 className="size-4" />
     } else {
       // Fallback: check the icon component directly
@@ -70,26 +73,26 @@ function processButton(child: React.ReactNode, index: number): React.ReactNode {
         // Try to match by checking the component's name or type
         const iconType = icon.type
         const iconName = String((iconType as any)?.name || (iconType as any)?.displayName || '').toLowerCase()
-        
+
         if (iconName.includes('pencil') || iconType === Pencil) {
-          buttonText = 'Edit'
+          buttonText = t($ => $.common.buttons.edit)
           iconComponent = <Pencil className="size-4" />
         } else if (iconName.includes('trash') || iconType === Trash2) {
-          buttonText = 'Delete'
+          buttonText = t($ => $.common.buttons.delete)
           iconComponent = <Trash2 className="size-4" />
         } else {
           // If we can't identify, keep original icon but add generic text
           iconComponent = icon
-          buttonText = 'Action'
+          buttonText = t($ => $.common.buttons.action)
         }
       }
     }
-    
+
     // Create new ghost button with text instead of cloning
     // Only for mobile view - add labels to icon buttons
     if (buttonText && iconComponent) {
       const { children, size, variant, className, key, ...restProps } = originalProps
-      
+
       return (
         <Button
           key={key || `mobile-cta-${index}`}
@@ -104,7 +107,7 @@ function processButton(child: React.ReactNode, index: number): React.ReactNode {
       )
     }
   }
-  
+
   // For non-icon buttons, just make them full-width
   return React.cloneElement(child as React.ReactElement<any>, {
     ...originalProps,
@@ -115,6 +118,7 @@ function processButton(child: React.ReactNode, index: number): React.ReactNode {
 
 export function PageHeaderCTAsContainer() {
   const { ctas } = usePageHeaderCTAs()
+  const { t } = useTranslation()
 
   if (!ctas) {
     return null
@@ -126,14 +130,14 @@ export function PageHeaderCTAsContainer() {
       <section className="hidden md:flex items-center gap-2 shrink-0">
         {ctas}
       </section>
-      
+
       {/* Mobile: Show dropdown menu with ellipsis icon */}
       <section className="flex md:hidden items-center shrink-0">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon" className="h-8 w-8">
               <MoreVertical className="h-4 w-4" />
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">{t($ => $.common.buttons.openMenu)}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
@@ -143,19 +147,19 @@ export function PageHeaderCTAsContainer() {
                 if (React.isValidElement(child) && child.type === React.Fragment) {
                   const fragmentProps = child.props as { children?: React.ReactNode }
                   return React.Children.map(React.Children.toArray(fragmentProps.children || []), (fragmentChild, fragIndex) => {
-                    return processButton(fragmentChild, fragIndex)
+                    return processButton(fragmentChild, fragIndex, t)
                   })
                 }
-                
+
                 // Handle section wrapper
                 if (React.isValidElement(child) && typeof child.type === 'string' && child.type === 'section') {
                   const sectionProps = child.props as { children?: React.ReactNode }
                   return React.Children.map(React.Children.toArray(sectionProps.children || []), (sectionChild, sectionIndex) => {
-                    return processButton(sectionChild, sectionIndex)
+                    return processButton(sectionChild, sectionIndex, t)
                   })
                 }
-                
-                return processButton(child, index)
+
+                return processButton(child, index, t)
               })}
             </div>
           </DropdownMenuContent>

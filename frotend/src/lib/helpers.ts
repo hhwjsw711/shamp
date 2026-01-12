@@ -1,8 +1,8 @@
-export const throttle = (func: (...args: unknown[]) => void, limit: number): ((...args: unknown[]) => void) => {
+export const throttle = (func: (...args: Array<unknown>) => void, limit: number): ((...args: Array<unknown>) => void) => {
   let lastFunc: ReturnType<typeof setTimeout> | null = null;
   let lastRan: number | null = null;
 
-  return function (this: unknown, ...args: unknown[]) {
+  return function (this: unknown, ...args: Array<unknown>) {
     if (lastRan === null) {
       func.apply(this, args);
       lastRan = Date.now();
@@ -17,7 +17,7 @@ export const throttle = (func: (...args: unknown[]) => void, limit: number): ((.
             lastRan = Date.now();
           }
         },
-        limit - (Date.now() - (lastRan as number)),
+        limit - (Date.now() - (lastRan)),
       );
     }
   };
@@ -30,7 +30,7 @@ export const throttle = (func: (...args: unknown[]) => void, limit: number): ((.
  * @param wait - The delay in milliseconds.
  * @returns A debounced version of the provided function.
  */
-export function debounce<T extends (...args: unknown[]) => unknown>(
+export function debounce<T extends (...args: Array<unknown>) => unknown>(
   func: T,
   wait: number,
 ): (...args: Parameters<T>) => void {
@@ -151,7 +151,7 @@ export function toAbsoluteUrl(path: string): string {
 	This function fetches the available time zones from the environment,
 	formats their offsets (e.g., "GMT+2"), and returns them in a sorted array.
 */
-export const getTimeZones = (): { label: string; value: string }[] => {
+export const getTimeZones = (): Array<{ label: string; value: string }> => {
   // Fetch supported timezones
   const timezones = Intl.supportedValuesOf('timeZone');
 

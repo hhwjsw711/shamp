@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { motion } from 'motion/react'
 import { OctagonXIcon } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import {
@@ -26,6 +27,7 @@ export const Route = createFileRoute('/auth/reset-password-code')({
 function ResetPasswordCodePage() {
   const navigate = useNavigate()
   const { verifyPasswordResetCode } = useAuth()
+  const { t } = useTranslation()
   const [code, setCode] = useState('')
   const [isVerifying, setIsVerifying] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -59,7 +61,7 @@ function ResetPasswordCodePage() {
     if (!email || isVerifying) return
     const safeEmail = email
     if (code.length !== 6) {
-      setError('Please enter the complete 6-digit code')
+      setError(t($ => $.validation.code.length, { length: 6 }))
       return
     }
     setIsVerifying(true)
@@ -68,16 +70,16 @@ function ResetPasswordCodePage() {
     const result = await verifyPasswordResetCode({ code })
 
     if (result.success && result.userId) {
-      toast.success('Reset code verified successfully!')
+      toast.success(t($ => $.auth.resetPassword.success))
       navigate({
         to: '/auth/reset-password',
         search: { email: safeEmail, userId: result.userId },
       })
     } else {
-      setError(result.error || 'Failed to verify reset code')
+      setError(result.error || t($ => $.auth.resetPassword.error))
       setIsVerifying(false)
     }
-  }, [email, code, verifyPasswordResetCode, isVerifying, navigate])
+  }, [email, code, verifyPasswordResetCode, isVerifying, t, navigate])
 
   // Auto-submit when code is complete
   useEffect(() => {
@@ -125,10 +127,10 @@ function ResetPasswordCodePage() {
             className="h-8 w-auto"
           />
           <h1 className="text-2xl font-semibold text-foreground">
-            Verify reset code
+            {t($ => $.auth.resetPassword.codeTitle)}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Enter the 6-digit code sent to{' '}
+            {t($ => $.auth.resetPassword.codeSubtitle)}{' '}
             <span className="font-medium text-foreground">{email}</span>
           </p>
         </section>
@@ -179,10 +181,10 @@ function ResetPasswordCodePage() {
             {isVerifying ? (
               <>
                 <Spinner className="mr-2" />
-                Verifying...
+                {t($ => $.auth.verifyEmail.verifying)}
               </>
             ) : (
-              'Verify code'
+              t($ => $.auth.resetPassword.verifyButton)
             )}
           </Button>
         </section>

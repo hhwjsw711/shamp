@@ -1,4 +1,5 @@
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { useTranslation } from 'react-i18next'
 import type { ChartConfig } from "@/components/ui/chart"
 import {
   ChartContainer,
@@ -22,14 +23,16 @@ interface VendorPerformanceChartProps {
 export default function VendorPerformanceChart({
   data,
 }: VendorPerformanceChartProps) {
+  const { t } = useTranslation()
+
   // Limit to top 5 vendors for better readability
   const topVendors = data.slice(0, 5)
 
   // Prepare chart data - show empty state if no vendors
   const chartData = topVendors.length > 0
     ? topVendors.map((vendor) => ({
-        vendor: vendor.businessName.length > 15 
-          ? `${vendor.businessName.substring(0, 15)}...` 
+        vendor: vendor.businessName.length > 15
+          ? `${vendor.businessName.substring(0, 15)}...`
           : vendor.businessName,
         responseTime: vendor.averageResponseTimeHours ?? 0,
         fixTime: vendor.averageFixTimeHours ?? 0,
@@ -37,7 +40,7 @@ export default function VendorPerformanceChart({
       }))
     : [
         {
-          vendor: "No vendors yet",
+          vendor: t($ => $.dashboard.vendorPerformance.noVendorsYet),
           responseTime: 0,
           fixTime: 0,
           tickets: 0,
@@ -46,11 +49,11 @@ export default function VendorPerformanceChart({
 
   const chartConfig = {
     responseTime: {
-      label: "Response Time",
+      label: t($ => $.dashboard.vendorPerformance.responseTime),
       color: "hsl(var(--chart-1))",
     },
     fixTime: {
-      label: "Fix Time",
+      label: t($ => $.dashboard.vendorPerformance.fixTime),
       color: "hsl(var(--chart-2))",
     },
   } satisfies ChartConfig
@@ -58,8 +61,8 @@ export default function VendorPerformanceChart({
   return (
     <Card className="flex flex-col gap-0 p-0 rounded-[24px] border-0 shadow-none">
       <section className="flex flex-col gap-1 py-2 px-4">
-        <h3>Vendor Performance Comparison</h3>
-        <p className="text-xs text-muted-foreground">Average response and fix times by vendor (top 5)</p>
+        <h3>{t($ => $.dashboard.vendorPerformance.title)}</h3>
+        <p className="text-xs text-muted-foreground">{t($ => $.dashboard.vendorPerformance.description)}</p>
       </section>
       <section className="p-2">
         <section className="p-2 bg-zinc-100 rounded-2xl">
@@ -88,12 +91,12 @@ export default function VendorPerformanceChart({
             <ChartTooltip
               content={
                 <ChartTooltipContent
-                  labelFormatter={(value) => `Vendor: ${value}`}
+                  labelFormatter={(value) => `${t($ => $.dashboard.vendorPerformance.vendorLabel)}: ${value}`}
                   formatter={(value, name) => {
                     const key = name as keyof typeof chartConfig
                     const config = chartConfig[key]
                     return [
-                      `${Number(value).toFixed(2)} hours`,
+                      `${Number(value).toFixed(2)} ${t($ => $.dashboard.vendorPerformance.hours)}`,
                       config.label,
                     ]
                   }}

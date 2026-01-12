@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ChevronRight, ExternalLink, Mail, MapPin, Phone, Star } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
@@ -29,8 +30,8 @@ interface VendorCardProps {
   isSelected?: boolean
 }
 
-function formatDate(timestamp: number) {
-  return new Date(timestamp).toLocaleDateString('en-US', {
+function formatDate(timestamp: number, locale: string) {
+  return new Date(timestamp).toLocaleDateString(locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -38,6 +39,7 @@ function formatDate(timestamp: number) {
 }
 
 export function VendorCard({ vendor, quote, className = '', onClick, isSelected = false }: VendorCardProps) {
+  const { t, i18n } = useTranslation()
   const priceInDollars = quote ? quote.price / 100 : undefined
   const [showMoreServices, setShowMoreServices] = useState(false)
 
@@ -67,7 +69,7 @@ export function VendorCard({ vendor, quote, className = '', onClick, isSelected 
               </p>
               {quote.estimatedDeliveryTime && (
                 <span className="text-xs text-muted-foreground">
-                  • {quote.estimatedDeliveryTime}h
+                  • {quote.estimatedDeliveryTime}{t($ => $.vendorCard.hours)}
                 </span>
               )}
             </section>
@@ -77,7 +79,7 @@ export function VendorCard({ vendor, quote, className = '', onClick, isSelected 
               </p>
             )}
             <p className="text-xs text-muted-foreground">
-              {formatDate(quote.createdAt)}
+              {formatDate(quote.createdAt, i18n.language)}
             </p>
           </>
         )}
@@ -85,7 +87,7 @@ export function VendorCard({ vendor, quote, className = '', onClick, isSelected 
         {/* Vendor details */}
         {vendor.specialty && (
           <p className="text-xs text-muted-foreground">
-            Specialty: {vendor.specialty}
+            {t($ => $.vendorCard.specialty)}: {vendor.specialty}
           </p>
         )}
         {vendor.address && (
@@ -98,7 +100,7 @@ export function VendorCard({ vendor, quote, className = '', onClick, isSelected 
           <section className="flex items-center gap-2">
             <Star className="size-3 text-muted-foreground" />
             <p className="text-xs text-muted-foreground">
-              Rating: {vendor.rating}/5
+              {t($ => $.vendorCard.rating)}: {vendor.rating}/5
             </p>
           </section>
         )}
@@ -147,24 +149,24 @@ export function VendorCard({ vendor, quote, className = '', onClick, isSelected 
             {vendor.services.length > 3 && (
               <Popover open={showMoreServices} onOpenChange={setShowMoreServices}>
                 <PopoverTrigger asChild>
-                  <Badge 
-                    variant="outline" 
+                  <Badge
+                    variant="outline"
                     className="text-xs bg-zinc-200/70 cursor-pointer hover:bg-zinc-300/70 transition-colors"
                   >
-                    +{vendor.services.length - 3} more
+                    {t($ => $.vendorCard.moreServices).replace('{count}', String(vendor.services.length - 3))}
                   </Badge>
                 </PopoverTrigger>
                 <PopoverContent className="w-64 p-0" align="start">
                   <section className="p-3">
                     <h5 className="text-xs font-semibold mb-2 text-muted-foreground uppercase tracking-wide">
-                      All Services
+                      {t($ => $.vendorCard.allServices)}
                     </h5>
                     <section className="max-h-48 overflow-y-auto">
                       <section className="flex flex-col gap-1.5">
                         {vendor.services.map((service, index) => (
-                          <Badge 
-                            key={index} 
-                            variant="outline" 
+                          <Badge
+                            key={index}
+                            variant="outline"
                             className="text-xs bg-zinc-200/70 w-fit"
                           >
                             {service}

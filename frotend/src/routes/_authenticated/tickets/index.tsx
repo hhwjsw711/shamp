@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useMutation, useQuery } from 'convex/react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
 import { TicketStatusColumn } from '@/components/layout/ticket-status-column'
@@ -43,16 +44,21 @@ type Ticket = {
 }
 
 // Only show these statuses in the UI (analyzing is transient, not shown)
-const TICKET_STATUSES: Array<{ value: TicketStatus; label: string }> = [
-  { value: 'analyzed', label: 'Analyzed' },
-  { value: 'reviewed', label: 'Reviewed' },
-  { value: 'find_vendors', label: 'Finding Vendors' },
-  { value: 'requested_for_information', label: 'RFI' },
-  { value: 'quotes_available', label: 'Quotes Available' },
-  { value: 'quote_selected', label: 'Quote Selected' },
-  { value: 'fixed', label: 'Fixed' },
-  { value: 'closed', label: 'Closed' },
-]
+// Hook to get status labels with translations
+function useTicketStatuses() {
+  const { t } = useTranslation()
+
+  return [
+    { value: 'analyzed' as const, label: t($ => $.tickets.status.analyzed) },
+    { value: 'reviewed' as const, label: t($ => $.tickets.status.reviewed) },
+    { value: 'find_vendors' as const, label: t($ => $.tickets.status.findVendors) },
+    { value: 'requested_for_information' as const, label: t($ => $.tickets.status.requestedForInformation) },
+    { value: 'quotes_available' as const, label: t($ => $.tickets.status.quotesAvailable) },
+    { value: 'quote_selected' as const, label: t($ => $.tickets.status.quoteSelected) },
+    { value: 'fixed' as const, label: t($ => $.tickets.status.fixed) },
+    { value: 'closed' as const, label: t($ => $.tickets.status.closed) },
+  ]
+}
 
 function formatDate(timestamp: number) {
   return new Date(timestamp).toLocaleDateString('en-US', {
@@ -65,6 +71,8 @@ function formatDate(timestamp: number) {
 function TicketsPage() {
   const navigate = useNavigate()
   const { user, isAuthenticated } = useAuth()
+  const { t } = useTranslation()
+  const TICKET_STATUSES = useTicketStatuses()
   const [isMobile, setIsMobile] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState<TicketStatus | 'all'>('all')
   
@@ -356,20 +364,20 @@ function TicketsPage() {
                     }}
                     onDelete={async () => {
                       if (!user?.id) return
-                      
+
                       try {
                         await deleteTicket({
                           ticketId: ticket._id as any,
                           userId: user.id as any,
                         })
-                        
-                        toast.success('Ticket Deleted', {
-                          description: 'The ticket has been successfully deleted.',
+
+                        toast.success(t($ => $.tickets.list.deleteSuccess), {
+                          description: t($ => $.tickets.list.deleteSuccessDescription),
                           duration: 3000,
                         })
                       } catch (error) {
-                        toast.error('Failed to Delete Ticket', {
-                          description: error instanceof Error ? error.message : 'An error occurred while deleting the ticket.',
+                        toast.error(t($ => $.tickets.list.deleteError), {
+                          description: error instanceof Error ? error.message : t($ => $.tickets.list.deleteErrorDescription),
                           duration: 5000,
                         })
                       }

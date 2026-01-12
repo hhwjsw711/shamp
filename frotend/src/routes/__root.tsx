@@ -1,8 +1,9 @@
-import { HeadContent, Scripts, createRootRoute, useLocation } from '@tanstack/react-router'
+import { HeadContent, Link, Scripts, createRootRoute, useLocation } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import { AnimatePresence } from 'motion/react'
 import { ConvexProvider } from 'convex/react'
+import { useTranslation } from 'react-i18next'
 
 import appCss from '../styles.css?url'
 import { Toaster } from '@/components/ui/sonner'
@@ -10,9 +11,27 @@ import { AppSidebar } from '@/components/layout/sidebar'
 import { PageHeader } from '@/components/layout/page-header'
 import { PageHeaderCTAsProvider } from '@/components/layout/page-header-ctas'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
+import { Button } from '@/components/ui/button'
 import { convex } from '@/lib/convex'
 
+// Initialize i18n
+import '@/i18n'
+
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
+
+function NotFound() {
+  const { t } = useTranslation()
+
+  return (
+    <div className="flex flex-col items-center justify-center h-full gap-4 p-8">
+      <h1 className="text-4xl font-bold text-gray-900">{t($ => $.notFound.title)}</h1>
+      <p className="text-gray-600">{t($ => $.notFound.description)}</p>
+      <Button asChild>
+        <Link to="/">{t($ => $.notFound.backToHome)}</Link>
+      </Button>
+    </div>
+  )
+}
 
 export const Route = createRootRoute({
   head: () => ({
@@ -68,6 +87,7 @@ export const Route = createRootRoute({
       : [],
   }),
 
+  notFoundComponent: NotFound,
   shellComponent: RootDocument,
 })
 
@@ -75,11 +95,16 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const location = useLocation()
   // Show sidebar for authenticated routes (not auth pages)
   const isAuthenticatedRoute = !location.pathname.startsWith('/auth')
-  
+
+  // Get current language from i18next
+  const currentLanguage = typeof window !== 'undefined'
+    ? window.localStorage.getItem('i18nextLng') || 'en'
+    : 'en'
+
   return (
     <ConvexProvider client={convex}>
       <PageHeaderCTAsProvider>
-        <html lang="en" style={{ fontFamily: 'Manrope, sans-serif' }}>
+        <html lang={currentLanguage} style={{ fontFamily: 'Manrope, sans-serif' }}>
           <head>
             <HeadContent />
           </head>

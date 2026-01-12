@@ -140,10 +140,10 @@ const ChartTooltipContent = React.forwardRef<
 
       const [item] = payload
       const key = `${labelKey || item.dataKey || item.name || "value"}`
-      const itemConfig = config[key as keyof typeof config]
+      const itemConfig = config[key]
       const value =
         !labelKey && typeof label === "string"
-          ? config[label as keyof typeof config]?.label || label
+          ? config[label]?.label || label
           : itemConfig?.label || item.name
 
       if (labelFormatter) {
@@ -187,7 +187,7 @@ const ChartTooltipContent = React.forwardRef<
         <div className={cn("grid gap-1.5", nestLabel && "ml-2")}>
           {payload.map((item, index) => {
             const key = `${nameKey || item.name || item.dataKey || "value"}`
-            const itemConfig = config[key as keyof typeof config]
+            const itemConfig = config[key]
             const indicatorColor = color || item.payload.fill || item.color
 
             return (
@@ -287,7 +287,7 @@ const ChartLegendContent = React.forwardRef<
       >
         {payload.map((item) => {
           const key = `${nameKey || item.dataKey || "value"}`
-          const itemConfig = config[key as keyof typeof config]
+          const itemConfig = config[key]
 
           return (
             <div

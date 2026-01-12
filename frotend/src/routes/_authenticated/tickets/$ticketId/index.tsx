@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Calendar, History, MapPin, MessageSquare, Pencil, Tag, Trash2, Users, X } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
 import { VendorCard } from '@/components/layout/vendor-card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
@@ -29,6 +30,8 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty'
 
+type TranslationFunction = ReturnType<typeof useTranslation>['t']
+
 export const Route = createFileRoute('/_authenticated/tickets/$ticketId/')({
   component: TicketDetailsPage,
 })
@@ -48,41 +51,41 @@ function getUrgencyStyles(urgency?: string) {
   }
 }
 
-function getUrgencyLabel(urgency?: string) {
+function getUrgencyLabel(urgency: string | undefined, t: TranslationFunction) {
   switch (urgency) {
     case 'emergency':
-      return 'Emergency'
+      return t($ => $.tickets.urgency.emergency)
     case 'urgent':
-      return 'Urgent'
+      return t($ => $.tickets.urgency.urgent)
     case 'normal':
-      return 'Normal'
+      return t($ => $.tickets.urgency.normal)
     case 'low':
-      return 'Low'
+      return t($ => $.tickets.urgency.low)
     default:
-      return 'Not specified'
+      return t($ => $.tickets.urgency.notSpecified)
   }
 }
 
-function getStatusLabel(status: string) {
+function getStatusLabel(status: string, t: TranslationFunction) {
   switch (status) {
     case 'analyzing':
-      return 'Analyzing'
+      return t($ => $.tickets.status.analyzing)
     case 'analyzed':
-      return 'Analyzed'
+      return t($ => $.tickets.status.analyzed)
     case 'reviewed':
-      return 'Reviewed'
+      return t($ => $.tickets.status.reviewed)
     case 'find_vendors':
-      return 'Finding Vendors'
+      return t($ => $.tickets.status.findVendors)
     case 'requested_for_information':
-      return 'RFI'
+      return t($ => $.tickets.status.requestedForInformation)
     case 'quotes_available':
-      return 'Quotes Available'
+      return t($ => $.tickets.status.quotesAvailable)
     case 'quote_selected':
-      return 'Quote Selected'
+      return t($ => $.tickets.status.quoteSelected)
     case 'fixed':
-      return 'Fixed'
+      return t($ => $.tickets.status.fixed)
     case 'closed':
-      return 'Closed'
+      return t($ => $.tickets.status.closed)
     default:
       return status
   }
@@ -127,6 +130,7 @@ function TicketDetailsPage() {
   const { ticketId } = Route.useParams()
   const navigate = useNavigate()
   const { user, isAuthenticated } = useAuth()
+  const { t } = useTranslation()
   const { setCTAs } = usePageHeaderCTAs()
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [selectedTab, setSelectedTab] = useState<'details' | 'vendors' | 'conversations'>('details')
@@ -309,8 +313,8 @@ function TicketDetailsPage() {
         if (!alreadyShown) {
           // Mark as shown IMMEDIATELY (synchronously) before showing toast
           markCompletionLogAsShown(logId)
-          toast.success('Vendor Discovery Complete', {
-            description: 'Vendors have been discovered and saved.',
+          toast.success(t($ => $.tickets.discovery.complete), {
+            description: t($ => $.tickets.discovery.completeDescription),
             duration: 4000,
           })
         }
@@ -377,17 +381,17 @@ function TicketDetailsPage() {
               if (!user.id || isMarkingAsReviewed) return
               setIsMarkingAsReviewed(true)
               try {
-                await markAsReviewed({ 
+                await markAsReviewed({
                   ticketId: ticketId as any,
                   userId: user.id as any,
                 })
-                toast.success('Ticket Marked as Reviewed', {
-                  description: 'The ticket has been successfully marked as reviewed.',
+                toast.success(t($ => $.tickets.details.markReviewedSuccess), {
+                  description: t($ => $.tickets.details.markReviewedSuccessDescription),
                   duration: 3000,
                 })
               } catch (error) {
-                toast.error('Failed to Mark as Reviewed', {
-                  description: error instanceof Error ? error.message : 'An error occurred.',
+                toast.error(t($ => $.tickets.details.markReviewedError), {
+                  description: error instanceof Error ? error.message : t($ => $.common.messages.error),
                   duration: 5000,
                 })
               } finally {
@@ -398,10 +402,10 @@ function TicketDetailsPage() {
             {isMarkingAsReviewed ? (
               <>
                 <Spinner className="size-4" />
-                Marking...
+                {t($ => $.tickets.details.marking)}
               </>
             ) : (
-              'Mark As Reviewed'
+              t($ => $.tickets.details.markAsReviewed)
             )}
           </Button>
         )}
@@ -428,8 +432,8 @@ function TicketDetailsPage() {
                 // The action runs independently, so we don't wait for it to complete here
               } catch (error) {
                 setIsProcessing(false)
-                toast.error('Failed to Process Ticket', {
-                  description: error instanceof Error ? error.message : 'An error occurred while processing the ticket.',
+                toast.error(t($ => $.tickets.details.processError), {
+                  description: error instanceof Error ? error.message : t($ => $.tickets.details.processErrorDescription),
                   duration: 5000,
                 })
               }
@@ -438,10 +442,10 @@ function TicketDetailsPage() {
             {isProcessing ? (
               <>
                 <Spinner className="size-4" />
-                Finding Vendors...
+                {t($ => $.tickets.details.findingVendors)}
               </>
             ) : (
-              'Find Vendors'
+              t($ => $.tickets.details.findVendors)
             )}
           </Button>
         )}
@@ -491,14 +495,14 @@ function TicketDetailsPage() {
         userId: user.id as any,
       })
 
-      toast.success('Ticket Deleted', {
-        description: 'The ticket has been successfully deleted.',
+      toast.success(t($ => $.tickets.details.deleteSuccess), {
+        description: t($ => $.tickets.details.deleteSuccessDescription),
         duration: 3000,
       })
     } catch (error) {
       setIsNavigatingAway(false)
-      toast.error('Failed to Delete Ticket', {
-        description: error instanceof Error ? error.message : 'An error occurred while deleting the ticket.',
+      toast.error(t($ => $.tickets.details.deleteError), {
+        description: error instanceof Error ? error.message : t($ => $.tickets.details.deleteErrorDescription),
         duration: 5000,
       })
     }
@@ -657,12 +661,12 @@ function TicketDetailsPage() {
     <section className="flex flex-col w-full md:w-80 md:min-w-80 shrink-0 bg-background rounded-3xl">
       {/* Header */}
       <header className="p-4 shrink-0 flex flex-row items-center justify-between">
-        <h2 className="font-semibold text-sm">Ticket Details</h2>
+        <h2 className="font-semibold text-sm">{t($ => $.tickets.details.title)}</h2>
         <Badge
           variant="outline"
           className={`text-xs px-2 py-1 ${getStatusStyles(ticket.status)}`}
         >
-          {getStatusLabel(ticket.status)}
+          {getStatusLabel(ticket.status, t)}
         </Badge>
       </header>
 
@@ -672,7 +676,7 @@ function TicketDetailsPage() {
         {/* Images Section */}
         {validPhotoUrls.length > 0 && (
           <section className="bg-zinc-100 rounded-2xl p-4">
-            <h3 className="text-xs font-normal text-muted-foreground/70 mb-3 uppercase tracking-wide">Photos</h3>
+            <h3 className="text-xs font-normal text-muted-foreground/70 mb-3 uppercase tracking-wide">{t($ => $.tickets.details.photos)}</h3>
             <section className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
               {validPhotoUrls.map((url: string, index: number) => (
                 <section
@@ -682,7 +686,7 @@ function TicketDetailsPage() {
                 >
                   <img
                     src={url}
-                    alt={`Ticket photo ${index + 1}`}
+                    alt={t($ => $.tickets.details.photoAlt, { number: index + 1 })}
                     className="h-full w-full rounded-lg border object-cover transition-transform group-hover:scale-105"
                   />
                   <section className="absolute inset-0 rounded-lg bg-black/0 group-hover:bg-black/10 transition-colors" />
@@ -694,14 +698,14 @@ function TicketDetailsPage() {
 
         {/* Description */}
         <section className="bg-zinc-100 rounded-2xl p-4">
-          <h3 className="text-xs font-normal text-muted-foreground/70 mb-2 uppercase tracking-wide">Description</h3>
-          <p className="text-base font-medium text-foreground whitespace-pre-wrap">{ticket.description || 'No description provided'}</p>
+          <h3 className="text-xs font-normal text-muted-foreground/70 mb-2 uppercase tracking-wide">{t($ => $.tickets.details.description)}</h3>
+          <p className="text-base font-medium text-foreground whitespace-pre-wrap">{ticket.description || t($ => $.tickets.details.noDescription)}</p>
         </section>
 
         {/* Problem Description */}
         {ticket.problemDescription && (
           <section className="bg-zinc-100 rounded-2xl p-4">
-            <h3 className="text-xs font-normal text-muted-foreground/70 mb-2 uppercase tracking-wide">Problem Analysis</h3>
+            <h3 className="text-xs font-normal text-muted-foreground/70 mb-2 uppercase tracking-wide">{t($ => $.tickets.details.problemAnalysis)}</h3>
             <p className="text-base font-medium text-foreground whitespace-pre-wrap">{ticket.problemDescription}</p>
           </section>
         )}
@@ -711,7 +715,7 @@ function TicketDetailsPage() {
           <section className="bg-zinc-100 rounded-2xl p-4">
             <h3 className="text-xs font-normal text-muted-foreground/70 mb-2 flex items-center gap-2 uppercase tracking-wide">
               <Tag className="size-3" />
-              Issue Type
+              {t($ => $.tickets.details.issueType)}
             </h3>
             <Badge variant="outline" className="text-sm px-2 py-1">
               {ticket.issueType}
@@ -721,12 +725,12 @@ function TicketDetailsPage() {
 
         {/* Urgency */}
         <section className="bg-zinc-100 rounded-2xl p-4">
-          <h3 className="text-xs font-normal text-muted-foreground/70 mb-2 uppercase tracking-wide">Urgency</h3>
+          <h3 className="text-xs font-normal text-muted-foreground/70 mb-2 uppercase tracking-wide">{t($ => $.tickets.details.urgency)}</h3>
           <Badge
             variant="outline"
             className={`text-sm px-2 py-1 ${getUrgencyStyles(ticket.urgency)}`}
           >
-            {getUrgencyLabel(ticket.urgency)}
+            {getUrgencyLabel(ticket.urgency, t)}
           </Badge>
         </section>
 
@@ -735,7 +739,7 @@ function TicketDetailsPage() {
           <section className="bg-zinc-100 rounded-2xl p-4">
             <h3 className="text-xs font-normal text-muted-foreground/70 mb-2 flex items-center gap-2 uppercase tracking-wide">
               <MapPin className="size-3" />
-              Location
+              {t($ => $.tickets.details.location)}
             </h3>
             <p className="text-base font-medium text-foreground">{ticket.location}</p>
           </section>
@@ -745,7 +749,7 @@ function TicketDetailsPage() {
         <section className="bg-zinc-100 rounded-2xl p-4">
           <h3 className="text-xs font-normal text-muted-foreground/70 mb-2 flex items-center gap-2 uppercase tracking-wide">
             <Calendar className="size-3" />
-            Created Date
+            {t($ => $.tickets.details.createdDate)}
           </h3>
           <p className="text-base font-medium text-foreground">{formatDate(ticket.createdAt)}</p>
         </section>
@@ -761,7 +765,7 @@ function TicketDetailsPage() {
       <header className="p-4 shrink-0 flex flex-row items-center justify-between">
         <section className="flex items-center gap-2">
           <History className="size-4" />
-          <h2 className="font-semibold text-sm">Discovery Log</h2>
+          <h2 className="font-semibold text-sm">{t($ => $.tickets.discovery.title)}</h2>
         </section>
         <Button
           variant="ghost"
@@ -774,7 +778,7 @@ function TicketDetailsPage() {
       </header>
 
       {/* Scrollable Content */}
-      <section 
+      <section
         data-discovery-log
         className="flex-1 overflow-y-auto p-2 min-h-0"
       >
@@ -784,8 +788,8 @@ function TicketDetailsPage() {
               <EmptyMedia variant="icon">
                 <History />
               </EmptyMedia>
-              <EmptyTitle>No discovery activity</EmptyTitle>
-              <EmptyDescription>Click "Process Ticket" to start vendor discovery.</EmptyDescription>
+              <EmptyTitle>{t($ => $.tickets.discovery.noActivity)}</EmptyTitle>
+              <EmptyDescription>{t($ => $.tickets.discovery.noActivityDescription)}</EmptyDescription>
             </EmptyHeader>
           </Empty>
         ) : (
@@ -813,7 +817,7 @@ function TicketDetailsPage() {
                 )}
                 {log.type === 'tool_call' && (
                   <section className="space-y-1.5">
-                    <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">Tool Call</p>
+                    <p className="text-xs font-semibold text-purple-700 uppercase tracking-wide">{t($ => $.tickets.discovery.toolCall)}</p>
                     <p className="text-sm text-foreground leading-relaxed">
                       <span className="font-medium text-purple-900">{log.toolName}</span>
                       {log.message && (
@@ -824,18 +828,18 @@ function TicketDetailsPage() {
                 )}
                 {log.type === 'tool_result' && (
                   <section className="space-y-1.5">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Tool Result</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t($ => $.tickets.discovery.toolResult)}</p>
                     <p className="text-sm text-foreground leading-relaxed">
-                      <span className="font-medium">{log.toolName}</span> completed successfully
+                      <span className="font-medium">{log.toolName}</span> {t($ => $.tickets.discovery.completedSuccessfully)}
                     </p>
                   </section>
                 )}
                 {log.type === 'vendor_found' && log.vendor && (
                   <section className="space-y-2">
-                    <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Vendor Found</p>
+                    <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">{t($ => $.tickets.discovery.vendorFound)}</p>
                     <p className="text-sm font-semibold text-foreground">{log.vendor.businessName}</p>
                     {log.vendor.specialty && (
-                      <p className="text-xs text-muted-foreground">Specialty: {log.vendor.specialty}</p>
+                      <p className="text-xs text-muted-foreground">{t($ => $.tickets.discovery.specialty)} {log.vendor.specialty}</p>
                     )}
                     {log.vendor.address && (
                       <p className="text-xs text-muted-foreground">📍 {log.vendor.address}</p>
@@ -848,7 +852,7 @@ function TicketDetailsPage() {
                 {log.type === 'step' && (
                   <section className="space-y-1.5">
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      Step {log.stepNumber}
+                      {t($ => $.tickets.discovery.step, { number: log.stepNumber })}
                     </p>
                     <p className="text-sm text-foreground leading-relaxed">{log.message}</p>
                   </section>
@@ -857,7 +861,7 @@ function TicketDetailsPage() {
                   <section className="space-y-1.5">
                     <p className="text-sm font-semibold text-green-700 flex items-center gap-2">
                       <span>✓</span>
-                      <span>Discovery Complete</span>
+                      <span>{t($ => $.tickets.discovery.discoveryComplete)}</span>
                     </p>
                     <p className="text-sm text-foreground leading-relaxed">{log.message}</p>
                   </section>
@@ -866,7 +870,7 @@ function TicketDetailsPage() {
                   <section className="space-y-1.5">
                     <p className="text-sm font-semibold text-red-700 flex items-center gap-2">
                       <span>✗</span>
-                      <span>Error</span>
+                      <span>{t($ => $.tickets.discovery.error)}</span>
                     </p>
                     <p className="text-sm text-foreground leading-relaxed">{log.error}</p>
                   </section>
@@ -880,7 +884,7 @@ function TicketDetailsPage() {
                 className="flex items-center gap-2 p-3 rounded-lg bg-zinc-50/50 border border-zinc-200/50"
               >
                 <Spinner className="size-4 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">Processing...</p>
+                <p className="text-sm text-muted-foreground">{t($ => $.tickets.discovery.processing)}</p>
               </motion.section>
             )}
           </section>
@@ -896,7 +900,7 @@ function TicketDetailsPage() {
       <header className="p-4 shrink-0 flex flex-row items-center justify-between">
         <section className="flex items-center gap-2">
           <Users className="size-4" />
-          <h2 className="font-semibold text-sm">Vendors</h2>
+          <h2 className="font-semibold text-sm">{t($ => $.tickets.vendors.title)}</h2>
           <Badge variant="secondary">{vendorQuotes.length + discoveredVendors.length}</Badge>
         </section>
         <Button
@@ -917,8 +921,8 @@ function TicketDetailsPage() {
               <EmptyMedia variant="icon">
                 <Users />
               </EmptyMedia>
-              <EmptyTitle>No vendors</EmptyTitle>
-              <EmptyDescription>No vendors have been discovered for this ticket yet.</EmptyDescription>
+              <EmptyTitle>{t($ => $.tickets.vendors.noVendors)}</EmptyTitle>
+              <EmptyDescription>{t($ => $.tickets.vendors.noVendorsDescription)}</EmptyDescription>
             </EmptyHeader>
           </Empty>
         ) : (
@@ -1133,10 +1137,10 @@ function TicketDetailsPage() {
         <header className="p-4 shrink-0">
           <section className="flex items-center gap-2">
             <MessageSquare className="size-4" />
-            <h2 className="font-semibold text-sm">Conversations</h2>
+            <h2 className="font-semibold text-sm">{t($ => $.tickets.conversations.title)}</h2>
             {selectedVendor ? (
               <Badge variant="secondary" className="text-xs justify-start text-left max-w-[120px] truncate overflow-hidden">
-                {selectedVendor.businessName || 'Vendor'}
+                {selectedVendor.businessName || t($ => $.tickets.vendors.title)}
               </Badge>
             ) : conversation ? (
               <Badge variant="secondary">{conversation.messages.length}</Badge>
@@ -1152,8 +1156,8 @@ function TicketDetailsPage() {
                 <EmptyMedia variant="icon">
                   <MessageSquare />
                 </EmptyMedia>
-                <EmptyTitle>Select a vendor</EmptyTitle>
-                <EmptyDescription>Click on a vendor to view their conversation.</EmptyDescription>
+                <EmptyTitle>{t($ => $.tickets.conversations.selectVendor)}</EmptyTitle>
+                <EmptyDescription>{t($ => $.tickets.conversations.selectVendorDescription)}</EmptyDescription>
               </EmptyHeader>
             </Empty>
           ) : !conversation ? (
@@ -1162,15 +1166,11 @@ function TicketDetailsPage() {
                 <EmptyMedia variant="icon">
                   <MessageSquare />
                 </EmptyMedia>
-                <EmptyTitle>No conversation started</EmptyTitle>
+                <EmptyTitle>{t($ => $.tickets.conversations.noConversation)}</EmptyTitle>
                 <EmptyDescription>
                   {selectedVendor?.businessName
-                    ? (
-                      <p>
-                        No conversation has been started with <span className="font-semibold">{selectedVendor.businessName}</span> yet. Messages will appear here once communication begins.
-                      </p>
-                    )
-                    : 'No conversation has been started for this ticket yet.'}
+                    ? t($ => $.tickets.conversations.noConversationWithVendor, { vendorName: selectedVendor.businessName })
+                    : t($ => $.tickets.conversations.noConversationDescription)}
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>
@@ -1180,15 +1180,11 @@ function TicketDetailsPage() {
                 <EmptyMedia variant="icon">
                   <MessageSquare />
                 </EmptyMedia>
-                <EmptyTitle>No messages yet</EmptyTitle>
+                <EmptyTitle>{t($ => $.tickets.conversations.noMessages)}</EmptyTitle>
                 <EmptyDescription>
-                  {selectedVendor?.businessName 
-                    ? (
-                      <>
-                        No messages exchanged with <span className="font-medium">{selectedVendor.businessName}</span> yet. Messages will appear here once communication begins.
-                      </>
-                    )
-                    : 'No messages for this vendor yet. Messages will appear here once communication begins.'}
+                  {selectedVendor?.businessName
+                    ? t($ => $.tickets.conversations.noMessagesWithVendor, { vendorName: selectedVendor.businessName })
+                    : t($ => $.tickets.conversations.noMessagesDescription)}
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>
@@ -1225,7 +1221,9 @@ function TicketDetailsPage() {
                     }`}
                   >
                     <section className="flex flex-col gap-1 mb-3 pb-3 border-b border-border/50">
-                      <section className="text-xs font-medium capitalize">{message.sender}</section>
+                      <section className="text-xs font-medium capitalize">
+                        {t($ => $.tickets.conversations.sender[message.sender as 'user' | 'agent' | 'vendor'])}
+                      </section>
                       <section className="text-xs text-muted-foreground">
                         {formatDate(message.date)}
                       </section>
@@ -1257,13 +1255,13 @@ function TicketDetailsPage() {
         >
           <TabsList className="w-full justify-start overflow-x-auto scrollbar-hide">
             <TabsTrigger value="details" className="shrink-0">
-              Details
+              {t($ => $.tickets.details.tabs.details)}
             </TabsTrigger>
             <TabsTrigger value="vendors" className="shrink-0">
-              {showDiscoveryLog ? 'Discovery Log' : `Vendors (${vendorQuotes.length})`}
+              {showDiscoveryLog ? t($ => $.tickets.details.tabs.discoveryLog) : `${t($ => $.tickets.details.tabs.vendors)} (${vendorQuotes.length})`}
             </TabsTrigger>
             <TabsTrigger value="conversations" className="shrink-0">
-              Conversations ({conversation?.messages.length || 0})
+              {t($ => $.tickets.details.tabs.conversations)} ({conversation?.messages.length || 0})
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -1317,11 +1315,11 @@ function TicketDetailsPage() {
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete this ticket</DialogTitle>
+            <DialogTitle>{t($ => $.tickets.details.deleteDialog)}</DialogTitle>
             <DialogDescription>
               {ticket.ticketName
-                ? `Deleting "${ticket.ticketName}" means all associated data including photos, vendor quotes, and conversation history will be permanently removed. This action cannot be undone.`
-                : 'Deleting this ticket means all associated data including photos, vendor quotes, and conversation history will be permanently removed. This action cannot be undone.'}
+                ? t($ => $.tickets.details.deleteDialogDescriptionNamed, { name: ticket.ticketName })
+                : t($ => $.tickets.details.deleteDialogDescription)}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-row justify-start gap-4">
@@ -1330,14 +1328,14 @@ function TicketDetailsPage() {
               variant="destructive"
               onClick={handleDeleteTicket}
             >
-              Delete ticket
+              {t($ => $.tickets.details.deleteButton)}
             </Button>
             <Button
               type="button"
               variant="outline"
               onClick={() => setShowDeleteDialog(false)}
             >
-              Cancel
+              {t($ => $.common.buttons.cancel)}
             </Button>
           </DialogFooter>
         </DialogContent>

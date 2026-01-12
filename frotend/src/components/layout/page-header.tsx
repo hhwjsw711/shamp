@@ -1,7 +1,9 @@
 import * as React from 'react'
 import { Link, useLocation, useParams } from '@tanstack/react-router'
 import { useQuery } from 'convex/react'
+import { useTranslation } from 'react-i18next'
 import { PageHeaderCTAsContainer } from './page-header-ctas'
+import { LanguageSwitcher } from './language-switcher'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import {
   Breadcrumb,
@@ -14,37 +16,38 @@ import {
 import { api as convexApi } from '@/lib/convex-api'
 import { useAuth } from '@/hooks/useAuth'
 
-const menuItems = [
-  {
-    title: 'Home',
-    href: '/',
-  },
-  {
-    title: 'Create New Ticket',
-    href: '/tickets/create',
-  },
-  {
-    title: 'Tickets',
-    href: '/tickets',
-  },
-  {
-    title: 'Edit Ticket',
-    href: '/tickets/$ticketId/edit',
-  },
-  {
-    title: 'Vendors',
-    href: '/vendors',
-  },
-  {
-    title: 'Conversations',
-    href: '/conversations',
-  },
-]
-
 export function PageHeader() {
   const location = useLocation()
   const params = useParams({ strict: false })
   const { user, isAuthenticated } = useAuth()
+  const { t } = useTranslation()
+
+  const menuItems = [
+    {
+      title: t($ => $.breadcrumb.home),
+      href: '/',
+    },
+    {
+      title: t($ => $.breadcrumb.createTicket),
+      href: '/tickets/create',
+    },
+    {
+      title: t($ => $.breadcrumb.tickets),
+      href: '/tickets',
+    },
+    {
+      title: t($ => $.breadcrumb.editTicket),
+      href: '/tickets/$ticketId/edit',
+    },
+    {
+      title: t($ => $.breadcrumb.vendors),
+      href: '/vendors',
+    },
+    {
+      title: t($ => $.breadcrumb.conversations),
+      href: '/conversations',
+    },
+  ]
 
   // Check if we're on the edit ticket page or ticket details page
   const isEditTicketPage = location.pathname.match(/^\/tickets\/[^/]+\/edit$/)
@@ -58,28 +61,28 @@ export function PageHeader() {
       : 'skip'
   )
 
-  const ticketName = ticketResult?.ticketName || 'Ticket'
+  const ticketName = ticketResult?.ticketName || t($ => $.breadcrumb.ticket)
 
   // Generate breadcrumb items based on pathname
   const pathSegments = location.pathname.split('/').filter(Boolean)
-  
+
   // Special case: Tickets page should only show "Tickets", not "Home > Tickets"
   const isTicketsPage = location.pathname === '/tickets'
-  
+
   // Special case: Edit ticket page - start from "Tickets", not "Home"
   // Breadcrumb should be: Tickets > Ticket > Edit
   // Special case: Ticket details page - start from "Tickets", not "Home"
   // Breadcrumb should be: Tickets > Ticket Name
   const breadcrumbItems = isTicketsPage
-    ? [{ label: 'Tickets', href: '/tickets' }]
+    ? [{ label: t($ => $.breadcrumb.tickets), href: '/tickets' }]
     : isEditTicketPage || isTicketDetailsPage
     ? [
-        { label: 'Tickets', href: '/tickets' },
+        { label: t($ => $.breadcrumb.tickets), href: '/tickets' },
         ...pathSegments.slice(1).map((segment, index) => {
           const segmentIndex = index + 1 // Adjust index since we're slicing from index 1
           const href = '/' + pathSegments.slice(0, segmentIndex + 1).join('/')
           const menuItem = menuItems.find((item) => item.href === href)
-          
+
           // Replace ticketId segment with ticketName for edit/details page
           // The ticketId is at segmentIndex 1 (after 'tickets')
           let label = menuItem?.title || segment.charAt(0).toUpperCase() + segment.slice(1)
@@ -88,7 +91,7 @@ export function PageHeader() {
             // Use ticketName if available, otherwise fall back to "Ticket"
             label = ticketName
           }
-          
+
           return {
             label,
             href,
@@ -96,13 +99,13 @@ export function PageHeader() {
         }),
       ]
     : [
-        { label: 'Home', href: '/' },
+        { label: t($ => $.breadcrumb.home), href: '/' },
         ...pathSegments.map((segment, index) => {
           const href = '/' + pathSegments.slice(0, index + 1).join('/')
           const menuItem = menuItems.find((item) => item.href === href)
-          
+
           const label = menuItem?.title || segment.charAt(0).toUpperCase() + segment.slice(1)
-          
+
           return {
             label,
             href,
@@ -146,8 +149,11 @@ export function PageHeader() {
           </section>
         </section>
 
-        {/* Right section: CTAs */}
-        <PageHeaderCTAsContainer />
+        {/* Right section: Language Switcher and CTAs */}
+        <section className="flex items-center gap-2 shrink-0">
+          <LanguageSwitcher />
+          <PageHeaderCTAsContainer />
+        </section>
       </section>
     </header>
   )

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Calendar, Edit, MapPin, Tag, Trash2, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -62,12 +63,13 @@ export function TicketCard({
   onDelete,
   className = ''
 }: TicketCardProps) {
+  const { t } = useTranslation()
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  
+
   // Use problemDescription if available, otherwise fall back to description
   const displayText = problemDescription || description || ''
-  
+
   // Filter out null/undefined photoUrls
   const validPhotoUrls = photoUrls.filter((url): url is string => Boolean(url))
 
@@ -111,7 +113,7 @@ export function TicketCard({
                   onEdit()
                 }}
                 className="size-7 cursor-pointer"
-                aria-label="Edit ticket"
+                aria-label={t($ => $.ticketCard.ariaLabels.editTicket)}
               >
                 <Edit className="size-4" />
               </Button>
@@ -123,7 +125,7 @@ export function TicketCard({
                 size="icon-sm"
                 onClick={handleDeleteClick}
                 className="size-7 text-destructive hover:text-destructive cursor-pointer"
-                aria-label="Delete ticket"
+                aria-label={t($ => $.ticketCard.ariaLabels.deleteTicket)}
               >
                 <Trash2 className="size-4" />
               </Button>
@@ -138,7 +140,7 @@ export function TicketCard({
                 <section key={index} className="relative flex-none w-16 h-16 overflow-hidden rounded-lg cursor-pointer hover:opacity-80 transition-opacity">
                   <img
                     src={url}
-                    alt={`Ticket photo ${index + 1}`}
+                    alt={t($ => $.ticketCard.photoAlt).replace('{number}', String(index + 1))}
                     className="h-full w-full object-cover"
                     loading="lazy"
                     onClick={(e) => {
@@ -155,8 +157,8 @@ export function TicketCard({
         <CardHeader className={`pb-3 ${validPhotoUrls.length > 0 ? 'pt-0' : ''}`}>
           <section className="flex items-start justify-between gap-2">
             <CardTitle className="text-sm font-medium line-clamp-2">
-              {status === 'analyzing' 
-                ? 'Awaiting ticket name' 
+              {status === 'analyzing'
+                ? t($ => $.ticketCard.awaitingName)
                 : ticketName || title}
             </CardTitle>
             {urgency && (
@@ -208,11 +210,11 @@ export function TicketCard({
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete this ticket</DialogTitle>
+            <DialogTitle>{t($ => $.ticketCard.deleteDialog.title)}</DialogTitle>
             <DialogDescription>
-              {ticketName 
-                ? `Deleting "${ticketName}" means all associated data including photos, vendor quotes, and conversation history will be permanently removed. This action cannot be undone.`
-                : 'Deleting this ticket means all associated data including photos, vendor quotes, and conversation history will be permanently removed. This action cannot be undone.'}
+              {ticketName
+                ? t($ => $.ticketCard.deleteDialog.descriptionNamed).replace('{name}', ticketName)
+                : t($ => $.ticketCard.deleteDialog.description)}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-row justify-start gap-4">
@@ -221,14 +223,14 @@ export function TicketCard({
               variant="destructive"
               onClick={handleConfirmDelete}
             >
-              Delete ticket
+              {t($ => $.ticketCard.deleteDialog.deleteButton)}
             </Button>
             <Button
               type="button"
               variant="outline"
               onClick={() => setShowDeleteDialog(false)}
             >
-              Cancel
+              {t($ => $.common.buttons.cancel)}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -254,7 +256,7 @@ export function TicketCard({
             >
               <img
                 src={selectedImage}
-                alt="Preview"
+                alt={t($ => $.ticketCard.preview)}
                 className="max-h-full max-w-full rounded-lg object-contain"
                 onClick={(e) => e.stopPropagation()}
               />

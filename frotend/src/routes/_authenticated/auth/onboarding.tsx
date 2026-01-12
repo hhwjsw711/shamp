@@ -1,13 +1,14 @@
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'motion/react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { OctagonXIcon } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 import type { OnboardingInput } from '@/lib/validations'
-import { onboardingSchema } from '@/lib/validations'
+import { createValidationSchemas } from '@/lib/validations'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
@@ -84,14 +85,18 @@ export const Route = createFileRoute('/_authenticated/auth/onboarding')({
 function OnboardingPage() {
   const navigate = useNavigate()
   const { completeOnboarding, getCurrentUser, user } = useAuth()
+  const { t } = useTranslation()
 
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const hasCheckedUser = useRef(false)
   const hasSetName = useRef(false)
 
+  // Create validation schemas with translations
+  const schemas = useMemo(() => createValidationSchemas(t), [t])
+
   const form = useForm<OnboardingInput>({
-    resolver: zodResolver(onboardingSchema),
+    resolver: zodResolver(schemas.onboardingSchema),
     defaultValues: {
       name: '',
       orgName: '',
@@ -302,15 +307,15 @@ function OnboardingPage() {
       const result = await completeOnboarding(sanitizedFormData)
 
       if (result.success) {
-        toast.success('Profile completed successfully!')
+        toast.success(t($ => $.auth.onboarding.success))
         navigate({ to: '/' })
       } else {
-        setError(result.error || 'Failed to complete onboarding')
+        setError(result.error || t($ => $.auth.onboarding.error))
         setIsLoading(false)
       }
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Failed to complete onboarding'
+        err instanceof Error ? err.message : t($ => $.auth.onboarding.error)
       )
       setIsLoading(false)
     }
@@ -356,10 +361,10 @@ function OnboardingPage() {
             className="h-8 w-auto"
           />
           <h1 className="text-2xl font-semibold text-foreground">
-            Complete your profile
+            {t($ => $.auth.onboarding.title)}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Tell us about you and your business to get started.
+            {t($ => $.auth.onboarding.subtitle)}
           </p>
         </section>
 
@@ -375,7 +380,7 @@ function OnboardingPage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Full Name</FormLabel>
+                    <FormLabel>{t($ => $.auth.onboarding.nameLabel)}</FormLabel>
                     <FormControl>
                       <Input
                         type="text"
@@ -398,7 +403,7 @@ function OnboardingPage() {
                 name="orgName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Business Name</FormLabel>
+                    <FormLabel>{t($ => $.auth.onboarding.orgNameLabel)}</FormLabel>
                     <FormControl>
                       <Input
                         type="text"
@@ -420,7 +425,7 @@ function OnboardingPage() {
                 name="location"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Business Location</FormLabel>
+                    <FormLabel>{t($ => $.auth.onboarding.locationLabel)}</FormLabel>
                     <FormControl>
                       {!isGoogleMapsReady ? (
                         <Input
@@ -468,7 +473,7 @@ function OnboardingPage() {
                               </ComboboxList>
                             ) : placesStatus === 'ZERO_RESULTS' ? (
                               <ComboboxEmpty>
-                                No locations found. Try a different search.
+                                {t($ => $.auth.onboarding.noLocationsFound)}
                               </ComboboxEmpty>
                             ) : null}
                           </ComboboxContent>
@@ -497,10 +502,10 @@ function OnboardingPage() {
                 {isLoading ? (
                   <>
                     <Spinner className="mr-2" />
-                    Finishing Up...
+                    {t($ => $.auth.onboarding.finishingUp)}
                   </>
                 ) : (
-                  'Finish Setup'
+                  t($ => $.auth.onboarding.finishSetup)
                 )}
               </Button>
             </form>
